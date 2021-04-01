@@ -1,6 +1,6 @@
 ## coreSNTP Library
 
-This repository contains the coreSNTP library, a client library to use the SNTP protocol (explained in [RFC 4330](https://tools.ietf.org/html/rfc4493)) to synchronize client devices with network time. 
+This repository contains the coreSNTP library, a client library to use the SNTP protocol (explained in [RFC 4330](https://tools.ietf.org/html/rfc4330)) to synchronize client devices with network time. 
 
 ## Reference example
 
