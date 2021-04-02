@@ -34,30 +34,31 @@
 /**
  * @brief The version of SNTP supported by the coreSNTP library.
  */
-#define SNTP_VERSION                                ( 4 )
+#define SNTP_VERSION                                 ( 4 )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
- * @note Refer to the [RFC4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT                            ( 3 )
+#define SNTP_MODE_CLIENT                             ( 3 )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
- * @note Refer to the [RFC4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER                            ( 4 )
+#define SNTP_MODE_SERVER                             ( 4 )
 
 /**
  * @brief Number of 232 picoseconds per microsecond.
- * @note The resolution of an SNTP timestamp fractions part is (1/2^32) ~ 232 picoseconds.
+ * @note The resolution of an SNTP timestamp fractions part is
+ * 2^(-32) seconds ~ 232 picoseconds.
  */
-#define SNTP_FRACTION_RESOLUTION_PER_MICROSECOND    ( 4295U )
+#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
 
 /**
- * @brief Structure representing the timestamp format of SNTP.
+ * @brieNSrepresenting the timestamp format of SNTP.
  */
 typedef struct SntpTimestamp
 {
@@ -67,6 +68,9 @@ typedef struct SntpTimestamp
     uint32_t fraction;
 } SntpTimestamp_t;
 
+/**
+ * @brief Constant to represent an empty SNTP timestamp value.
+ */
 #define SNTP_ZERO_TIMESTAMP    { 0U, 0U }
 
 /**
@@ -126,10 +130,11 @@ static const SntpPacket_t requestPacket =
 
 
 SntpStatus_t Sntp_SerializeRequest( SntpTime_t * pCurrentTime,
+                                    uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize )
 {
-    SntpStatus_t status = SntpErrorInternal;
+    SntpStatus_t status = SntpSuccess;
 
     if( pCurrentTime == NULL )
     {
@@ -147,13 +152,28 @@ SntpStatus_t Sntp_SerializeRequest( SntpTime_t * pCurrentTime,
     {
         SntpPacket_t * pRequestPacket = ( SntpPacket_t * ) pBuffer;
 
+        /* Convert passed microseconds into fractions representation of
+         * SNTP timestamp value. */
+        uint32_t fractionsTime = ( pCurrentTime->microseconds ) /
+                                 SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND;
+
         /* Fill the buffer with standard data for an SNTP request packet.*/
         memcpy( pBuffer, &requestPacket, sizeof( SntpPacket_t ) );
 
-        /* Convert the passed time into NTP timestamp format. */
+        /* Add passed random number to non-significant bits of the fractions part
+         * of the transmit timestamp.
+         * This is suggested by the SNTPv4 (and NTPv4) specification(s)
+         * to protect against replay attacks. Refer to RFC 4330 Section 3 for
+         * more information.
+         * Adding random bits to the least significant 16 bits of the fractions
+         * part of the timestamp affects only ~15 microseconds of information
+         * (calculated as 0xFFFF * 232 picoseconds).
+         */
+        fractionsTime = ( fractionsTime | ( randomNumber >> 16 ) );
+
+        /* Convert the passed system time into SNTP timestamp format. */
         pRequestPacket->transmitTime.secs = SNTP_HTONL( pCurrentTime->seconds );
-        pRequestPacket->transmitTime.fraction = SNTP_HTONL( pCurrentTime->microseconds *
-                                                            SNTP_FRACTION_RESOLUTION_PER_MICROSECOND );
+        pRequestPacket->transmitTime.fraction = SNTP_HTONL( fractionsTime );
 
         status = SntpSuccess;
     }
