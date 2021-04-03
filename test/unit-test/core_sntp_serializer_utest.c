@@ -32,33 +32,15 @@
 /* Backoff Algorithm library include */
 #include "core_sntp_serializer.h"
 
-static const SntpTime_t testTime =
-{
-    .seconds      = UINT32_MAX,
-    .microseconds = 1000
-};
+#define TEST_TIMESTAMP         \
+    {                          \
+        .seconds = UINT32_MAX, \
+        .fractions = 1000      \
+    }
 
 static uint8_t testBuffer[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE ];
 
 /* ============================   UNITY FIXTURES ============================ */
-
-/* / * Called before each test method. * / */
-/* void setUp() */
-/* { */
-/*     / * Initialize context. * / */
-/*     BackoffAlgorithm_InitializeParams( &retryParams, */
-/*                                        TEST_BACKOFF_BASE_VALUE, */
-/*                                        TEST_BACKOFF_MAX_VALUE, */
-/*                                        TEST_MAX_ATTEMPTS ); */
-/* } */
-
-/* / * Called after each test method. * / */
-/* void tearDown() */
-/* { */
-/*     testRandomVal = 0; */
-/*     BackoffAlgorithmStatus = BackoffAlgorithmSuccess; */
-/*     nextBackoff = 0; */
-/* } */
 
 /* Called at the beginning of the whole suite. */
 void suiteSetUp()
@@ -78,6 +60,8 @@ int suiteTearDown( int numFailures )
  */
 void test_SerializeRequest_InvalidParams( void )
 {
+    SntpTimestamp_t testTime = TEST_TIMESTAMP;
+
     /* Pass invalid time object. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_SerializeRequest( NULL,
@@ -101,12 +85,19 @@ void test_SerializeRequest_InvalidParams( void )
 }
 
 /**
- * @brief Test @ref Sntp_SerializeRequest with invalid parameters.
+ * @brief Validate the serialization operation of the @ref Sntp_SerializeRequest API.
  */
 void test_SerializeRequest_NominalCase( void )
 {
+    SntpTimestamp_t testTime = TEST_TIMESTAMP;
     const uint32_t randomVal = 0xAABBCCDD;
-    const uint32_t expectedTxTimeFraction = ( ( testTime.microseconds * 4295 ) | ( randomVal >> 16 ) );
+
+    /* Expected transmit timestamp in the SNTP request packet. */
+    const SntpTimestamp_t expectedTxTime =
+    {
+        .seconds   = testTime.seconds,
+        .fractions = ( testTime.fractions | ( randomVal >> 16 ) )
+    };
 
     uint8_t expectedSerialization[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE ] =
     {
@@ -126,8 +117,8 @@ void test_SerializeRequest_NominalCase( void )
     /* Update the expected transmit timestamp value. */
     uint32_t * pTransmitTimePtr = ( uint32_t * ) ( &expectedSerialization[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE - 8 ] );
 
-    *pTransmitTimePtr = htonl( testTime.seconds );
-    *( ++pTransmitTimePtr ) = htonl( expectedTxTimeFraction );
+    *pTransmitTimePtr = htonl( expectedTxTime.seconds );
+    *( ++pTransmitTimePtr ) = htonl( expectedTxTime.fractions );
 
 
     /* Call the API under test. */
@@ -141,4 +132,9 @@ void test_SerializeRequest_NominalCase( void )
     TEST_ASSERT_EQUAL_UINT8_ARRAY( expectedSerialization,
                                    testBuffer,
                                    SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE );
+
+    /* Check that the request timestamp object has been updated with the random value. */
+    TEST_ASSERT_EQUAL( 0, memcmp( &expectedTxTime,
+                                  &testTime,
+                                  sizeof( SntpTimestamp_t ) ) );
 }
