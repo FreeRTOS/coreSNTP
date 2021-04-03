@@ -132,7 +132,7 @@ typedef struct SntpTime
  * for serializing an SNTP request packet.
  */
 /* @[define_sntp_serializerequest] */
-SntpStatus_t Sntp_SerializeRequest( SntpTime_t * pCurrentTime,
+SntpStatus_t Sntp_SerializeRequest( const SntpTime_t * pCurrentTime,
                                     uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize );

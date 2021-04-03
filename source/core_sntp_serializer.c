@@ -71,7 +71,13 @@ typedef struct SntpTimestamp
 /**
  * @brief Constant to represent an empty SNTP timestamp value.
  */
-#define SNTP_ZERO_TIMESTAMP    { 0U, 0U }
+#define SNTP_ZERO_TIMESTAMP     { 0U, 0U }
+
+/**
+ * @brief The least-significant bit position of the "Version" information
+ * in the first byte of an SNTP packet.
+ */
+#define VERSION_LSB_POSITION    ( 3 )
 
 /**
  * @brief Structure representing an (S)NTP packet header.
@@ -81,12 +87,10 @@ typedef struct SntpTimestamp
  */
 typedef struct SntpPacket
 {
-    char leap : 2;                /* leap indicator */
-    char version : 3;             /* version number */
-    char mode : 3;                /* mode */
-    uint8_t stratum : 8;          /* stratum */
-    uint8_t poll : 8;             /* poll interval */
-    uint8_t precision : 8;        /* precision */
+    char leapVersionMode;         /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
+    uint8_t stratum;              /* stratum */
+    uint8_t poll;                 /* poll interval */
+    uint8_t precision;            /* precision */
     uint32_t rootDelay;           /* root delay */
     uint32_t rootDisp;            /* root dispersion */
     uint32_t refId;               /* reference ID */
@@ -103,19 +107,17 @@ typedef struct SntpPacket
  */
 static const SntpPacket_t requestPacket =
 {
-    0,                   /* leap indicator */
-    SNTP_VERSION,        /* version number */
-    SNTP_MODE_CLIENT,    /* mode */
-    0,                   /* stratum */
-    0,                   /* poll interval */
-    0,                   /* precision */
-    0,                   /* root delay */
-    0,                   /* root dispersion */
-    0,                   /* reference ID */
-    SNTP_ZERO_TIMESTAMP, /* reference time */
-    SNTP_ZERO_TIMESTAMP, /* origin timestamp */
-    SNTP_ZERO_TIMESTAMP, /* receive timestamp */
-    SNTP_ZERO_TIMESTAMP  /* transmit timestamp */
+    0 | ( SNTP_VERSION << VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
+    0,                                                               /* stratum */
+    0,                                                               /* poll interval */
+    0,                                                               /* precision */
+    0,                                                               /* root delay */
+    0,                                                               /* root dispersion */
+    0,                                                               /* reference ID */
+    SNTP_ZERO_TIMESTAMP,                                             /* reference time */
+    SNTP_ZERO_TIMESTAMP,                                             /* origin timestamp */
+    SNTP_ZERO_TIMESTAMP,                                             /* receive timestamp */
+    SNTP_ZERO_TIMESTAMP                                              /* transmit timestamp */
 };
 
 /**
@@ -129,7 +131,7 @@ static const SntpPacket_t requestPacket =
                    ( 0xFF000000 & ( wordData << 24 ) ) )
 
 
-SntpStatus_t Sntp_SerializeRequest( SntpTime_t * pCurrentTime,
+SntpStatus_t Sntp_SerializeRequest( const SntpTime_t * pCurrentTime,
                                     uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize )
@@ -153,8 +155,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTime_t * pCurrentTime,
         SntpPacket_t * pRequestPacket = ( SntpPacket_t * ) pBuffer;
 
         /* Convert passed microseconds into fractions representation of
-         * SNTP timestamp value. */
-        uint32_t fractionsTime = ( pCurrentTime->microseconds ) /
+         * SNTP timestamp format. */
+        uint32_t fractionsTime = ( pCurrentTime->microseconds ) *
                                  SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND;
 
         /* Fill the buffer with standard data for an SNTP request packet.*/
