@@ -44,6 +44,17 @@
 #define SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE    ( 48U )
 
 /**
+ * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
+ *
+ * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
+ * resolution of 2^(-32) seconds ~ 232 picoseconds.
+ *
+ * @note The application can use this value to convert fractions part of system
+ * time into SNTP timestamp format.
+ */
+#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
+
+/**
  * @ingroup core_sntp_enum_types
  * @brief Enumeration of status codes that can be returned
  * by the coreSNTP Library API.
@@ -90,16 +101,6 @@ typedef enum SntpStatus
     SntpInvalidResponse
 } SntpStatus_t;
 
-/**
- * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
- *
- * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
- * resolution of 2^(-32) seconds ~ 232 picoseconds.
- *
- * @note The application can use this value to convert fractions part of system
- * time into SNTP timestamp format.
- */
-#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
 
 /**
  * @ingroup core_sntp_struct_types
