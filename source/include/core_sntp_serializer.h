@@ -55,6 +55,36 @@
 #define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
 
 /**
+ * @brief The fixed-length of any Kiss-o'-Death message ASCII code sent
+ * in an SNTP server response.
+ * @note An SNTP server sends a Kiss-o'-Death message to reject a time request
+ * from the client. For more information on the Kiss-o'-Death codes, refer to the
+ * [SNTPv4 specification Section 8](https://tools.ietf.org/html/rfc4330#section-8).
+ */
+#define SNTP_KISS_OF_DEATH_CODE_LENGTH               ( 4U )
+
+/**
+ * @brief The value for clock offset that indicates inability to perform
+ * arithmetic calculation of system clock offset relative to the server time
+ * due to overflow.
+ *
+ * The application should use this macro against the seconds part of the clock
+ * offset value i.e. @ref SntpResponseData_t.clockOffset.seconds. If the seconds
+ * part is set to this macro, then the entire clock offset value is unusable.
+ *
+ * @note A clock offset overflow occurs if the system time is beyond 34 years
+ * (in the past or future) of the server time.
+ *
+ * @note The clock offset is a 62 bit signed integer value with 2 sign bits
+ * (in the seconds part of the @ref SntpTimestamp_t representation of the value).
+ * Thus, this macro uses a value that cannot be the result of offset arithmetic
+ * calculation because a valid offset value will always have the 2 most significant
+ * bits as either zero (i.e. to represent positive offer) or one (i.e. to represent
+ * negative offset).
+ */
+#define SNTP_CLOCK_OFFSET_OVERFLOW                   ( 0x7FFFFFFFU )
+
+/**
  * @ingroup core_sntp_enum_types
  * @brief Enumeration of status codes that can be returned
  * by the coreSNTP Library API.
@@ -86,7 +116,7 @@ typedef enum SntpStatus
      * @brief Server sent a Kiss-o'-Death message with a code, specific to the server.
      * Application can inspect the ASCII kiss-code from @ref Sntp_DeserializeResponse API.
      */
-    SntpRejectedResponseRetryOther,
+    SntpRejectedResponseOther,
 
     /**
      * @brief Application provided insufficient buffer space for serializing
@@ -100,6 +130,27 @@ typedef enum SntpStatus
      */
     SntpInvalidResponse
 } SntpStatus_t;
+
+/**
+ * @brief Enumeration for leap second information that an SNTP server can
+ * send its response to a time request. An SNTP server sends information about
+ * whether there is an upcoming leap second adjustment in the last day of the
+ * current month.
+ *
+ * @note A leap second is an adjustment made in atomic clock time because Earth's rotation
+ * can be inconsistent. Leap seconds are usually incorporated as an extra second insertion
+ * or second deletion in the last minute before midnight i.e. in the minute of 23h:59h UTC
+ * on the 31st of June or December. For more information on leap seconds, refer to
+ * https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs.
+ */
+typedef enum SntpLeapSecondInfo
+{
+    NoLeapSecond = 0x00,              /** <@brief There is no upcoming leap second adjustment. */
+    LastMinuteHas61Seconds = 0x01,    /** <@brief A leap second should be inserted in the last minute before midnight. */
+    LastMinuteHas59Seconds = 0x02,    /** <@brief A leap second should be deleted from the last minute before midnight. */
+    AlarmServerNotSynchronized = 0x03 /** <@brief An alarm condition meaning that server's time is not synchronized
+                                       * to an upstream NTP (or SNTP) server. */
+} SntpLeapSecondInfo_t;
 
 
 /**
@@ -115,6 +166,52 @@ typedef struct SntpTimestamp
     uint32_t fractions; /**< @brief The fractions part of the SNTP timestamp with resolution
                          *   of 2^(-32) ~ 232 picoseconds. */
 } SntpTimestamp_t;
+
+/**
+ * @ingroup core_sntp_struct_types
+ * @brief Structure representing data parsed from an SNTP response from server
+ * as well as data of arithmetic calculations derived from the response.
+ */
+typedef struct SntpResponse
+{
+    /**
+     * @brief The timestamp sent by the server.
+     */
+    SntpTimestamp_t serverTime;
+
+    /**
+     * @brief The information of an upcoming leap second in the
+     * server response.
+     */
+    SntpLeapSecondInfo_t leapSecondType;
+
+    /**
+     * @brief If a server responded with Kiss-o'-Death message to reject
+     * time request, this is the fixed length ASCII code for the rejection.
+     *
+     * The Kiss-o'-Death code is always #SNTP_KISS_OF_DEATH_CODE_LENGTH
+     * bytes long.
+     *
+     * @note If the either the server does not send a Kiss-o'-Death packet,
+     * this value will be #SNTP_KISS_OF_DEATH_CODE_INVALID.
+     */
+    const char * pResponseCode;
+
+    /**
+     * @brief The offset (in seconds) of the system clock relative to the
+     * server time calculated from client request and server response
+     * times. This information can be used to synchronize the system clock
+     * with a "slew" or "step" correction approach.
+     *
+     * @note The system clock MUST be within 34 years (in the past or future)
+     * of the server time for this calculation. This is a fundamental limitation
+     * of 64 bit integer arithmetic.
+     * If the system clock is beyond 34 years of server time, then this value
+     * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW.
+     */
+    SntpTimestamp_t clockOffset;
+} SntpResponseData_t;
+
 
 /**
  * @brief Serializes an SNTP request packet to use for querying a
@@ -134,7 +231,7 @@ typedef struct SntpTimestamp
  * [RFC 4330 Section 5](https://tools.ietf.org/html/rfc4330#section-3).
  * @param[out] pBuffer The buffer that will be populated with the serialized
  * SNTP request packet.
- * @param[in] bufferSize The size of the @p pBuffer buffer. It should be at least
+ * @param[in] bufferSize The size of the @p pBuffer buffer. It MUST be at least
  * #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE bytes in size.
  *
  * @note It is recommended to use a True Random Generator (TRNG) to generate
@@ -142,7 +239,7 @@ typedef struct SntpTimestamp
  * @note The application MUST save the @p pRequestTime value for de-serializing
  * the server response with @ref Sntp_DeserializeResponse API.
  *
- * @return This functions returns one of the following:
+ * @return This function returns one of the following:
  * - #SntpSuccess when serialization operation is successful.
  * - #SntpBadParameter if an invalid parameter is passed.
  * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
@@ -154,5 +251,53 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
                                     void * pBuffer,
                                     size_t bufferSize );
 /* @[define_sntp_serializerequest] */
+
+/**
+ * @brief De-serializes an SNTP packet received from a server as a response
+ * to a SNTP request.
+ *
+ * This function will parse only the #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+ * bytes of data in the passed buffer.
+ *
+ * @note If the server has sent a Kiss-o'-Death message to reject the associated
+ * time request, the API function will return the appropriate return code and,
+ * also, provide the ASCII code (of fixed length, #SNTP_KISS_OF_DEATH_CODE_LENGTH bytes)
+ * parsed from the response packet.
+ * The application SHOULD respect the server rejection and take appropriate action
+ * based on the rejection code.
+ *
+ * @param[in] pRequestTime The system time used in the SNTP request packet
+ * that is associated with the server response. This MUST be the same as the
+ * time returned by the @ref Sntp_SerializeRequest API.
+ * @param[in] pResponseBuffer The buffer containing the SNTP response from the
+ * server.
+ * @param[in] bufferSize The size of the @p pResponseBuffer containing the SNTP
+ * response. It MUST be at least #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE bytes
+ * long for a valid SNTP response.
+ * @param[out] pParsedResponse The information parsed from the SNTP response packet.
+ * If possible to calculate, it also contains the system clock offset relative
+ * to the server time.
+ *
+ * @return This function returns one of the following:
+ * - #SntpSuccess if the de-serialization operation is successful.
+ * - #SntpBadParameter if an invalid parameter is passed.
+ * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
+ * required for a valid SNTP response packet.
+ * - #SntpInvalidResponse if the response fails sanity checks expected in an
+ * SNTP response.
+ * - #SntpRejectedResponseChangeServer if the server rejected with a code
+ * indicating that client cannot be retry requests to it.
+ * - #SntpRejectedResponseRetryWithBackoff if the server rejected with a code
+ * indicating that client should back-off before retrying request.
+ * - #SntpRejectedResponseRetryOther if the server rejected with a code that
+ * application can inspect in the @p pParsedResponse paramter.
+ */
+/* @[define_sntp_deserializeresponse] */
+SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
+                                       const SntpTimestamp_t * pCurrentTime,
+                                       const void * pBuffer,
+                                       size_t bufferSize,
+                                       SntpResponseData_t * pParsedResponse );
+/* @[define_sntp_deserializeresponse] */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */

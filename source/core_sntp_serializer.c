@@ -34,32 +34,86 @@
 /**
  * @brief The version of SNTP supported by the coreSNTP library.
  */
-#define SNTP_VERSION            ( 4 )
+#define SNTP_VERSION                        ( 4 )
+
+/**
+ * @brief The bit mask for the Mode information in the first byte of
+ * an SNTP packet. The "Mode" field occupies bits 0-2 of the byte.
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * for more information.
+ */
+#define SNTP_MODE_BITS_MASK                 ( 0x07 )
+
+/**
+ * @brief The bit mask for the Mode information in the first byte of
+ * an SNTP packet. The "Mode" field occupies bits 0-2 of the byte.
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * for more information.
+ */
+#define SNTP_MODE_BITS_MASK                 ( 0x07 )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT        ( 3 )
+#define SNTP_MODE_CLIENT                    ( 3 )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER        ( 4 )
+#define SNTP_MODE_SERVER                    ( 4 )
+
+/**
+ * @brief The position of the least significant bit of the "Leap Indicator" field
+ * in first byte of an SNTP packet. The "Leap Indiciator" field occupies bits 6-7 of the byte.
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * for more information.
+ */
+#define SNTP_LEAP_INDICATOR_LSB_POSITION    ( 6 )
+
+/**
+ * @brief Value of Stratum field in SNTP packet representing a Kiss-o'-Death message
+ * from server.
+ */
+#define SNTP_KISS_OF_DEATH_STRATUM          ( 0 )
 
 /**
  * @brief Constant to represent an empty SNTP timestamp value.
  */
-#define SNTP_ZERO_TIMESTAMP     { 0U, 0U }
+#define SNTP_ZERO_TIMESTAMP                 { 0U, 0U }
 
 /**
  * @brief The least-significant bit position of the "Version" information
  * in the first byte of an SNTP packet.
  */
-#define VERSION_LSB_POSITION    ( 3 )
+#define VERSION_LSB_POSITION                ( 3 )
+
+/**
+ * @brief The integer value of the Kiss-o'-Death ASCII code, "DENY", used
+ * for comparison with data in an SNTP response.
+ * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
+ * for more information.
+ */
+#define KOD_CODE_DENY_UINT_VALUE            ( 0x44454e59U )
+
+/**
+ * @brief The integer value of the Kiss-o'-Death ASCII code, "RSTR", used
+ * for comparison with data in an SNTP response.
+ * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
+ * for more information.
+ */
+#define KOD_CODE_RSTR_UINT_VALUE            ( 0x52535452U )
+
+/**
+ * @brief The integer value of the Kiss-o'-Death ASCII code, "RATE", used
+ * for comparison with data in an SNTP response.
+ * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
+ * for more information.
+ */
+#define KOD_CODE_RATE_UINT_VALUE            ( 0x52415445U )
 
 /**
  * @brief Structure representing an (S)NTP packet header.
@@ -89,7 +143,7 @@ typedef struct SntpPacket
  */
 static const SntpPacket_t requestPacket =
 {
-    0 | ( SNTP_VERSION << VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
+    0 | ( SNTP_VERSION << VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /* leap indicator | version number | mode */
     0,                                                               /* stratum */
     0,                                                               /* poll interval */
     0,                                                               /* precision */
@@ -104,9 +158,9 @@ static const SntpPacket_t requestPacket =
 
 /**
  * @brief Utility macro to convert a 32-bit integer from host to
- * network byte order.
+ * network byte order or from network to host byte order.
  */
-#define SNTP_HTONL( wordData )                           \
+#define SNTP_HTONL_NTOHL( wordData )                     \
     ( uint32_t ) ( ( 0x000000FF & ( wordData >> 24 ) ) | \
                    ( 0x0000FF00 & ( wordData >> 8 ) ) |  \
                    ( 0x00FF0000 & ( wordData << 8 ) ) |  \
@@ -152,10 +206,109 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        pRequestPacket->transmitTime.seconds = SNTP_HTONL( pCurrentTime->seconds );
-        pRequestPacket->transmitTime.fractions = SNTP_HTONL( pCurrentTime->fractions );
+        pRequestPacket->transmitTime.seconds = SNTP_HTONL_NTOHL( pCurrentTime->seconds );
+        pRequestPacket->transmitTime.fractions = SNTP_HTONL_NTOHL( pCurrentTime->fractions );
 
         status = SntpSuccess;
+    }
+
+    return status;
+}
+
+
+SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
+                                       const SntpTimestamp_t * pCurrentTime,
+                                       const void * pResponseBuffer,
+                                       size_t bufferSize,
+                                       SntpResponseData_t * pParsedResponse )
+{
+    SntpStatus_t status = SntpSuccess;
+
+    if( pRequestTime == NULL )
+    {
+        status = SntpErrorBadParameter;
+    }
+    else if( pResponseBuffer == NULL )
+    {
+        status = SntpErrorBadParameter;
+    }
+    else if( bufferSize < SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE )
+    {
+        status = SntpErrorInsufficientSpace;
+    }
+    else
+    {
+        SntpPacket_t * pResponsePacket = ( SntpPacket_t * ) pResponseBuffer;
+
+        /* Check that the server response is valid. */
+
+        /* Check if the packet represents a server in the "Mode" field. */
+        if( ( pResponsePacket->leapVersionMode & SNTP_MODE_BITS_MASK ) != SNTP_MODE_SERVER )
+        {
+            status = SntpInvalidResponse;
+        }
+
+        if( status == SntpSuccess )
+        {
+            /* Validate that the server has sent the client's request timestamp in the
+             * "originate" timestamp field of the response. */
+            if( ( pRequestTime->seconds ==
+                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.seconds ) ) &&
+                ( pRequestTime->fractions ==
+                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.fractions ) ) )
+            {
+                status = SntpInvalidResponse;
+            }
+        }
+
+        if( status == SntpSuccess )
+        {
+            /* As the packet is valid, parse more information from it. */
+
+            /* Determine if the server has accepted or rejected the request for time. */
+            if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
+            {
+                /* Server has sent a Kiss-o'-Death message i.e. rejected the request. */
+
+                /* Extract the kiss-code sent by the server from the "Reference ID" field
+                 * of the SNTP packet. */
+                pParsedResponse->pResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
+
+                /* Determine the return code based on the Kiss-o'-Death code. */
+                switch( pResponsePacket->refId )
+                {
+                    case KOD_CODE_DENY_UINT_VALUE:
+                    case KOD_CODE_RSTR_UINT_VALUE:
+                        status = SntpRejectedResponseChangeServer;
+                        break;
+
+                    case KOD_CODE_RATE_UINT_VALUE:
+                        status = SntpRejectedResponseRetryWithBackoff;
+                        break;
+
+                    default:
+                        status = SntpRejectedResponseOther;
+                }
+            }
+            else
+            {
+                /* Server has responded successfully to the time request. */
+                int32_t firstOrderDiff = 0;
+
+                /* Fill the output parameter with the server time which is the
+                 * "transmit" time in the response packet. */
+                pParsedResponse->serverTime.seconds =
+                    SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
+                pParsedResponse->serverTime.fractions =
+                    SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
+
+                /* Extract information of any upcoming leap second from the response. */
+                pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t ) ( pResponsePacket->leapVersionMode
+                                                                             >> SNTP_LEAP_INDICATOR_LSB_POSITION );
+
+                /* Determine if the clock offset can be calculated. */
+            }
+        }
     }
 
     return status;
