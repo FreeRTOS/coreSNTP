@@ -83,7 +83,7 @@ typedef struct SntpPacket
 } SntpPacket_t;
 
 /**
- * @brief Object representing data that is common any SNTP request.
+ * @brief Object representing data that is common to any SNTP request.
  * @note The @ref Sntp_SerializeRequest API will fill the "originate
  * timestamp" with value provided by the application.
  */
