@@ -32,7 +32,8 @@
 #include "core_sntp_serializer.h"
 
 /**
- * @brief The version of SNTP supported by the coreSNTP library.
+ * @brief The version of SNTP supported by the coreSNTP library by complying
+ * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
  */
 #define SNTP_VERSION            ( 4 )
 
@@ -58,11 +59,16 @@
 /**
  * @brief The least-significant bit position of the "Version" information
  * in the first byte of an SNTP packet.
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * for more information.
  */
 #define VERSION_LSB_POSITION    ( 3 )
 
 /**
- * @brief Structure representing an (S)NTP packet header.
+ * @brief Structure representing an SNTP packet header.
+ * For more information on SNTP packet format, refer to
+ * [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4).
+ *
  * @note This does not include extension fields for authentication data
  * for secure SNTP communication. Authentication data follows the
  * packet header represented by this structure.
@@ -154,8 +160,6 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
         /* Update the request buffer with request timestamp in network byte order. */
         pRequestPacket->transmitTime.seconds = SNTP_HTONL( pCurrentTime->seconds );
         pRequestPacket->transmitTime.fractions = SNTP_HTONL( pCurrentTime->fractions );
-
-        status = SntpSuccess;
     }
 
     return status;
