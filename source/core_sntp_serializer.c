@@ -28,6 +28,7 @@
 /* Standard includes. */
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 /* Include API header. */
 #include "core_sntp_serializer.h"
@@ -237,13 +238,19 @@ static const SntpPacket_t requestPacket =
  * server time; otherwise, the seconds part of clock offset is set to
  * #SNTP_CLOCK_OFFSET_OVERFLOW.
  */
-void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
-                           const SntpTimestamp_t * pServerRxTime,
-                           const SntpTimestamp_t * pServerTxTime,
-                           const SntpTimestamp_t * pClientRxTime,
-                           SntpTimestamp_t * pClockOffset )
+static void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
+                                  const SntpTimestamp_t * pServerRxTime,
+                                  const SntpTimestamp_t * pServerTxTime,
+                                  const SntpTimestamp_t * pClientRxTime,
+                                  SntpTimestamp_t * pClockOffset )
 {
     int32_t firstOrderDiff = 0;
+
+    assert( pClientTxTime != NULL );
+    assert( pServerRxTime != NULL );
+    assert( pServerTxTime != NULL );
+    assert( pClientRxTime != NULL );
+    assert( pClockOffset != NULL );
 
     /* Calculate a sample first order difference value between the
      * server and system timestamps. */
@@ -285,9 +292,107 @@ void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     }
 }
 
+/**
+ * @brief Parse a SNTP response packet by determining whether it is a rejected
+ * or accepted response to an SNTP request, and accordingly, populate the
+ * @p pParsedResponse parameter with the parsed data.
+ *
+ * @note If the server has rejected the request with the a Kiss-o'-Death message,
+ * then this function will set the associated rejection code in the output parameter
+ * while setting the remaining members to zero.
+ * If the server has accepted the time request, then the function will set the
+ * pRejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID,
+ * and set the other the members with appropriate data extracted from the response
+ * packet.
+ *
+ * @param[in] pResponsePacket The SNTP response packet from server to parse.
+ * @param[in] pResponseRxTime The system time (in SNTP timestamp format) of
+ * receiving the SNTP response from server.
+ * @param[out] pParsedResponse The parameter that will be populated with data
+ * parsed from the response packet, @p pResponsePacket.
+ *
+ * @return This function returns one of the following:
+ * - #SntpSuccess if the server response does not represent a Kiss-o'-Death
+ * message.
+ * - #SntpRejectedResponseChangeServer if the server rejected with a code
+ * indicating that client cannot be retry requests to it.
+ * - #SntpRejectedResponseRetryWithBackoff if the server rejected with a code
+ * indicating that client should back-off before retrying request.
+ * - #SntpRejectedResponseCodeOther if the server rejected with a code
+ * other than "DENY", "RSTR" and "RATE".
+ */
+static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket,
+                                            const SntpTimestamp_t * pResponseRxTime,
+                                            SntpResponseData_t * pParsedResponse )
+{
+    SntpStatus_t status = SntpSuccess;
+
+    assert( pResponsePacket != NULL );
+    assert( pResponseRxTime != NULL );
+    assert( pParsedResponse != NULL );
+
+    /* Clear the output parameter memory to zero. */
+    memset( pParsedResponse, 0, sizeof( *pParsedResponse ) );
+
+    /* Determine if the server has accepted or rejected the request for time. */
+    if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
+    {
+        /* Server has sent a Kiss-o'-Death message i.e. rejected the request. */
+
+        /* Extract the kiss-code sent by the server from the "Reference ID" field
+         * of the SNTP packet. */
+        pParsedResponse->pRejectedResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
+
+        /* Determine the return code based on the Kiss-o'-Death code. */
+        switch( pResponsePacket->refId )
+        {
+            case KOD_CODE_DENY_UINT_VALUE:
+            case KOD_CODE_RSTR_UINT_VALUE:
+                status = SntpRejectedResponseChangeServer;
+                break;
+
+            case KOD_CODE_RATE_UINT_VALUE:
+                status = SntpRejectedResponseRetryWithBackoff;
+                break;
+
+            default:
+                status = SntpRejectedResponseCodeOther;
+        }
+    }
+    else
+    {
+        /* Server has responded successfully to the time request. */
+
+        /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
+         * to the time request. */
+        pParsedResponse->pRejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
+
+        /* Fill the output parameter with the server time which is the
+         * "transmit" time in the response packet. */
+        pParsedResponse->serverTime.seconds =
+            SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
+        pParsedResponse->serverTime.fractions =
+            SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
+
+        /* Extract information of any upcoming leap second from the response. */
+        pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
+                                          ( pResponsePacket->leapVersionMode
+                                            >> SNTP_LEAP_INDICATOR_LSB_POSITION );
+
+        /* Calculate system clock offset relative to server time, if possible, within
+         * the 64 bit integer width of the SNTP timestamp. */
+        calculateClockOffset( &pResponsePacket->originTime,
+                              &pResponsePacket->receiveTime,
+                              &pResponsePacket->transmitTime,
+                              pResponseRxTime,
+                              &pParsedResponse->clockOffset );
+    }
+
+    return status;
+}
+
 
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
-
                                     uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize )
@@ -337,7 +442,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
 
 
 SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
-                                       const SntpTimestamp_t * pCurrentTime,
+                                       const SntpTimestamp_t * pResponseRxTime,
                                        const void * pResponseBuffer,
                                        size_t bufferSize,
                                        SntpResponseData_t * pParsedResponse )
@@ -386,62 +491,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
         /* As the response packet is valid, parse more information from it and
          * populate the output parameter. */
 
-        /* Clear the output parameter memory to zero. */
-        memset( pParsedResponse, 0, sizeof( *pParsedResponse ) );
-
-        /* Determine if the server has accepted or rejected the request for time. */
-        if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
-        {
-            /* Server has sent a Kiss-o'-Death message i.e. rejected the request. */
-
-            /* Extract the kiss-code sent by the server from the "Reference ID" field
-             * of the SNTP packet. */
-            pParsedResponse->pRejectedResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
-
-            /* Determine the return code based on the Kiss-o'-Death code. */
-            switch( pResponsePacket->refId )
-            {
-                case KOD_CODE_DENY_UINT_VALUE:
-                case KOD_CODE_RSTR_UINT_VALUE:
-                    status = SntpRejectedResponseChangeServer;
-                    break;
-
-                case KOD_CODE_RATE_UINT_VALUE:
-                    status = SntpRejectedResponseRetryWithBackoff;
-                    break;
-
-                default:
-                    status = SntpRejectedResponseCodeOther;
-            }
-        }
-        else
-        {
-            /* Server has responded successfully to the time request. */
-
-            /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
-             * to the time request. */
-            pParsedResponse->pRejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
-
-            /* Fill the output parameter with the server time which is the
-             * "transmit" time in the response packet. */
-            pParsedResponse->serverTime.seconds =
-                SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
-            pParsedResponse->serverTime.fractions =
-                SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
-
-            /* Extract information of any upcoming leap second from the response. */
-            pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
-                                              ( pResponsePacket->leapVersionMode
-                                                >> SNTP_LEAP_INDICATOR_LSB_POSITION );
-
-            /* Calculate system clock offset relative to server time, if possible, within
-             * the 64 bit integer width of the SNTP timestamp. */
-            calculateClockOffset( &pResponsePacket->originTime,
-                                  &pResponsePacket->receiveTime,
-                                  &pResponsePacket->transmitTime,
-                                  pCurrentTime,
-                                  &pParsedResponse->clockOffset );
-        }
+        status = parseValidSntpResponse( pResponsePacket,
+                                         pResponseRxTime,
+                                         pParsedResponse );
     }
 
     return status;

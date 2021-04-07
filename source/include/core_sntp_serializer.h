@@ -287,9 +287,9 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
  * time returned by the @ref Sntp_SerializeRequest API.
- * @param[in] pCurrentTime The current time of the system, expressed as time
- * since the SNTP epoch (i.e. 0h of 1st Jan 1900 ). This time will be used to
- * calculate clock offset.
+ * @param[in] pResponseRxTime The time of the system, expressed as time since the
+ * SNTP epoch (i.e. 0h of 1st Jan 1900 ), at receiving SNTP response from server.
+ * This time will be used to calculate system clock offset relative to server.
  * @param[in] pResponseBuffer The buffer containing the SNTP response from the
  * server.
  * @param[in] bufferSize The size of the @p pResponseBuffer containing the SNTP
@@ -315,7 +315,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  */
 /* @[define_sntp_deserializeresponse] */
 SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
-                                       const SntpTimestamp_t * pCurrentTime,
+                                       const SntpTimestamp_t * pResponseRxTime,
                                        const void * pBuffer,
                                        size_t bufferSize,
                                        SntpResponseData_t * pParsedResponse );
