@@ -69,7 +69,7 @@
 
 /**
  * @brief The position of the least significant bit of the "Leap Indicator" field
- * in first byte of an SNTP packet. The "Leap Indiciator" field occupies bits 6-7 of the byte.
+ * in first byte of an SNTP packet. The "Leap Indicator" field occupies bits 6-7 of the byte.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
@@ -371,9 +371,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
         {
             /* Validate that the server has sent the client's request timestamp in the
              * "originate" timestamp field of the response. */
-            if( ( pRequestTime->seconds ==
-                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.seconds ) ) &&
-                ( pRequestTime->fractions ==
+            if( ( pRequestTime->seconds !=
+                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.seconds ) ) ||
+                ( pRequestTime->fractions !=
                   SNTP_HTONL_NTOHL( pResponsePacket->originTime.fractions ) ) )
             {
                 status = SntpInvalidResponse;
@@ -383,7 +383,11 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
 
     if( status == SntpSuccess )
     {
-        /* As the packet is valid, parse more information from it. */
+        /* As the response packet is valid, parse more information from it and
+         * populate the output parameter. */
+
+        /* Clear the output parameter memory to zero. */
+        memset( pParsedResponse, 0, sizeof( *pParsedResponse ) );
 
         /* Determine if the server has accepted or rejected the request for time. */
         if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
@@ -407,7 +411,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                     break;
 
                 default:
-                    status = SntpRejectedResponseOther;
+                    status = SntpRejectedResponseCodeOther;
             }
         }
         else
@@ -416,7 +420,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
 
             /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
              * to the time request. */
-            pParsedResponse->pRejectedResponseCode = NULL;
+            pParsedResponse->pRejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
 
             /* Fill the output parameter with the server time which is the
              * "transmit" time in the response packet. */
