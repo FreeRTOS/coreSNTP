@@ -25,8 +25,9 @@
  * @brief Implementation of the Serializer API of the coreSNTP library.
  */
 
-/* Standard include. */
+/* Standard includes. */
 #include <string.h>
+#include <stdbool.h>
 
 /* Include API header. */
 #include "core_sntp_serializer.h"
@@ -34,7 +35,7 @@
 /**
  * @brief The version of SNTP supported by the coreSNTP library.
  */
-#define SNTP_VERSION                        ( 4 )
+#define SNTP_VERSION                                        ( 4 )
 
 /**
  * @brief The bit mask for the Mode information in the first byte of
@@ -42,7 +43,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_BITS_MASK                 ( 0x07 )
+#define SNTP_MODE_BITS_MASK                                 ( 0x07 )
 
 /**
  * @brief The bit mask for the Mode information in the first byte of
@@ -50,21 +51,21 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_BITS_MASK                 ( 0x07 )
+#define SNTP_MODE_BITS_MASK                                 ( 0x07 )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT                    ( 3 )
+#define SNTP_MODE_CLIENT                                    ( 3 )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER                    ( 4 )
+#define SNTP_MODE_SERVER                                    ( 4 )
 
 /**
  * @brief The position of the least significant bit of the "Leap Indicator" field
@@ -72,24 +73,24 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_LEAP_INDICATOR_LSB_POSITION    ( 6 )
+#define SNTP_LEAP_INDICATOR_LSB_POSITION                    ( 6 )
 
 /**
  * @brief Value of Stratum field in SNTP packet representing a Kiss-o'-Death message
  * from server.
  */
-#define SNTP_KISS_OF_DEATH_STRATUM          ( 0 )
+#define SNTP_KISS_OF_DEATH_STRATUM                          ( 0 )
 
 /**
  * @brief Constant to represent an empty SNTP timestamp value.
  */
-#define SNTP_ZERO_TIMESTAMP                 { 0U, 0U }
+#define SNTP_ZERO_TIMESTAMP                                 { 0U, 0U }
 
 /**
  * @brief The least-significant bit position of the "Version" information
  * in the first byte of an SNTP packet.
  */
-#define VERSION_LSB_POSITION                ( 3 )
+#define VERSION_LSB_POSITION                                ( 3 )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "DENY", used
@@ -97,7 +98,7 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_DENY_UINT_VALUE            ( 0x44454e59U )
+#define KOD_CODE_DENY_UINT_VALUE                            ( 0x44454e59U )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "RSTR", used
@@ -105,7 +106,7 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_RSTR_UINT_VALUE            ( 0x52535452U )
+#define KOD_CODE_RSTR_UINT_VALUE                            ( 0x52535452U )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "RATE", used
@@ -113,7 +114,20 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_RATE_UINT_VALUE            ( 0x52415445U )
+#define KOD_CODE_RATE_UINT_VALUE                            ( 0x52415445U )
+
+/**
+ * @brief The bit mask for the first order difference between system clock and
+ * server second part of timestamps to determine whether calculation for
+ * system clock-offset relative to server will overflow.
+ * If any of the bits represented by the mask are set in the first order timestamp
+ * difference value, it represents that clock offset calculations will overflow.
+ *
+ * @note The bit mask represents the 2 most significant bits of a 32 bit integer
+ * as the clock-offset value uses the bits as sign bits, thereby, requiring that
+ * the value be representable within 30 bits of the seconds part of timestamp width.
+ */
+#define CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK    ( 0xC0000000U )
 
 /**
  * @brief Structure representing an (S)NTP packet header.
@@ -167,7 +181,113 @@ static const SntpPacket_t requestPacket =
                    ( 0xFF000000 & ( wordData << 24 ) ) )
 
 
+/**
+ * @brief Utility to calculate clock offset of system relative to the
+ * server using the on-wire protocol specified in the NTPv4 specification.
+ * For more information on on-wire protocol, refer to
+ * [RFC 5905 Section 8](https://tools.ietf.org/html/rfc5905#section-8).
+ *
+ * If the clock offset will result in an overflow, this function sets
+ * the clock offset, @p pClockOffset, as #SNTP_CLOCK_OFFSET_OVERFLOW.
+ *
+ * @note The following diagram explains the calculation of the clock
+ * offset:
+ *
+ *                 T2      T3
+ *      ---------------------------------   <-----   *SNTP/NTP server*
+ *               /\         \
+ *               /           \
+ *     Request* /             \ *Response*
+ *             /              \/
+ *      ---------------------------------   <-----   *SNTP client*
+ *           T1                T4
+ *
+ *  The four most recent timestamps, T1 through T4, are used to compute
+ *  the clock offset of SNTP client relative to the server where:
+ *
+ *     T1 = Client Request Transmit Time
+ *     T2 = Server Receive Time (of client request)
+ *     T3 = Server Response Transmit Time
+ *     T4 = Client Receive Time (of server response)
+ *
+ *  Clock Offset = T(NTP/SNTP server) - T(SNTP client)
+ *               = [( T2 - T1 ) + ( T3 - T4 )]
+ *                 ---------------------------
+ *                              2
+ *
+ * @note Both NTPv4 and SNTPv4 specifications suggest calculating the
+ * clock offset value, if possible. As the timestamp format uses 64 bit
+ * integer and there exist 2 orders of arithmetic calculations on the
+ * timestamp values (subtraction followed by addition as shown in the
+ * diagram above), the clock offset for the system can be calculated
+ * ONLY if the value can be represented in 62 significant bits and 2 sign
+ * bits i.e. if the system clock is within 34 years (in the future or past)
+ * of the server time.
+ *
+ * @param[in] pClientTxTime The system time of sending the SNTP request.
+ * This is the same as "T1" in the above diagram.
+ * @param[in] pServerRxTime The server time of receiving the SNTP request
+ * packet from the client. This is the same as "T2" in the above diagram.
+ * @param[in] pServerTxTime The server time of sending the SNTP response
+ * packet. This is the same as "T3" in the above diagram.
+ * @param[in] pClientRxTime The system time of receiving the SNTP response
+ * from the server. This is the same as "T4" in the above diagram.
+ * @param[out] pClockOffset The calculated offset value of the system clock
+ * relative to the server time, if the system clock is within 34 years of
+ * server time; otherwise, the seconds part of clock offset is set to
+ * #SNTP_CLOCK_OFFSET_OVERFLOW.
+ */
+void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
+                           const SntpTimestamp_t * pServerRxTime,
+                           const SntpTimestamp_t * pServerTxTime,
+                           const SntpTimestamp_t * pClientRxTime,
+                           SntpTimestamp_t * pClockOffset )
+{
+    int32_t firstOrderDiff = 0;
+
+    /* Calculate a sample first order difference value between the
+     * server and system timestamps. */
+    if( pClientRxTime->seconds > pServerTxTime->seconds )
+    {
+        firstOrderDiff = pClientRxTime->seconds - pServerTxTime->seconds;
+    }
+    else
+    {
+        firstOrderDiff = pServerTxTime->seconds - pClientRxTime->seconds;
+    }
+
+    /* Determine from the first order difference if the system time is within
+     * 34 years of server time to be able to calculate clock offset. */
+    if( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
+        == 0 )
+    {
+        /* Calculate the clock-offset as system time is within 34 years window
+         * of server time. */
+        SntpTimestamp_t firstOrderDiffSend;
+        SntpTimestamp_t firstOrderDiffRecv;
+
+        /* Perform ( T2 - T1 ) offset calculation of SNTP Request packet path. */
+        firstOrderDiffSend.seconds = pServerRxTime->seconds - pClientTxTime->seconds;
+        firstOrderDiffSend.fractions = pServerRxTime->fractions - pClientTxTime->fractions;
+
+        /* Perform ( T3 - T4 ) offset calculation of SNTP Response packet path. */
+        firstOrderDiffRecv.seconds = pServerTxTime->seconds - pClientRxTime->seconds;
+        firstOrderDiffRecv.fractions = pServerTxTime->fractions - pClientRxTime->fractions;
+
+        /* Perform second order calculation of using average of the above offsets. */
+        pClockOffset->seconds = ( firstOrderDiffSend.seconds + firstOrderDiffRecv.seconds ) >> 2;
+        pClockOffset->fractions = ( firstOrderDiffSend.fractions + firstOrderDiffRecv.fractions ) >> 2;
+    }
+    else
+    {
+        pClockOffset->seconds = SNTP_CLOCK_OFFSET_OVERFLOW;
+        pClockOffset->fractions = 0;
+    }
+}
+
+
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
+
                                     uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize )
@@ -223,6 +343,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                                        SntpResponseData_t * pParsedResponse )
 {
     SntpStatus_t status = SntpSuccess;
+    SntpPacket_t * pResponsePacket = ( SntpPacket_t * ) pResponseBuffer;
 
     if( pRequestTime == NULL )
     {
@@ -238,8 +359,6 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     }
     else
     {
-        SntpPacket_t * pResponsePacket = ( SntpPacket_t * ) pResponseBuffer;
-
         /* Check that the server response is valid. */
 
         /* Check if the packet represents a server in the "Mode" field. */
@@ -260,54 +379,64 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                 status = SntpInvalidResponse;
             }
         }
+    }
 
-        if( status == SntpSuccess )
+    if( status == SntpSuccess )
+    {
+        /* As the packet is valid, parse more information from it. */
+
+        /* Determine if the server has accepted or rejected the request for time. */
+        if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
         {
-            /* As the packet is valid, parse more information from it. */
+            /* Server has sent a Kiss-o'-Death message i.e. rejected the request. */
 
-            /* Determine if the server has accepted or rejected the request for time. */
-            if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
+            /* Extract the kiss-code sent by the server from the "Reference ID" field
+             * of the SNTP packet. */
+            pParsedResponse->pRejectedResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
+
+            /* Determine the return code based on the Kiss-o'-Death code. */
+            switch( pResponsePacket->refId )
             {
-                /* Server has sent a Kiss-o'-Death message i.e. rejected the request. */
+                case KOD_CODE_DENY_UINT_VALUE:
+                case KOD_CODE_RSTR_UINT_VALUE:
+                    status = SntpRejectedResponseChangeServer;
+                    break;
 
-                /* Extract the kiss-code sent by the server from the "Reference ID" field
-                 * of the SNTP packet. */
-                pParsedResponse->pResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
+                case KOD_CODE_RATE_UINT_VALUE:
+                    status = SntpRejectedResponseRetryWithBackoff;
+                    break;
 
-                /* Determine the return code based on the Kiss-o'-Death code. */
-                switch( pResponsePacket->refId )
-                {
-                    case KOD_CODE_DENY_UINT_VALUE:
-                    case KOD_CODE_RSTR_UINT_VALUE:
-                        status = SntpRejectedResponseChangeServer;
-                        break;
-
-                    case KOD_CODE_RATE_UINT_VALUE:
-                        status = SntpRejectedResponseRetryWithBackoff;
-                        break;
-
-                    default:
-                        status = SntpRejectedResponseOther;
-                }
+                default:
+                    status = SntpRejectedResponseOther;
             }
-            else
-            {
-                /* Server has responded successfully to the time request. */
-                int32_t firstOrderDiff = 0;
+        }
+        else
+        {
+            /* Server has responded successfully to the time request. */
 
-                /* Fill the output parameter with the server time which is the
-                 * "transmit" time in the response packet. */
-                pParsedResponse->serverTime.seconds =
-                    SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
-                pParsedResponse->serverTime.fractions =
-                    SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
+            /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
+             * to the time request. */
+            pParsedResponse->pRejectedResponseCode = NULL;
 
-                /* Extract information of any upcoming leap second from the response. */
-                pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t ) ( pResponsePacket->leapVersionMode
-                                                                             >> SNTP_LEAP_INDICATOR_LSB_POSITION );
+            /* Fill the output parameter with the server time which is the
+             * "transmit" time in the response packet. */
+            pParsedResponse->serverTime.seconds =
+                SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
+            pParsedResponse->serverTime.fractions =
+                SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
 
-                /* Determine if the clock offset can be calculated. */
-            }
+            /* Extract information of any upcoming leap second from the response. */
+            pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
+                                              ( pResponsePacket->leapVersionMode
+                                                >> SNTP_LEAP_INDICATOR_LSB_POSITION );
+
+            /* Calculate system clock offset relative to server time, if possible, within
+             * the 64 bit integer width of the SNTP timestamp. */
+            calculateClockOffset( &pResponsePacket->originTime,
+                                  &pResponsePacket->receiveTime,
+                                  &pResponsePacket->transmitTime,
+                                  pCurrentTime,
+                                  &pParsedResponse->clockOffset );
         }
     }
 

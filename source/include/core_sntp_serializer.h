@@ -75,12 +75,11 @@
  * @note A clock offset overflow occurs if the system time is beyond 34 years
  * (in the past or future) of the server time.
  *
- * @note The clock offset is a 62 bit signed integer value with 2 sign bits
- * (in the seconds part of the @ref SntpTimestamp_t representation of the value).
- * Thus, this macro uses a value that cannot be the result of offset arithmetic
- * calculation because a valid offset value will always have the 2 most significant
- * bits as either zero (i.e. to represent positive offer) or one (i.e. to represent
- * negative offset).
+ * @note The clock offset as a value with 62 significant bits and 2 sign bits
+ * in a 64 bit integer. This macro uses a value that cannot be a valid clock
+ * offset value as a valid value will always have the 2 most significant
+ * bits set as either zero (i.e. to represent positive offset) or one
+ * (i.e. to represent negative offset).
  */
 #define SNTP_CLOCK_OFFSET_OVERFLOW                   ( 0x7FFFFFFFU )
 
@@ -195,7 +194,7 @@ typedef struct SntpResponse
      * @note If the either the server does not send a Kiss-o'-Death packet,
      * this value will be #SNTP_KISS_OF_DEATH_CODE_INVALID.
      */
-    const char * pResponseCode;
+    const char * pRejectedResponseCode;
 
     /**
      * @brief The offset (in seconds) of the system clock relative to the
@@ -262,13 +261,26 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @note If the server has sent a Kiss-o'-Death message to reject the associated
  * time request, the API function will return the appropriate return code and,
  * also, provide the ASCII code (of fixed length, #SNTP_KISS_OF_DEATH_CODE_LENGTH bytes)
+ * in the #SntpResponseData_t.pResponseCode member of @p pParsedResponse parameter,
  * parsed from the response packet.
  * The application SHOULD respect the server rejection and take appropriate action
  * based on the rejection code.
+ * If the server response represents an accepted SNTP client request, then the API
+ * function will set the #SntpResponseData_t.pRejectedResponseCode member of
+ * @p pParsedResponse parameter to NULL.
+ *
+ * @note If the server has positively responded with its clock time, then this API
+ * function will calculate the clock-offset ONLY if the system clock is within
+ * 34 years of the server time mentioned in the response packet; otherwise the
+ * seconds part of the clock offset in @p pParsedResponse parameter will be set to
+ * #SNTP_CLOCK_OFFSET_OVERFLOW.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
  * time returned by the @ref Sntp_SerializeRequest API.
+ * @param[in] pCurrentTime The current time of the system, expressed as time
+ * since the SNTP epoch (i.e. 0h of 1st Jan 1900 ). This time will be used to
+ * calculate clock offset.
  * @param[in] pResponseBuffer The buffer containing the SNTP response from the
  * server.
  * @param[in] bufferSize The size of the @p pResponseBuffer containing the SNTP
