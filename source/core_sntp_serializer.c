@@ -134,9 +134,9 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE )
+    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
     {
-        status = SntpErrorInsufficientSpace;
+        status = SntpErrorBufferTooSmall;
     }
     else
     {

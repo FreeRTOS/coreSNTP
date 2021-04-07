@@ -38,10 +38,10 @@
  * @brief The base packet size of request and response of the (S)NTP protocol.
  * @note This is the packet size without any authentication headers for security
  * mechanism. If the application uses a security mechanism for communicating with
- * an (S)NTP server, it can perform add authentication data after the SNTP packet
- * is serialized with the @ref Sntp_SerializeRequest API function.
+ * an (S)NTP server, it can add authentication data after the SNTP packet is
+ * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE    ( 48U )
+#define SNTP_PACKET_MINIMUM_SIZE                     ( 48U )
 
 /**
  * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
@@ -91,9 +91,9 @@ typedef enum SntpStatus
     /**
      * @brief Application provided insufficient buffer space for serializing
      * or de-serializing an SNTP packet.
-     * The minimum size of an SNTP packet is #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+     * The minimum size of an SNTP packet is #SNTP_PACKET_MINIMUM_SIZE
      * bytes. */
-    SntpErrorInsufficientSpace,
+    SntpErrorBufferTooSmall,
 
     /**
      * @brief Server response failed validation checks for expected data in SNTP packet.
@@ -120,7 +120,7 @@ typedef struct SntpTimestamp
  * @brief Serializes an SNTP request packet to use for querying a
  * time server.
  *
- * This function will fill only #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+ * This function will fill only #SNTP_PACKET_MINIMUM_SIZE
  * bytes of data in the passed buffer.
  *
  * @param[in, out] pCurrentTime The current time of the system, expressed as time
@@ -135,7 +135,7 @@ typedef struct SntpTimestamp
  * @param[out] pBuffer The buffer that will be populated with the serialized
  * SNTP request packet.
  * @param[in] bufferSize The size of the @p pBuffer buffer. It should be at least
- * #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE bytes in size.
+ * #SNTP_PACKET_MINIMUM_SIZE bytes in size.
  *
  * @note It is recommended to use a True Random Generator (TRNG) to generate
  * the random number.
@@ -145,7 +145,7 @@ typedef struct SntpTimestamp
  * @return This functions returns one of the following:
  * - #SntpSuccess when serialization operation is successful.
  * - #SntpBadParameter if an invalid parameter is passed.
- * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
+ * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * for serializing an SNTP request packet.
  */
 /* @[define_sntp_serializerequest] */

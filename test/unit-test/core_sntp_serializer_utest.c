@@ -38,7 +38,7 @@
         .fractions = 1000      \
     }
 
-static uint8_t testBuffer[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE ];
+static uint8_t testBuffer[ SNTP_PACKET_MINIMUM_SIZE ];
 
 /* ============================   UNITY FIXTURES ============================ */
 
@@ -77,7 +77,7 @@ void test_SerializeRequest_InvalidParams( void )
                                               sizeof( testBuffer ) ) );
 
     /* Pass a buffer size less than 48 bytes of minimum SNTP packet size. */
-    TEST_ASSERT_EQUAL( SntpErrorInsufficientSpace,
+    TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
                        Sntp_SerializeRequest( &testTime,
                                               ( rand() % UINT32_MAX ),
                                               testBuffer,
@@ -99,15 +99,15 @@ void test_SerializeRequest_NominalCase( void )
         .fractions = ( testTime.fractions | ( randomVal >> 16 ) )
     };
 
-    uint8_t expectedSerialization[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE ] =
+    uint8_t expectedSerialization[ SNTP_PACKET_MINIMUM_SIZE ] =
     {
         0x00 /* Leap Indicator */ | 0x20 /* Version */ | 0x03, /* Client Mode */
         0x00,                                                  /* stratum */
         0x00,                                                  /* poll interval */
         0x00,                                                  /* precision */
-        0x00,                                                  /* root delay */
-        0x00,                                                  /* root dispersion */
-        0x00,                                                  /* reference ID */
+        0x00, 0x00, 0x00, 0x00,                                /* root delay */
+        0x00, 0x00, 0x00, 0x00,                                /* root dispersion */
+        0x00, 0x00, 0x00, 0x00,                                /* reference ID */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* reference time */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* origin timestamp */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* receive timestamp */
@@ -115,7 +115,7 @@ void test_SerializeRequest_NominalCase( void )
     };
 
     /* Update the expected transmit timestamp value. */
-    uint32_t * pTransmitTimePtr = ( uint32_t * ) ( &expectedSerialization[ SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE - 8 ] );
+    uint32_t * pTransmitTimePtr = ( uint32_t * ) ( &expectedSerialization[ SNTP_PACKET_MINIMUM_SIZE - 8 ] );
 
     *pTransmitTimePtr = htonl( expectedTxTime.seconds );
     *( ++pTransmitTimePtr ) = htonl( expectedTxTime.fractions );
@@ -131,7 +131,7 @@ void test_SerializeRequest_NominalCase( void )
     /* Validate that serialization operation by the API. */
     TEST_ASSERT_EQUAL_UINT8_ARRAY( expectedSerialization,
                                    testBuffer,
-                                   SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE );
+                                   SNTP_PACKET_MINIMUM_SIZE );
 
     /* Check that the request timestamp object has been updated with the random value. */
     TEST_ASSERT_EQUAL( 0, memcmp( &expectedTxTime,
