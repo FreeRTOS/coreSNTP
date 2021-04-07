@@ -40,7 +40,7 @@ rootdisp
 serializerequest
 sntp
 sntpbadparameter
-sntperrorinsufficientspace
+sntperrorbuffertoosmall
 sntpsuccess
 sntptimestamp
 sntpv
