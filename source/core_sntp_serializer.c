@@ -172,15 +172,28 @@ static const SntpPacket_t requestPacket =
 };
 
 /**
- * @brief Utility macro to convert a 32-bit integer from host to
- * network byte order or from network to host byte order.
+ * @brief Utility macro to convert a 32-bit integer from Big Endian to
+ * Little Endian (or network byte) order.
+ * @param[in] wordData The 32-bit integer to convert to its network byte
+ * order equivalent value.
  */
-#define SNTP_HTONL_NTOHL( wordData )                     \
+#define SNTP_HTONL( wordData )                           \
     ( uint32_t ) ( ( 0x000000FF & ( wordData >> 24 ) ) | \
                    ( 0x0000FF00 & ( wordData >> 8 ) ) |  \
                    ( 0x00FF0000 & ( wordData << 8 ) ) |  \
                    ( 0xFF000000 & ( wordData << 24 ) ) )
 
+/**
+ * @brief Utility macro to generate a 32-bit integer from memory containing
+ * integer in network (or Little Endian) byte order.
+ * @param[in] ptr Pointer to the memory containing 32-bit integer in network
+ * byte order.
+ */
+#define SNTP_BUILD_BIG_ENDIAN_WORD( ptr )                                               \
+    ( uint32_t ) ( ( 0x000000FF & ( uint32_t ) *( ( uint8_t * ) ptr ) ) |               \
+                   ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 8 ) ) |  \
+                   ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 16 ) ) | \
+                   ( 0xFF000000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 3 ) << 24 ) ) )
 
 /**
  * @brief Utility to calculate clock offset of system relative to the
@@ -344,7 +357,9 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         pParsedResponse->pRejectedResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
 
         /* Determine the return code based on the Kiss-o'-Death code. */
-        switch( pResponsePacket->refId )
+        uint32_t code = SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->refId );
+
+        switch( code )
         {
             case KOD_CODE_DENY_UINT_VALUE:
             case KOD_CODE_RSTR_UINT_VALUE:
@@ -370,9 +385,9 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */
         pParsedResponse->serverTime.seconds =
-            SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.seconds );
+            SNTP_HTONL( pResponsePacket->transmitTime.seconds );
         pParsedResponse->serverTime.fractions =
-            SNTP_HTONL_NTOHL( pResponsePacket->transmitTime.fractions );
+            SNTP_HTONL( pResponsePacket->transmitTime.fractions );
 
         /* Extract information of any upcoming leap second from the response. */
         pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
@@ -431,8 +446,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        pRequestPacket->transmitTime.seconds = SNTP_HTONL_NTOHL( pCurrentTime->seconds );
-        pRequestPacket->transmitTime.fractions = SNTP_HTONL_NTOHL( pCurrentTime->fractions );
+        pRequestPacket->transmitTime.seconds = SNTP_HTONL( pCurrentTime->seconds );
+        pRequestPacket->transmitTime.fractions = SNTP_HTONL( pCurrentTime->fractions );
 
         status = SntpSuccess;
     }
@@ -450,11 +465,8 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     SntpStatus_t status = SntpSuccess;
     SntpPacket_t * pResponsePacket = ( SntpPacket_t * ) pResponseBuffer;
 
-    if( pRequestTime == NULL )
-    {
-        status = SntpErrorBadParameter;
-    }
-    else if( pResponseBuffer == NULL )
+    if( ( pRequestTime == NULL ) || ( pResponseRxTime == NULL ) ||
+        ( pResponseBuffer == NULL ) || ( pParsedResponse == NULL ) )
     {
         status = SntpErrorBadParameter;
     }
@@ -477,9 +489,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
             /* Validate that the server has sent the client's request timestamp in the
              * "originate" timestamp field of the response. */
             if( ( pRequestTime->seconds !=
-                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.seconds ) ) ||
+                  SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->originTime.seconds ) ) ||
                 ( pRequestTime->fractions !=
-                  SNTP_HTONL_NTOHL( pResponsePacket->originTime.fractions ) ) )
+                  SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->originTime.fractions ) ) )
             {
                 status = SntpInvalidResponse;
             }
