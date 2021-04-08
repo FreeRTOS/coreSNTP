@@ -39,7 +39,7 @@ pclockoffset
 pcurrenttime
 pml
 pparsedresponse
-prejectedresponsecode
+rejectedresponsecode
 prequesttime
 presponsebuffer
 presponsecode
