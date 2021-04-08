@@ -36,26 +36,26 @@
  * @brief The version of SNTP supported by the coreSNTP library by complying
  * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
  */
-#define SNTP_VERSION            ( 4 )
+#define SNTP_VERSION           ( 4 )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT        ( 3 )
+#define SNTP_MODE_CLIENT       ( 3 )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER        ( 4 )
+#define SNTP_MODE_SERVER       ( 4 )
 
 /**
  * @brief Constant to represent an empty SNTP timestamp value.
  */
-#define SNTP_ZERO_TIMESTAMP     { 0U, 0U }
+#define SNTP_ZERO_TIMESTAMP    { 0U, 0U }
 
 /**
  * @brief The position of the "Version" information
@@ -63,7 +63,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define VERSION_POSITION    ( 3 )
+#define VERSION_POSITION       ( 3 )
 
 /**
  * @brief Structure representing an SNTP packet header.
@@ -76,12 +76,12 @@
  */
 typedef struct SntpPacket
 {
-    char leapVersionMode;         /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
+    uint8_t leapVersionMode;      /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
     uint8_t stratum;              /* stratum */
     uint8_t poll;                 /* poll interval */
     uint8_t precision;            /* precision */
     uint32_t rootDelay;           /* root delay */
-    uint32_t rootDispersion;            /* root dispersion */
+    uint32_t rootDispersion;      /* root dispersion */
     uint32_t refId;               /* reference ID */
     SntpTimestamp_t refTime;      /* reference time */
     SntpTimestamp_t originTime;   /* origin timestamp */
@@ -97,17 +97,17 @@ typedef struct SntpPacket
  */
 static const SntpPacket_t requestPacket =
 {
-    0 | ( SNTP_VERSION << VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
-    0,                                                               /* stratum */
-    0,                                                               /* poll interval */
-    0,                                                               /* precision */
-    0,                                                               /* root delay */
-    0,                                                               /* root dispersion */
-    0,                                                               /* reference ID */
-    SNTP_ZERO_TIMESTAMP,                                             /* reference time */
-    SNTP_ZERO_TIMESTAMP,                                             /* origin timestamp */
-    SNTP_ZERO_TIMESTAMP,                                             /* receive timestamp */
-    SNTP_ZERO_TIMESTAMP                                              /* transmit timestamp */
+    0 | ( SNTP_VERSION << VERSION_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
+    0,                                                           /* stratum */
+    0,                                                           /* poll interval */
+    0,                                                           /* precision */
+    0,                                                           /* root delay */
+    0,                                                           /* root dispersion */
+    0,                                                           /* reference ID */
+    SNTP_ZERO_TIMESTAMP,                                         /* reference time */
+    SNTP_ZERO_TIMESTAMP,                                         /* origin timestamp */
+    SNTP_ZERO_TIMESTAMP,                                         /* receive timestamp */
+    SNTP_ZERO_TIMESTAMP                                          /* transmit timestamp */
 };
 
 /**

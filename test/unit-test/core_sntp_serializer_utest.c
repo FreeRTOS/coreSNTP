@@ -20,10 +20,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/* Standard includes. */
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+
+/* POSIX include. */
 #include <arpa/inet.h>
 
 /* Unity include. */

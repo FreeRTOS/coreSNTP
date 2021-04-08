@@ -41,6 +41,7 @@ retryable
 rfc
 rootdelay
 rootdisp
+rootdispersion
 serializerequest
 sntp
 sntpbadparameter
@@ -54,5 +55,6 @@ transmittime
 trng
 uint
 utc
+wordmemory
 wordval
 xffff
