@@ -38,10 +38,21 @@
  * @brief The base packet size of request and response of the (S)NTP protocol.
  * @note This is the packet size without any authentication headers for security
  * mechanism. If the application uses a security mechanism for communicating with
- * an (S)NTP server, it can perform add authentication data after the SNTP packet
- * is serialized with the @ref Sntp_SerializeRequest API function.
+ * an (S)NTP server, it can add authentication data after the SNTP packet is
+ * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE    ( 48U )
+#define SNTP_PACKET_MINIMUM_SIZE                     ( 48U )
+
+/**
+ * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
+ *
+ * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
+ * resolution of 2^(-32) seconds ~ 232 picoseconds.
+ *
+ * @note The application can use this value to convert fractions part of system
+ * time into SNTP timestamp format.
+ */
+#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
 
 /**
  * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
@@ -129,9 +140,9 @@ typedef enum SntpStatus
     /**
      * @brief Application provided insufficient buffer space for serializing
      * or de-serializing an SNTP packet.
-     * The minimum size of an SNTP packet is #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+     * The minimum size of an SNTP packet is #SNTP_PACKET_MINIMUM_SIZE
      * bytes. */
-    SntpErrorInsufficientSpace,
+    SntpErrorBufferTooSmall,
 
     /**
      * @brief Server response failed validation checks for expected data in SNTP packet.
@@ -159,7 +170,6 @@ typedef enum SntpLeapSecondInfo
     AlarmServerNotSynchronized = 0x03 /** <@brief An alarm condition meaning that server's time is not synchronized
                                        * to an upstream NTP (or SNTP) server. */
 } SntpLeapSecondInfo_t;
-
 
 /**
  * @ingroup core_sntp_struct_types
@@ -225,7 +235,7 @@ typedef struct SntpResponse
  * @brief Serializes an SNTP request packet to use for querying a
  * time server.
  *
- * This function will fill only #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+ * This function will fill only #SNTP_PACKET_MINIMUM_SIZE
  * bytes of data in the passed buffer.
  *
  * @param[in, out] pCurrentTime The current time of the system, expressed as time
@@ -239,8 +249,13 @@ typedef struct SntpResponse
  * [RFC 4330 Section 5](https://tools.ietf.org/html/rfc4330#section-3).
  * @param[out] pBuffer The buffer that will be populated with the serialized
  * SNTP request packet.
+ * <<<<<<< HEAD
  * @param[in] bufferSize The size of the @p pBuffer buffer. It MUST be at least
- * #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE bytes in size.
+ * #SNTP_PACKET_MINIMUM_SIZE bytes in size.
+ * =======
+ * @param[in] bufferSize The size of the @p pBuffer buffer. It should be at least
+ * #SNTP_PACKET_MINIMUM_SIZE bytes in size.
+ * >>>>>>> api/add-serialize-function-and-unit-tests
  *
  * @note It is recommended to use a True Random Generator (TRNG) to generate
  * the random number.
@@ -250,7 +265,7 @@ typedef struct SntpResponse
  * @return This function returns one of the following:
  * - #SntpSuccess when serialization operation is successful.
  * - #SntpBadParameter if an invalid parameter is passed.
- * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
+ * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * for serializing an SNTP request packet.
  */
 /* @[define_sntp_serializerequest] */
@@ -264,7 +279,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @brief De-serializes an SNTP packet received from a server as a response
  * to a SNTP request.
  *
- * This function will parse only the #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE
+ * This function will parse only the #SNTP_PACKET_MINIMUM_SIZE
  * bytes of data in the passed buffer.
  *
  * @note If the server has sent a Kiss-o'-Death message to reject the associated
@@ -293,7 +308,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @param[in] pResponseBuffer The buffer containing the SNTP response from the
  * server.
  * @param[in] bufferSize The size of the @p pResponseBuffer containing the SNTP
- * response. It MUST be at least #SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE bytes
+ * response. It MUST be at least #SNTP_PACKET_MINIMUM_SIZE bytes
  * long for a valid SNTP response.
  * @param[out] pParsedResponse The information parsed from the SNTP response packet.
  * If possible to calculate, it also contains the system clock offset relative

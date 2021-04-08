@@ -34,7 +34,8 @@
 #include "core_sntp_serializer.h"
 
 /**
- * @brief The version of SNTP supported by the coreSNTP library.
+ * @brief The version of SNTP supported by the coreSNTP library by complying
+ * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
  */
 #define SNTP_VERSION                                        ( 4 )
 
@@ -90,6 +91,8 @@
 /**
  * @brief The least-significant bit position of the "Version" information
  * in the first byte of an SNTP packet.
+ * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
+ * for more information.
  */
 #define VERSION_LSB_POSITION                                ( 3 )
 
@@ -131,7 +134,10 @@
 #define CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK    ( 0xC0000000U )
 
 /**
- * @brief Structure representing an (S)NTP packet header.
+ * @brief Structure representing an SNTP packet header.
+ * For more information on SNTP packet format, refer to
+ * [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4).
+ *
  * @note This does not include extension fields for authentication data
  * for secure SNTP communication. Authentication data follows the
  * packet header represented by this structure.
@@ -152,7 +158,7 @@ typedef struct SntpPacket
 } SntpPacket_t;
 
 /**
- * @brief Object representing data that is common any SNTP request.
+ * @brief Object representing data that is common to any SNTP request.
  * @note The @ref Sntp_SerializeRequest API will fill the "originate
  * timestamp" with value provided by the application.
  */
@@ -172,16 +178,21 @@ static const SntpPacket_t requestPacket =
 };
 
 /**
- * @brief Utility macro to convert a 32-bit integer from Big Endian to
- * Little Endian (or network byte) order.
- * @param[in] wordData The 32-bit integer to convert to its network byte
- * order equivalent value.
+ * @brief Utility macro to fill 32-bit integer in word-sized
+ * memory in network byte (or Little Endian) order.
+ *
+ * @note This utility ensures that data is filled in memory
+ * in expected network byte order, as an assignment operation
+ * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
+ * of network-byte ordering getting reversed on Little Endian platforms.
  */
-#define SNTP_HTONL( wordData )                           \
-    ( uint32_t ) ( ( 0x000000FF & ( wordData >> 24 ) ) | \
-                   ( 0x0000FF00 & ( wordData >> 8 ) ) |  \
-                   ( 0x00FF0000 & ( wordData << 8 ) ) |  \
-                   ( 0xFF000000 & ( wordData << 24 ) ) )
+#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )      \
+    do {                                                                    \
+        *( ( uint8_t * ) wordMemory ) = ( uint8_t ) wordData;               \
+        *( ( uint8_t * ) wordMemory + 1 ) = ( uint8_t ) ( wordData >> 8 );  \
+        *( ( uint8_t * ) wordMemory + 2 ) = ( uint8_t ) ( wordData >> 16 ); \
+        *( ( uint8_t * ) wordMemory + 3 ) = ( uint8_t ) ( wordData >> 24 ); \
+    } while( 0 )
 
 /**
  * @brief Utility macro to generate a 32-bit integer from memory containing
@@ -421,9 +432,9 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE )
+    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
     {
-        status = SntpErrorInsufficientSpace;
+        status = SntpErrorBufferTooSmall;
     }
     else
     {
@@ -445,10 +456,10 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        pRequestPacket->transmitTime.seconds = SNTP_HTONL( pCurrentTime->seconds );
-        pRequestPacket->transmitTime.fractions = SNTP_HTONL( pCurrentTime->fractions );
-
-        status = SntpSuccess;
+        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.seconds,
+                                                pCurrentTime->seconds );
+        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.fractions,
+                                                pCurrentTime->fractions );
     }
 
     return status;
@@ -469,9 +480,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_REQUEST_RESPONSE_MINIMUM_PACKET_SIZE )
+    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
     {
-        status = SntpErrorInsufficientSpace;
+        status = SntpErrorBufferTooSmall;
     }
     else
     {

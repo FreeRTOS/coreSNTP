@@ -64,7 +64,7 @@ rstr
 serializerequest
 sntp
 sntpbadparameter
-sntperrorinsufficientspace
+sntperrorbuffertoosmall
 sntpinvalidresponse
 sntprejectedresponsechangeserver
 sntprejectedresponsecodeother
