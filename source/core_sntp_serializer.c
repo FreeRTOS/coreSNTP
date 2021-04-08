@@ -25,8 +25,9 @@
  * @brief Implementation of the Serializer API of the coreSNTP library.
  */
 
-/* Standard include. */
+/* Standard includes. */
 #include <string.h>
+#include <assert.h>
 
 /* Include API header. */
 #include "core_sntp_serializer.h"
@@ -112,19 +113,26 @@ static const SntpPacket_t requestPacket =
  * @brief Utility macro to fill 32-bit integer in word-sized
  * memory in network byte (or Little Endian) order.
  *
+ * @param[out] wordMemory Pointer to the word-sized memory in which
+ * the 32-bit integer will be filled.
+ * @param[in] data The 32-bit integer to fill in the @p wordMemory
+ * in network byte order.
+ *
  * @note This utility ensures that data is filled in memory
  * in expected network byte order, as an assignment operation
  * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
  * of network-byte ordering getting reversed on Little Endian platforms.
  */
-#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )      \
-    do {                                                                    \
-        *( ( uint8_t * ) wordMemory ) = ( uint8_t ) wordData;               \
-        *( ( uint8_t * ) wordMemory + 1 ) = ( uint8_t ) ( wordData >> 8 );  \
-        *( ( uint8_t * ) wordMemory + 2 ) = ( uint8_t ) ( wordData >> 16 ); \
-        *( ( uint8_t * ) wordMemory + 3 ) = ( uint8_t ) ( wordData >> 24 ); \
-    } while( 0 )
+static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
+                                          uint32_t data )
+{
+    assert( pWordMemory != NULL );
 
+    *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) data;
+    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( data >> 8 );
+    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( data >> 16 );
+    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) ( data >> 24 );
+}
 
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     uint32_t randomNumber,
@@ -165,10 +173,10 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.seconds,
-                                                pCurrentTime->seconds );
-        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.fractions,
-                                                pCurrentTime->fractions );
+        fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.seconds,
+                                      pCurrentTime->seconds );
+        fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.fractions,
+                                      pCurrentTime->fractions );
     }
 
     return status;
