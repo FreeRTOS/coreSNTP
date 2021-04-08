@@ -9,11 +9,14 @@ coresntp
 de
 december
 deserializeresponse
+endian
 endif
 enum
+expectedtxtime
 faqs
 gov
 html
+htonl
 https
 ietf
 ifndef
@@ -39,7 +42,6 @@ pclockoffset
 pcurrenttime
 pml
 pparsedresponse
-rejectedresponsecode
 prequesttime
 presponsebuffer
 presponsecode
@@ -47,11 +49,13 @@ presponsepacket
 presponserxtime
 pserverrxtime
 pservertxtime
+pwordmemory
 randomnum
 randomnumber
 receivetime
 refid
 reftime
+rejectedresponsecode
 retryable
 rfc
 rootdelay
@@ -74,5 +78,6 @@ transmittime
 trng
 uint
 utc
+wordval
 www
 xffff
