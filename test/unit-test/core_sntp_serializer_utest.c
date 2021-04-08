@@ -47,8 +47,9 @@
 #define SNTP_PACKET_MODE_SERVER                        ( 4 )
 #define SNTP_PACKET_MODE_CLIENT                        ( 3 )
 
-/* The word positions of SNTP packet fields in the 12-word (or 48 bytes)
- * sized packet format. */
+/* The byte positions of SNTP packet fields in the 48 bytes sized
+ * packet format. */
+#define SNTP_PACKET_STRATUM_BYTE_POS                   ( 1 )
 #define SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS            ( 12 )
 #define SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS    ( 24 )
 
@@ -66,6 +67,37 @@
                      ( ( uint32_t ) codePtr[ 3 ] ) ) )
 
 static uint8_t testBuffer[ SNTP_PACKET_MINIMUM_SIZE ];
+
+/* ============================ Helper Functions ============================ */
+
+void generateValidSntpResponse( uint8_t * pBuffer,
+                                SntpTimestamp_t * pRequestTime )
+{
+    /* Clear the buffer. */
+    memset( pBuffer, 0, SNTP_PACKET_MINIMUM_SIZE );
+
+    /* Set the "Version" and "Mode" fields in the first byte of SNTP packet. */
+    pBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
+
+    /* Convert the request time into network byte order to use in the
+     * "originate" timestamp field of the response packet. */
+    SntpTimestamp_t networkOrderTime =
+    {
+        .seconds   = htonl( pRequestTime->seconds ),
+        .fractions = htonl( pRequestTime->fractions )
+    };
+
+    /* Set the SNTP response packet to contain the "originate" timestamp
+     * correctly, as matching the SNTP request timestamp. */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS ] = networkOrderTime.seconds >> 24;       /* origin timestamp - seconds, byte 1*/
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 1 ] = networkOrderTime.seconds >> 16;   /* origin timestamp - seconds, byte 2 */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 2 ] = networkOrderTime.seconds >> 8;    /* origin timestamp - seconds, byte 3 */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 3 ] = networkOrderTime.seconds;         /* origin timestamp - seconds, byte 4 */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 4 ] = networkOrderTime.fractions >> 24; /* origin timestamp - fractions, byte 1*/
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 5 ] = networkOrderTime.fractions >> 16; /* origin timestamp - fractions, byte 2 */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 6 ] = networkOrderTime.fractions >> 8;  /* origin timestamp - fractions, byte 3 */
+    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 7 ] = networkOrderTime.fractions;       /* origin timestamp - fractions, byte 4 */
+}
 
 /* ============================   UNITY FIXTURES ============================ */
 
@@ -224,19 +256,7 @@ void test_DeserializeResponse_Invalid_Responses( void )
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
     SntpResponseData_t parsedData = { 0 };
 
-    /* Clear the global buffer. */
-    memset( testBuffer, 0, sizeof( testBuffer ) );
-
-    /* Set the SNTP response packet to contain the "originate" timestamp
-     * correctly, as matching the SNTP request timestamp. */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS ] = htonl( testTime.seconds ) >> 24;       /* origin timestamp - seconds, byte 1*/
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 1 ] = htonl( testTime.seconds ) >> 16;   /* origin timestamp - seconds, byte 2 */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 2 ] = htonl( testTime.seconds ) >> 8;    /* origin timestamp - seconds, byte 3 */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 3 ] = htonl( testTime.seconds );         /* origin timestamp - seconds, byte 4 */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 4 ] = htonl( testTime.fractions ) >> 24; /* origin timestamp - fractions, byte 1*/
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 5 ] = htonl( testTime.fractions ) >> 16; /* origin timestamp - fractions, byte 2 */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 6 ] = htonl( testTime.fractions ) >> 8;  /* origin timestamp - fractions, byte 3 */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 7 ] = htonl( testTime.fractions );       /* origin timestamp - fractions, byte 4 */
+    generateValidSntpResponse( testBuffer, &testTime );
 
     /* Test with SNTP packet containing a non-server value in the "Mode" field. */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_CLIENT;
@@ -279,47 +299,32 @@ void test_DeserializeResponse_KoD_packets( void )
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
     SntpResponseData_t parsedData = { 0 };
     uint32_t KodCodeNetworkOrder = 0;
-    /* SNTP packet representing a Kiss-o'-Death message. */
-    uint8_t KodResponse[] =
-    {
-        0 | SNTP_PACKET_VERSION_VAL | 4,                /* Leap Indicator | Version | Server mode */
-        0x00,                                           /* Stratum (value 0 for KoD) */
-        0x00,                                           /* Poll Interval (Ignore) */
-        0x00,                                           /* Precision (Ignore) */
-        0x00, 0x00, 0x00, 0x00,                         /* root delay (Ignore)*/
-        0x00, 0x00, 0x00, 0x00,                         /* root dispersion (Ignore) */
-        0x00, 0x00, 0x00, 0x00,                         /* KoD Code  (Will be filled with specific codes in test) */
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* reference time (Ignore) */
-        htonl( testTime.seconds ) >> 24,                /* origin timestamp - seconds, byte 1*/
-        htonl( testTime.seconds ) >> 16,                /* origin timestamp - seconds, byte 2 */
-        htonl( testTime.seconds ) >> 8,                 /* origin timestamp - seconds, byte 3 */
-        htonl( testTime.seconds ),                      /* origin timestamp - seconds, byte 4 */
-        htonl( testTime.fractions ) >> 24,              /* origin timestamp - fractions, byte 1*/
-        htonl( testTime.fractions ) >> 16,              /* origin timestamp - fractions, byte 2 */
-        htonl( testTime.fractions ) >> 8,               /* origin timestamp - fractions, byte 3 */
-        htonl( testTime.fractions ),                    /* origin timestamp - fractions, byte 4 */
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* receive timestamp (Ignore)*/
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /* transmit timestamp (Ignore)*/
-    };
+
+    /* Populate the buffer with a valid SNTP response before converting it
+     * into a Kiss-o'-Death message. */
+    generateValidSntpResponse( testBuffer, &testTime );
+
+    /* Update the "Stratum" field in the buffer to make the packet a Kiss-o'-Death message. */
+    testBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = 0;
 
 /* Common test code for testing de-serialization of Kiss-o'-Death packet containing a specific
  * code with@ref Sntp_DeserializeResponse API. */
-#define TEST_API_FOR_KOD_CODE( code, expectedStatus )                                       \
-    do {                                                                                    \
-        KodCodeNetworkOrder = htonl( INTEGER_VAL_OF_KOD_CODE( KOD_CODE_DENY ) );            \
-        KodResponse[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS ] = KodCodeNetworkOrder >> 24;     \
-        KodResponse[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 1 ] = KodCodeNetworkOrder >> 16; \
-        KodResponse[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 2 ] = KodCodeNetworkOrder >> 8;  \
-        KodResponse[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 3 ] = KodCodeNetworkOrder;       \
-                                                                                            \
-        /* Call API under test. */                                                          \
-        TEST_ASSERT_EQUAL( expectedStatus,                                                  \
-                           Sntp_DeserializeResponse( &testTime,                             \
-                                                     &testTime,                             \
-                                                     KodResponse,                           \
-                                                     sizeof( KodResponse ),                 \
-                                                     &parsedData ) );                       \
-                                                                                            \
+#define TEST_API_FOR_KOD_CODE( code, expectedStatus )                                      \
+    do {                                                                                   \
+        KodCodeNetworkOrder = htonl( INTEGER_VAL_OF_KOD_CODE( KOD_CODE_DENY ) );           \
+        testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS ] = KodCodeNetworkOrder >> 24;     \
+        testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 1 ] = KodCodeNetworkOrder >> 16; \
+        testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 2 ] = KodCodeNetworkOrder >> 8;  \
+        testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 3 ] = KodCodeNetworkOrder;       \
+                                                                                           \
+        /* Call API under test. */                                                         \
+        TEST_ASSERT_EQUAL( expectedStatus,                                                 \
+                           Sntp_DeserializeResponse( &testTime,                            \
+                                                     &testTime,                            \
+                                                     testBuffer,                           \
+                                                     sizeof( testBuffer ),                 \
+                                                     &parsedData ) );                      \
+                                                                                           \
         /* Test that API has populated the output parameter with the parsed \
          * KoD code. */                                              \
         TEST_ASSERT_EQUAL( INTEGER_VAL_OF_KOD_CODE( KOD_CODE_DENY ), \

@@ -200,7 +200,7 @@ static const SntpPacket_t requestPacket =
  * @param[in] ptr Pointer to the memory containing 32-bit integer in network
  * byte order.
  */
-#define SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( ptr )                                        \
+#define READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( ptr )                                 \
     ( uint32_t ) ( ( 0x000000FF & ( uint32_t ) *( ( uint8_t * ) ptr ) ) |               \
                    ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 8 ) ) |  \
                    ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 16 ) ) | \
@@ -366,10 +366,10 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         /* Extract the kiss-code sent by the server from the "Reference ID" field
          * of the SNTP packet. */
         pParsedResponse->rejectedResponseCode =
-            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->refId );
+            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->refId );
 
         /* Determine the return code based on the Kiss-o'-Death code. */
-        switch( SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->refId ) )
+        switch( READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->refId ) )
         {
             case KOD_CODE_DENY_UINT_VALUE:
             case KOD_CODE_RSTR_UINT_VALUE:
@@ -395,9 +395,9 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */
         pParsedResponse->serverTime.seconds =
-            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->transmitTime.seconds );
+            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->transmitTime.seconds );
         pParsedResponse->serverTime.fractions =
-            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->transmitTime.fractions );
+            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->transmitTime.fractions );
 
         /* Extract information of any upcoming leap second from the response. */
         pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
@@ -499,9 +499,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
             /* Validate that the server has sent the client's request timestamp in the
              * "originate" timestamp field of the response. */
             if( ( pRequestTime->seconds !=
-                  SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->originTime.seconds ) ) ||
+                  READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->originTime.seconds ) ) ||
                 ( pRequestTime->fractions !=
-                  SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->originTime.fractions ) ) )
+                  READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->originTime.fractions ) ) )
             {
                 status = SntpInvalidResponse;
             }
