@@ -99,6 +99,7 @@ void test_SerializeRequest_NominalCase( void )
         .fractions = ( testTime.fractions | ( randomVal >> 16 ) )
     };
 
+    /* The expected serialization of the SNTP request packet. */
     uint8_t expectedSerialization[ SNTP_PACKET_MINIMUM_SIZE ] =
     {
         0x00 /* Leap Indicator */ | 0x20 /* Version */ | 0x03, /* Client Mode */
@@ -111,15 +112,15 @@ void test_SerializeRequest_NominalCase( void )
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* reference time */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* origin timestamp */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* receive timestamp */
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00         /* transmit timestamp */
+        htonl( expectedTxTime.seconds ) >> 24,                 /* transmit timestamp - seconds, byte 1 */
+        htonl( expectedTxTime.seconds ) >> 16,                 /* transmit timestamp - seconds, byte 2 */
+        htonl( expectedTxTime.seconds ) >> 8,                  /* transmit timestamp - seconds, byte 3 */
+        htonl( expectedTxTime.seconds ),                       /* transmit timestamp - seconds, byte 4 */
+        htonl( expectedTxTime.fractions ) >> 24,               /* transmit timestamp - fractions, byte 1 */
+        htonl( expectedTxTime.fractions ) >> 16,               /* transmit timestamp - fractions, byte 2 */
+        htonl( expectedTxTime.fractions ) >> 8,                /* transmit timestamp - fractions, byte 3 */
+        htonl( expectedTxTime.fractions ),                     /* transmit timestamp - fractions, byte 4 */
     };
-
-    /* Update the expected transmit timestamp value. */
-    uint32_t * pTransmitTimePtr = ( uint32_t * ) ( &expectedSerialization[ SNTP_PACKET_MINIMUM_SIZE - 8 ] );
-
-    *pTransmitTimePtr = htonl( expectedTxTime.seconds );
-    *( ++pTransmitTimePtr ) = htonl( expectedTxTime.fractions );
-
 
     /* Call the API under test. */
     TEST_ASSERT_EQUAL( SntpSuccess,

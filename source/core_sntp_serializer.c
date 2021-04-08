@@ -109,14 +109,21 @@ static const SntpPacket_t requestPacket =
 };
 
 /**
- * @brief Utility macro to convert a 32-bit integer from host to
- * network byte order.
+ * @brief Utility macro to fill 32-bit integer in word-sized
+ * memory in network byte (or Little Endian) order.
+ * 
+ * @note This utility ensures that data is filled in memory
+ * in expected network byte order, as an assignment operation 
+ * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
+ * of network-byte ordering getting reversed on Little Endian platforms.
  */
-#define SNTP_HTONL( wordData )                           \
-    ( uint32_t ) ( ( 0x000000FF & ( wordData >> 24 ) ) | \
-                   ( 0x0000FF00 & ( wordData >> 8 ) ) |  \
-                   ( 0x00FF0000 & ( wordData << 8 ) ) |  \
-                   ( 0xFF000000 & ( wordData << 24 ) ) )
+#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )                  \
+    do {                                                                    \
+        *( ( uint8_t * ) wordMemory ) = ( uint8_t ) wordData;               \
+        *( ( uint8_t * ) wordMemory + 1 ) = ( uint8_t ) ( wordData >> 8 );  \
+        *( ( uint8_t * ) wordMemory + 2 ) = ( uint8_t ) ( wordData >> 16 ); \
+        *( ( uint8_t * ) wordMemory + 3 ) = ( uint8_t ) ( wordData >> 24 ); \
+    } while( 0 )
 
 
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
@@ -158,8 +165,10 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        pRequestPacket->transmitTime.seconds = SNTP_HTONL( pCurrentTime->seconds );
-        pRequestPacket->transmitTime.fractions = SNTP_HTONL( pCurrentTime->fractions );
+        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.seconds,
+                                    pCurrentTime->seconds );
+        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.fractions,
+                                    pCurrentTime->fractions );
     }
 
     return status;
