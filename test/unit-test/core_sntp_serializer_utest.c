@@ -29,7 +29,7 @@
 /* Unity include. */
 #include "unity.h"
 
-/* Backoff Algorithm library include */
+/* coreSNTP API include */
 #include "core_sntp_serializer.h"
 
 #define TEST_TIMESTAMP         \
