@@ -89,12 +89,12 @@
 #define SNTP_ZERO_TIMESTAMP                                 { 0U, 0U }
 
 /**
- * @brief The least-significant bit position of the "Version" information
+ * @brief The position of the "Version" information
  * in the first byte of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define VERSION_LSB_POSITION                                ( 3 )
+#define VERSION_POSITION                                    ( 3 )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "DENY", used
@@ -144,12 +144,12 @@
  */
 typedef struct SntpPacket
 {
-    char leapVersionMode;         /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
+    uint8_t leapVersionMode;      /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
     uint8_t stratum;              /* stratum */
     uint8_t poll;                 /* poll interval */
     uint8_t precision;            /* precision */
     uint32_t rootDelay;           /* root delay */
-    uint32_t rootDisp;            /* root dispersion */
+    uint32_t rootDispersion;      /* root dispersion */
     uint32_t refId;               /* reference ID */
     SntpTimestamp_t refTime;      /* reference time */
     SntpTimestamp_t originTime;   /* origin timestamp */
@@ -159,40 +159,49 @@ typedef struct SntpPacket
 
 /**
  * @brief Object representing data that is common to any SNTP request.
+ *
  * @note The @ref Sntp_SerializeRequest API will fill the "originate
  * timestamp" with value provided by the application.
  */
 static const SntpPacket_t requestPacket =
 {
-    0 | ( SNTP_VERSION << VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /* leap indicator | version number | mode */
-    0,                                                               /* stratum */
-    0,                                                               /* poll interval */
-    0,                                                               /* precision */
-    0,                                                               /* root delay */
-    0,                                                               /* root dispersion */
-    0,                                                               /* reference ID */
-    SNTP_ZERO_TIMESTAMP,                                             /* reference time */
-    SNTP_ZERO_TIMESTAMP,                                             /* origin timestamp */
-    SNTP_ZERO_TIMESTAMP,                                             /* receive timestamp */
-    SNTP_ZERO_TIMESTAMP                                              /* transmit timestamp */
+    0 | ( SNTP_VERSION << VERSION_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
+    0,                                                           /* stratum */
+    0,                                                           /* poll interval */
+    0,                                                           /* precision */
+    0,                                                           /* root delay */
+    0,                                                           /* root dispersion */
+    0,                                                           /* reference ID */
+    SNTP_ZERO_TIMESTAMP,                                         /* reference time */
+    SNTP_ZERO_TIMESTAMP,                                         /* origin timestamp */
+    SNTP_ZERO_TIMESTAMP,                                         /* receive timestamp */
+    SNTP_ZERO_TIMESTAMP                                          /* transmit timestamp */
 };
 
 /**
  * @brief Utility macro to fill 32-bit integer in word-sized
  * memory in network byte (or Little Endian) order.
  *
+ * @param[out] pWordMemory Pointer to the word-sized memory in which
+ * the 32-bit integer will be filled.
+ * @param[in] data The 32-bit integer to fill in the @p wordMemory
+ * in network byte order.
+ *
  * @note This utility ensures that data is filled in memory
  * in expected network byte order, as an assignment operation
  * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
  * of network-byte ordering getting reversed on Little Endian platforms.
  */
-#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )      \
-    do {                                                                    \
-        *( ( uint8_t * ) wordMemory ) = ( uint8_t ) wordData;               \
-        *( ( uint8_t * ) wordMemory + 1 ) = ( uint8_t ) ( wordData >> 8 );  \
-        *( ( uint8_t * ) wordMemory + 2 ) = ( uint8_t ) ( wordData >> 16 ); \
-        *( ( uint8_t * ) wordMemory + 3 ) = ( uint8_t ) ( wordData >> 24 ); \
-    } while( 0 )
+static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
+                                          uint32_t data )
+{
+    assert( pWordMemory != NULL );
+
+    *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) data;
+    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( data >> 8 );
+    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( data >> 16 );
+    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) ( data >> 24 );
+}
 
 /**
  * @brief Utility macro to generate a 32-bit integer from memory containing
@@ -354,7 +363,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * indicating that client cannot be retry requests to it.
  * - #SntpRejectedResponseRetryWithBackoff if the server rejected with a code
  * indicating that client should back-off before retrying request.
- * - #SntpRejectedResponseCodeOther if the server rejected with a code
+ * - #SntpRejectedResponseOtherCode if the server rejected with a code
  * other than "DENY", "RSTR" and "RATE".
  */
 static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket,
@@ -393,7 +402,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
                 break;
 
             default:
-                status = SntpRejectedResponseCodeOther;
+                status = SntpRejectedResponseOtherCode;
         }
     }
     else
@@ -444,7 +453,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
+    else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
         status = SntpErrorBufferTooSmall;
     }
@@ -468,10 +477,10 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
-        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.seconds,
-                                                pCurrentTime->seconds );
-        FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.fractions,
-                                                pCurrentTime->fractions );
+        fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.seconds,
+                                      pCurrentTime->seconds );
+        fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.fractions,
+                                      pCurrentTime->fractions );
     }
 
     return status;
@@ -492,7 +501,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
+    else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
         status = SntpErrorBufferTooSmall;
     }

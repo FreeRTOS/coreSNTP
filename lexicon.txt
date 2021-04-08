@@ -41,6 +41,7 @@ pclienttxtime
 pclockoffset
 pcurrenttime
 pml
+posix
 pparsedresponse
 prequesttime
 presponsebuffer
@@ -60,6 +61,7 @@ retryable
 rfc
 rootdelay
 rootdisp
+rootdispersion
 rstr
 serializerequest
 sntp
@@ -67,7 +69,7 @@ sntpbadparameter
 sntperrorbuffertoosmall
 sntpinvalidresponse
 sntprejectedresponsechangeserver
-sntprejectedresponsecodeother
+SntpRejectedResponseOtherCode
 sntprejectedresponseretrywithbackoff
 sntpsuccess
 sntptimestamp
@@ -78,6 +80,7 @@ transmittime
 trng
 uint
 utc
+wordmemory
 wordval
 www
 xffff
