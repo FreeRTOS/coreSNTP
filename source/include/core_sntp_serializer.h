@@ -41,18 +41,20 @@
  * an (S)NTP server, it can add authentication data after the SNTP packet is
  * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_PACKET_MINIMUM_SIZE                     ( 48U )
+#define SNTP_PACKET_MINIMUM_SIZE               ( 48U )
 
 /**
- * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
+ * @brief Number  timestamp fraction's value for 1 microsecond.
  *
  * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
  * resolution of 2^(-32) seconds ~ 232 picoseconds.
  *
  * @note The application can use this value to convert fractions part of system
- * time into SNTP timestamp format.
+ * time into SNTP timestamp format. For example, if the microseconds
+ * part of system time is n microseconds, the fractions value to be used for the
+ * SNTP timestamp fraction part will be n * SNTP_FRACTIONS_PER_MICROSECOND.
  */
-#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
+#define SNTP_FRACTION_VALUE_PER_MICROSECOND    ( 4295U )
 
 /**
  * @ingroup core_sntp_enum_types
