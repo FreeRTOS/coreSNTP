@@ -114,7 +114,7 @@ static const SntpPacket_t requestPacket =
  * @brief Utility macro to fill 32-bit integer in word-sized
  * memory in network byte (or Little Endian) order.
  *
- * @param[out] wordMemory Pointer to the word-sized memory in which
+ * @param[out] pWordMemory Pointer to the word-sized memory in which
  * the 32-bit integer will be filled.
  * @param[in] data The 32-bit integer to fill in the @p wordMemory
  * in network byte order.
@@ -150,7 +150,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( bufferSize < SNTP_PACKET_MINIMUM_SIZE )
+    else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
         status = SntpErrorBufferTooSmall;
     }

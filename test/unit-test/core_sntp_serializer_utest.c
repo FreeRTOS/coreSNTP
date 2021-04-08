@@ -41,7 +41,7 @@
         .fractions = 1000      \
     }
 
-static uint8_t testBuffer[ SNTP_PACKET_MINIMUM_SIZE ];
+static uint8_t testBuffer[ SNTP_PACKET_BASE_SIZE ];
 
 /* ============================   UNITY FIXTURES ============================ */
 
@@ -103,7 +103,7 @@ void test_SerializeRequest_NominalCase( void )
     };
 
     /* The expected serialization of the SNTP request packet. */
-    uint8_t expectedSerialization[ SNTP_PACKET_MINIMUM_SIZE ] =
+    uint8_t expectedSerialization[ SNTP_PACKET_BASE_SIZE ] =
     {
         0x00 /* Leap Indicator */ | 0x20 /* Version */ | 0x03, /* Client Mode */
         0x00,                                                  /* stratum */
@@ -135,7 +135,7 @@ void test_SerializeRequest_NominalCase( void )
     /* Validate that serialization operation by the API. */
     TEST_ASSERT_EQUAL_UINT8_ARRAY( expectedSerialization,
                                    testBuffer,
-                                   SNTP_PACKET_MINIMUM_SIZE );
+                                   SNTP_PACKET_BASE_SIZE );
 
     /* Check that the request timestamp object has been updated with the random value. */
     TEST_ASSERT_EQUAL( 0, memcmp( &expectedTxTime,

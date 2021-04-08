@@ -16,9 +16,9 @@ jobs:
           sudo apt-get install -y lcov sed
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
-          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -Werror'
+          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -Werror -DNDEBUG'
           make -C build/ all
       - name: Test
         run: |

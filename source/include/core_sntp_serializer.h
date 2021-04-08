@@ -41,7 +41,7 @@
  * an (S)NTP server, it can add authentication data after the SNTP packet is
  * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_PACKET_MINIMUM_SIZE               ( 48U )
+#define SNTP_PACKET_BASE_SIZE                  ( 48U )
 
 /**
  * @brief Number of SNTP timestamp fractions in 1 microsecond.
@@ -93,7 +93,7 @@ typedef enum SntpStatus
     /**
      * @brief Application provided insufficient buffer space for serializing
      * or de-serializing an SNTP packet.
-     * The minimum size of an SNTP packet is #SNTP_PACKET_MINIMUM_SIZE
+     * The minimum size of an SNTP packet is #SNTP_PACKET_BASE_SIZE
      * bytes. */
     SntpErrorBufferTooSmall,
 
@@ -122,8 +122,8 @@ typedef struct SntpTimestamp
  * @brief Serializes an SNTP request packet to use for querying a
  * time server.
  *
- * This function will fill only #SNTP_PACKET_MINIMUM_SIZE
- * bytes of data in the passed buffer.
+ * This function will fill only #SNTP_PACKET_BASE_SIZE bytes of data in the
+ * passed buffer.
  *
  * @param[in, out] pRequestTime The current time of the system, expressed as time
  * since the SNTP epoch (i.e. 0h of 1st Jan 1900 ). This time will be serialized
@@ -136,7 +136,7 @@ typedef struct SntpTimestamp
  * @param[out] pBuffer The buffer that will be populated with the serialized
  * SNTP request packet.
  * @param[in] bufferSize The size of the @p pBuffer buffer. It should be at least
- * #SNTP_PACKET_MINIMUM_SIZE bytes in size.
+ * #SNTP_PACKET_BASE_SIZE bytes in size.
  *
  * @note It is recommended to use a True Random Generator (TRNG) to generate
  * the random number.
