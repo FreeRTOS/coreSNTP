@@ -261,13 +261,20 @@ static const SntpPacket_t requestPacket =
  * relative to the server time, if the system clock is within 34 years of
  * server time; otherwise, the seconds part of clock offset is set to
  * #SNTP_CLOCK_OFFSET_OVERFLOW.
+ *
+ * @return #SntpSuccess if clock-offset is calculated; #SntpClockOffsetOverflow
+ * otherwise for inability to calculate from arithmetic overflow.
  */
-static void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
-                                  const SntpTimestamp_t * pServerRxTime,
-                                  const SntpTimestamp_t * pServerTxTime,
-                                  const SntpTimestamp_t * pClientRxTime,
-                                  SntpTimestamp_t * pClockOffset )
+static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
+                                          const SntpTimestamp_t * pServerRxTime,
+                                          const SntpTimestamp_t * pServerTxTime,
+                                          const SntpTimestamp_t * pClientRxTime,
+                                          SntpTimestamp_t * pClockOffset )
 {
+    SntpStatus_t status = SntpSuccess;
+
+    /* Variable for storing the first-order difference
+     * between timestamps. */
     int32_t firstOrderDiff = 0;
 
     assert( pClientTxTime != NULL );
@@ -311,9 +318,14 @@ static void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     }
     else
     {
+        /* System clock-offset cannot be calculated as arithmetic operation will overflow. */
         pClockOffset->seconds = SNTP_CLOCK_OFFSET_OVERFLOW;
         pClockOffset->fractions = 0;
+
+        status = SntpClockOffsetOverflow;
     }
+
+    return status;
 }
 
 /**
@@ -406,11 +418,11 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         /* Calculate system clock offset relative to server time, if possible, within
          * the 64 bit integer width of the SNTP timestamp. */
-        calculateClockOffset( &pResponsePacket->originTime,
-                              &pResponsePacket->receiveTime,
-                              &pResponsePacket->transmitTime,
-                              pResponseRxTime,
-                              &pParsedResponse->clockOffset );
+        status = calculateClockOffset( &pResponsePacket->originTime,
+                                       &pResponsePacket->receiveTime,
+                                       &pResponsePacket->transmitTime,
+                                       pResponseRxTime,
+                                       &pParsedResponse->clockOffset );
     }
 
     return status;

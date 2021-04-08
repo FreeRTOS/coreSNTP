@@ -42,23 +42,30 @@
     }
 
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
-#define SNTP_PACKET_VERSION_VAL                        ( 4 << 3 )
+#define SNTP_PACKET_VERSION_VAL                    ( 4 << 3 )
 
-#define SNTP_PACKET_MODE_SERVER                        ( 4 )
-#define SNTP_PACKET_MODE_CLIENT                        ( 3 )
+/* Values for "Mode" field in an SNTP packet. */
+#define SNTP_PACKET_MODE_SERVER                    ( 4 )
+#define SNTP_PACKET_MODE_CLIENT                    ( 3 )
 
 /* The byte positions of SNTP packet fields in the 48 bytes sized
  * packet format. */
-#define SNTP_PACKET_STRATUM_BYTE_POS                   ( 1 )
-#define SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS            ( 12 )
-#define SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS    ( 24 )
+#define SNTP_PACKET_STRATUM_BYTE_POS               ( 1 )
+#define SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS        ( 12 )
+#define SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS     ( 24 )
+#define SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS    ( 32 )
+#define SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS    ( 40 )
+
+/* Values of "Stratum" field in an SNTP packet. */
+#define SNTP_PACKET_STRATUM_KOD                    ( 0 )
+#define SNTP_PACKET_STRATUM_SECONDARY_SERVER       ( 15 )
 
 /* ASCII string codes that a server can send in a Kiss-o'-Death response. */
-#define KOD_CODE_DENY                                  "DENY"
-#define KOD_CODE_RSTR                                  "RSTR"
-#define KOD_CODE_RATE                                  "RATE"
-#define KOD_CODE_OTHER_EXAMPLE_1                       "AUTH"
-#define KOD_CODE_OTHER_EXAMPLE_2                       "CRYP"
+#define KOD_CODE_DENY                              "DENY"
+#define KOD_CODE_RSTR                              "RSTR"
+#define KOD_CODE_RATE                              "RATE"
+#define KOD_CODE_OTHER_EXAMPLE_1                   "AUTH"
+#define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
 #define INTEGER_VAL_OF_KOD_CODE( codePtr )                 \
     ( ( uint32_t ) ( ( ( uint32_t ) codePtr[ 0 ] << 24 ) | \
@@ -70,7 +77,25 @@ static uint8_t testBuffer[ SNTP_PACKET_MINIMUM_SIZE ];
 
 /* ============================ Helper Functions ============================ */
 
-void generateValidSntpResponse( uint8_t * pBuffer,
+void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
+                                   uint8_t * pResponseBuffer,
+                                   size_t startingPos )
+{
+    /* Convert the request time into network byte order to use to fill in buffer. */
+    uint32_t secsInNetOrder = htonl( pTime->seconds );
+    uint32_t fracsInNetOrder = htonl( pTime->fractions );
+
+    pResponseBuffer[ startingPos ] = secsInNetOrder >> 24;      /* seconds, byte 1*/
+    pResponseBuffer[ startingPos + 1 ] = secsInNetOrder >> 16;  /* seconds, byte 2 */
+    pResponseBuffer[ startingPos + 2 ] = secsInNetOrder >> 8;   /* seconds, byte 3 */
+    pResponseBuffer[ startingPos + 3 ] = secsInNetOrder;        /* seconds, byte 4 */
+    pResponseBuffer[ startingPos + 4 ] = fracsInNetOrder >> 24; /* fractions, byte 1*/
+    pResponseBuffer[ startingPos + 5 ] = fracsInNetOrder >> 16; /* fractions, byte 2 */
+    pResponseBuffer[ startingPos + 6 ] = fracsInNetOrder >> 8;  /* fractions, byte 3 */
+    pResponseBuffer[ startingPos + 7 ] = fracsInNetOrder;       /* fractions, byte 4 */
+}
+
+void fillValidSntpResponseData( uint8_t * pBuffer,
                                 SntpTimestamp_t * pRequestTime )
 {
     /* Clear the buffer. */
@@ -79,24 +104,15 @@ void generateValidSntpResponse( uint8_t * pBuffer,
     /* Set the "Version" and "Mode" fields in the first byte of SNTP packet. */
     pBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
 
-    /* Convert the request time into network byte order to use in the
-     * "originate" timestamp field of the response packet. */
-    SntpTimestamp_t networkOrderTime =
-    {
-        .seconds   = htonl( pRequestTime->seconds ),
-        .fractions = htonl( pRequestTime->fractions )
-    };
-
     /* Set the SNTP response packet to contain the "originate" timestamp
      * correctly, as matching the SNTP request timestamp. */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS ] = networkOrderTime.seconds >> 24;       /* origin timestamp - seconds, byte 1*/
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 1 ] = networkOrderTime.seconds >> 16;   /* origin timestamp - seconds, byte 2 */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 2 ] = networkOrderTime.seconds >> 8;    /* origin timestamp - seconds, byte 3 */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 3 ] = networkOrderTime.seconds;         /* origin timestamp - seconds, byte 4 */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 4 ] = networkOrderTime.fractions >> 24; /* origin timestamp - fractions, byte 1*/
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 5 ] = networkOrderTime.fractions >> 16; /* origin timestamp - fractions, byte 2 */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 6 ] = networkOrderTime.fractions >> 8;  /* origin timestamp - fractions, byte 3 */
-    pBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 7 ] = networkOrderTime.fractions;       /* origin timestamp - fractions, byte 4 */
+    addTimestampToResponseBuffer( pRequestTime,
+                                  pBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+
+    /* Set the "Stratum" byte in the response packet to represent a
+     * secondary NTP server. */
+    pBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = SNTP_PACKET_STRATUM_SECONDARY_SERVER;
 }
 
 /* ============================   UNITY FIXTURES ============================ */
@@ -256,7 +272,8 @@ void test_DeserializeResponse_Invalid_Responses( void )
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
     SntpResponseData_t parsedData = { 0 };
 
-    generateValidSntpResponse( testBuffer, &testTime );
+    /* Fill buffer with general SNTP response data. */
+    fillValidSntpResponseData( testBuffer, &testTime );
 
     /* Test with SNTP packet containing a non-server value in the "Mode" field. */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_CLIENT;
@@ -273,8 +290,8 @@ void test_DeserializeResponse_Invalid_Responses( void )
 
     /* Corrupt the "originate" timestamp to test with an SNTP response packet that does not
      * have the "originate" timestamp matching the timestamp sent in the request. */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS ]++;
-    testBuffer[ SNTP_PACKET_ORIGIN_TIMESTAMP_FIRST_BYTE_POS + 1 ]++;
+    testBuffer[ SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS ]++;
+    testBuffer[ SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS + 1 ]++;
 
     /* Call the API under test. */
     TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &testTime,
@@ -302,10 +319,10 @@ void test_DeserializeResponse_KoD_packets( void )
 
     /* Populate the buffer with a valid SNTP response before converting it
      * into a Kiss-o'-Death message. */
-    generateValidSntpResponse( testBuffer, &testTime );
+    fillValidSntpResponseData( testBuffer, &testTime );
 
     /* Update the "Stratum" field in the buffer to make the packet a Kiss-o'-Death message. */
-    testBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = 0;
+    testBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = SNTP_PACKET_STRATUM_KOD;
 
 /* Common test code for testing de-serialization of Kiss-o'-Death packet containing a specific
  * code with@ref Sntp_DeserializeResponse API. */
@@ -344,4 +361,60 @@ void test_DeserializeResponse_KoD_packets( void )
     /* ***** Test de-serialization of Kiss-o'-Death server response with other codes ***** */
     TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_1, SntpRejectedResponseChangeServer );
     TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_2, SntpRejectedResponseChangeServer );
+}
+
+/**
+ * @brief Test that @ref Sntp_DeserializeResponse API can process an accepted
+ * SNTP server response, and determine that the clock offset cannot be calculated
+ * when the client clock is beyond 34 years from server.
+ */
+void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
+{
+    SntpTimestamp_t clientTxTime = TEST_TIMESTAMP;
+    SntpResponseData_t parsedData = { 0 };
+
+    /* Fill buffer with general SNTP response data. */
+    fillValidSntpResponseData( testBuffer, &clientTxTime );
+
+/* Common test code to validate that API can de-serialize response packet
+ * that results in a clock offset calculation overflow. */
+#define TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime )                                             \
+    do {                                                                                            \
+        /* Update the response packet with the server time. */                                      \
+        addTimestampToResponseBuffer( &serverTime,                                                  \
+                                      testBuffer,                                                   \
+                                      SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );                    \
+        addTimestampToResponseBuffer( &serverTime,                                                  \
+                                      testBuffer,                                                   \
+                                      SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );                    \
+                                                                                                    \
+        /* Call the API under test. */                                                              \
+        TEST_ASSERT_EQUAL( SntpClockOffsetOverflow, Sntp_DeserializeResponse( &clientTxTime,        \
+                                                                              &clientTxTime,        \
+                                                                              testBuffer,           \
+                                                                              sizeof( testBuffer ), \
+                                                                              &parsedData ) );      \
+                                                                                                    \
+        /* Make sure that the API has indicated in the output parameter that
+         * clock-offset could not be calculated. */                                                       \
+        TEST_ASSERT_EQUAL( SNTP_CLOCK_OFFSET_OVERFLOW,                                                    \
+                           parsedData.clockOffset.seconds );                                              \
+                                                                                                          \
+        /* Validate other fields in the output parameter. */                                              \
+        TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
+        TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );                                     \
+        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
+    } while( 0 )
+
+    /* Test when the client is 40 years ahead of server time .*/
+    SntpTimestamp_t serverTime =
+    {
+        clientTxTime.seconds - ( 40 * 365 * 24 * 3600 ),
+        clientTxTime.fractions
+    };
+    TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
+
+    /* Now test when the client is 40 years ahead of server time .*/
+    serverTime.seconds = clientTxTime.seconds + ( 40 * 365 * 24 * 3600 );
+    TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
 }

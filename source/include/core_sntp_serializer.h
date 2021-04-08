@@ -147,7 +147,13 @@ typedef enum SntpStatus
     /**
      * @brief Server response failed validation checks for expected data in SNTP packet.
      */
-    SntpInvalidResponse
+    SntpInvalidResponse,
+
+    /**
+     * @brief Calculation of system clock offset relative to server
+     * underwent overflow.
+     */
+    SntpClockOffsetOverflow
 } SntpStatus_t;
 
 /**
@@ -225,7 +231,8 @@ typedef struct SntpResponse
      * of the server time for this calculation. This is a fundamental limitation
      * of 64 bit integer arithmetic.
      * If the system clock is beyond 34 years of server time, then this value
-     * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW.
+     * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW, and the @ref Sntp_DeserializeResponse
+     * API will return #SntpClockOffsetOverflow.
      */
     SntpTimestamp_t clockOffset;
 } SntpResponseData_t;
@@ -279,8 +286,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @brief De-serializes an SNTP packet received from a server as a response
  * to a SNTP request.
  *
- * This function will parse only the #SNTP_PACKET_MINIMUM_SIZE
- * bytes of data in the passed buffer.
+ * This function will parse only the #SNTP_PACKET_MINIMUM_SIZE bytes of data
+ * in the passed buffer.
  *
  * @note If the server has sent a Kiss-o'-Death message to reject the associated
  * time request, the API function will return the appropriate return code and,
@@ -297,7 +304,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * function will calculate the clock-offset ONLY if the system clock is within
  * 34 years of the server time mentioned in the response packet; otherwise the
  * seconds part of the clock offset in @p pParsedResponse parameter will be set to
- * #SNTP_CLOCK_OFFSET_OVERFLOW.
+ * #SNTP_CLOCK_OFFSET_OVERFLOW, and the function will return #SntpClockOffsetOverflow.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
@@ -311,11 +318,13 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * response. It MUST be at least #SNTP_PACKET_MINIMUM_SIZE bytes
  * long for a valid SNTP response.
  * @param[out] pParsedResponse The information parsed from the SNTP response packet.
- * If possible to calculate, it also contains the system clock offset relative
- * to the server time.
+ * If possible to calculate without overflow, it also contains the system clock
+ * offset relative to the server time.
  *
  * @return This function returns one of the following:
  * - #SntpSuccess if the de-serialization operation is successful.
+ * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
+ * but clock-offset cannot be calculated due to overflow.
  * - #SntpBadParameter if an invalid parameter is passed.
  * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
