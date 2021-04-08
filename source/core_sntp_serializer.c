@@ -189,7 +189,7 @@ static const SntpPacket_t requestPacket =
  * @param[in] ptr Pointer to the memory containing 32-bit integer in network
  * byte order.
  */
-#define SNTP_BUILD_BIG_ENDIAN_WORD( ptr )                                               \
+#define SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( ptr )                                        \
     ( uint32_t ) ( ( 0x000000FF & ( uint32_t ) *( ( uint8_t * ) ptr ) ) |               \
                    ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 8 ) ) |  \
                    ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 16 ) ) | \
@@ -314,7 +314,7 @@ static void calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * then this function will set the associated rejection code in the output parameter
  * while setting the remaining members to zero.
  * If the server has accepted the time request, then the function will set the
- * pRejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID,
+ * rejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID,
  * and set the other the members with appropriate data extracted from the response
  * packet.
  *
@@ -354,12 +354,11 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         /* Extract the kiss-code sent by the server from the "Reference ID" field
          * of the SNTP packet. */
-        pParsedResponse->pRejectedResponseCode = ( const char * ) ( &( pResponsePacket->refId ) );
+        pParsedResponse->rejectedResponseCode =
+            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->refId );
 
         /* Determine the return code based on the Kiss-o'-Death code. */
-        uint32_t code = SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->refId );
-
-        switch( code )
+        switch( SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->refId ) )
         {
             case KOD_CODE_DENY_UINT_VALUE:
             case KOD_CODE_RSTR_UINT_VALUE:
@@ -380,14 +379,14 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
          * to the time request. */
-        pParsedResponse->pRejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
+        pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
 
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */
         pParsedResponse->serverTime.seconds =
-            SNTP_HTONL( pResponsePacket->transmitTime.seconds );
+            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->transmitTime.seconds );
         pParsedResponse->serverTime.fractions =
-            SNTP_HTONL( pResponsePacket->transmitTime.fractions );
+            SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->transmitTime.fractions );
 
         /* Extract information of any upcoming leap second from the response. */
         pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
@@ -489,9 +488,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
             /* Validate that the server has sent the client's request timestamp in the
              * "originate" timestamp field of the response. */
             if( ( pRequestTime->seconds !=
-                  SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->originTime.seconds ) ) ||
+                  SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->originTime.seconds ) ) ||
                 ( pRequestTime->fractions !=
-                  SNTP_BUILD_BIG_ENDIAN_WORD( &pResponsePacket->originTime.fractions ) ) )
+                  SNTP_NETWORK_TO_BIG_ENDIAN_UINT32( &pResponsePacket->originTime.fractions ) ) )
             {
                 status = SntpInvalidResponse;
             }

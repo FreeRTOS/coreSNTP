@@ -64,13 +64,13 @@
 #define SNTP_KISS_OF_DEATH_CODE_LENGTH               ( 4U )
 
 /**
- * @brief The value for the #SntpResponseData_t.pRejectedResponseCode member
+ * @brief The value for the #SntpResponseData_t.rejectedResponseCode member
  * when that the server response packet does not contain a Kiss-o'-Death
  * message, and therefore, does not have a "kiss code".
  * The server sends a "kiss-code" only when it rejects an SNTP request
  * with a Kiss-o'-Death message.
  */
-#define SNTP_KISS_OF_DEATH_CODE_INVALID              ( NULL )
+#define SNTP_KISS_OF_DEATH_CODE_INVALID              ( 0U )
 
 /**
  * @brief The value for clock offset that indicates inability to perform
@@ -203,7 +203,7 @@ typedef struct SntpResponse
      * @note If the server does not send a Kiss-o'-Death message in its
      * response, this value will be #SNTP_KISS_OF_DEATH_CODE_INVALID.
      */
-    const char * pRejectedResponseCode;
+    uint32_t rejectedResponseCode;
 
     /**
      * @brief The offset (in seconds) of the system clock relative to the
@@ -270,12 +270,12 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @note If the server has sent a Kiss-o'-Death message to reject the associated
  * time request, the API function will return the appropriate return code and,
  * also, provide the ASCII code (of fixed length, #SNTP_KISS_OF_DEATH_CODE_LENGTH bytes)
- * in the #SntpResponseData_t.pRejectedResponseCode member of @p pParsedResponse parameter,
+ * in the #SntpResponseData_t.rejectedResponseCode member of @p pParsedResponse parameter,
  * parsed from the response packet.
  * The application SHOULD respect the server rejection and take appropriate action
  * based on the rejection code.
  * If the server response represents an accepted SNTP client request, then the API
- * function will set the #SntpResponseData_t.pRejectedResponseCode member of
+ * function will set the #SntpResponseData_t.rejectedResponseCode member of
  * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID.
  *
  * @note If the server has positively responded with its clock time, then this API
