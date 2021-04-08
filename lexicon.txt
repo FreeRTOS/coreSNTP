@@ -6,9 +6,12 @@ com
 coresntp
 de
 deserializeresponse
+endian
 endif
 enum
+expectedtxtime
 html
+htonl
 https
 ietf
 ifndef
@@ -27,6 +30,7 @@ param
 pbuffer
 pcurrenttime
 prequesttime
+pwordmemory
 randomnum
 randomnumber
 receivetime
@@ -50,4 +54,5 @@ transmittime
 trng
 uint
 utc
+wordval
 xffff

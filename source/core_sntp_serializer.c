@@ -111,13 +111,13 @@ static const SntpPacket_t requestPacket =
 /**
  * @brief Utility macro to fill 32-bit integer in word-sized
  * memory in network byte (or Little Endian) order.
- * 
+ *
  * @note This utility ensures that data is filled in memory
- * in expected network byte order, as an assignment operation 
+ * in expected network byte order, as an assignment operation
  * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
  * of network-byte ordering getting reversed on Little Endian platforms.
  */
-#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )                  \
+#define FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( wordMemory, wordData )      \
     do {                                                                    \
         *( ( uint8_t * ) wordMemory ) = ( uint8_t ) wordData;               \
         *( ( uint8_t * ) wordMemory + 1 ) = ( uint8_t ) ( wordData >> 8 );  \
@@ -166,9 +166,9 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
 
         /* Update the request buffer with request timestamp in network byte order. */
         FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.seconds,
-                                    pCurrentTime->seconds );
+                                                pCurrentTime->seconds );
         FILL_WORD_MEMORY_IN_NETWORK_BYTE_ORDER( &pRequestPacket->transmitTime.fractions,
-                                    pCurrentTime->fractions );
+                                                pCurrentTime->fractions );
     }
 
     return status;
