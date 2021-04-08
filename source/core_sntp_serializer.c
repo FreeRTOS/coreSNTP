@@ -58,12 +58,12 @@
 #define SNTP_ZERO_TIMESTAMP     { 0U, 0U }
 
 /**
- * @brief The least-significant bit position of the "Version" information
+ * @brief The position of the "Version" information
  * in the first byte of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define VERSION_LSB_POSITION    ( 3 )
+#define VERSION_POSITION    ( 3 )
 
 /**
  * @brief Structure representing an SNTP packet header.
@@ -81,7 +81,7 @@ typedef struct SntpPacket
     uint8_t poll;                 /* poll interval */
     uint8_t precision;            /* precision */
     uint32_t rootDelay;           /* root delay */
-    uint32_t rootDisp;            /* root dispersion */
+    uint32_t rootDispersion;            /* root dispersion */
     uint32_t refId;               /* reference ID */
     SntpTimestamp_t refTime;      /* reference time */
     SntpTimestamp_t originTime;   /* origin timestamp */
@@ -91,6 +91,7 @@ typedef struct SntpPacket
 
 /**
  * @brief Object representing data that is common to any SNTP request.
+ *
  * @note The @ref Sntp_SerializeRequest API will fill the "originate
  * timestamp" with value provided by the application.
  */
