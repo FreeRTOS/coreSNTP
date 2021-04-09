@@ -322,7 +322,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
  * but clock-offset cannot be calculated due to overflow.
  * - #SntpBadParameter if an invalid parameter is passed.
- * - #SntpErrorInsufficientSpace if the buffer does not have the minimum size
+ * - #SntpBufferTooSmall if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
  * - #SntpInvalidResponse if the response fails sanity checks expected in an
  * SNTP response.
