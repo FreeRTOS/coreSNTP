@@ -278,7 +278,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
                                           const SntpTimestamp_t * pServerRxTime,
                                           const SntpTimestamp_t * pServerTxTime,
                                           const SntpTimestamp_t * pClientRxTime,
-                                          SntpTimestamp_t * pClockOffset )
+                                          int32_t * pClockOffset )
 {
     SntpStatus_t status = SntpSuccess;
 
@@ -310,26 +310,22 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     {
         /* Calculate the clock-offset as system time is within 34 years window
          * of server time. */
-        SntpTimestamp_t firstOrderDiffSend;
-        SntpTimestamp_t firstOrderDiffRecv;
+        int32_t firstOrderDiffSend;
+        int32_t firstOrderDiffRecv;
 
         /* Perform ( T2 - T1 ) offset calculation of SNTP Request packet path. */
-        firstOrderDiffSend.seconds = pServerRxTime->seconds - pClientTxTime->seconds;
-        firstOrderDiffSend.fractions = pServerRxTime->fractions - pClientTxTime->fractions;
+        firstOrderDiffSend = pServerRxTime->seconds - pClientTxTime->seconds;
 
         /* Perform ( T3 - T4 ) offset calculation of SNTP Response packet path. */
-        firstOrderDiffRecv.seconds = pServerTxTime->seconds - pClientRxTime->seconds;
-        firstOrderDiffRecv.fractions = pServerTxTime->fractions - pClientRxTime->fractions;
+        firstOrderDiffRecv = pServerTxTime->seconds - pClientRxTime->seconds;
 
         /* Perform second order calculation of using average of the above offsets. */
-        pClockOffset->seconds = ( firstOrderDiffSend.seconds + firstOrderDiffRecv.seconds ) >> 2;
-        pClockOffset->fractions = ( firstOrderDiffSend.fractions + firstOrderDiffRecv.fractions ) >> 2;
+        *pClockOffset = ( firstOrderDiffSend + firstOrderDiffRecv ) >> 1;
     }
     else
     {
         /* System clock-offset cannot be calculated as arithmetic operation will overflow. */
-        pClockOffset->seconds = SNTP_CLOCK_OFFSET_OVERFLOW;
-        pClockOffset->fractions = 0;
+        *pClockOffset = SNTP_CLOCK_OFFSET_OVERFLOW;
 
         status = SntpClockOffsetOverflow;
     }

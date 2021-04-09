@@ -236,7 +236,7 @@ typedef struct SntpResponse
      * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW, and the @ref Sntp_DeserializeResponse
      * API will return #SntpClockOffsetOverflow.
      */
-    SntpTimestamp_t clockOffset;
+    int32_t clockOffset;
 } SntpResponseData_t;
 
 

@@ -67,12 +67,18 @@
 #define KOD_CODE_OTHER_EXAMPLE_1                   "AUTH"
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
+#define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
+#define YEARS_40_IN_SECONDS                        ( ( 40 * 365 + 40 / 4 ) * 24 * 3600 )
+
+/* Macro utility to convert the fixed-size Kiss-o'-Death ASCII code
+ * to integer.*/
 #define INTEGER_VAL_OF_KOD_CODE( codePtr )                 \
     ( ( uint32_t ) ( ( ( uint32_t ) codePtr[ 0 ] << 24 ) | \
                      ( ( uint32_t ) codePtr[ 1 ] << 16 ) | \
                      ( ( uint32_t ) codePtr[ 2 ] << 8 ) |  \
                      ( ( uint32_t ) codePtr[ 3 ] ) ) )
 
+/* Buffer used for SNTP requests and responses in tests. */
 static uint8_t testBuffer[ SNTP_PACKET_BASE_SIZE ];
 
 /* ============================ Helper Functions ============================ */
@@ -397,8 +403,7 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
                                                                                                     \
         /* Make sure that the API has indicated in the output parameter that
          * clock-offset could not be calculated. */                                                       \
-        TEST_ASSERT_EQUAL( SNTP_CLOCK_OFFSET_OVERFLOW,                                                    \
-                           parsedData.clockOffset.seconds );                                              \
+        TEST_ASSERT_EQUAL( SNTP_CLOCK_OFFSET_OVERFLOW, parsedData.clockOffset );                          \
                                                                                                           \
         /* Validate other fields in the output parameter. */                                              \
         TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
@@ -409,12 +414,73 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
     /* Test when the client is 40 years ahead of server time .*/
     SntpTimestamp_t serverTime =
     {
-        clientTxTime.seconds - ( 40 * 365 * 24 * 3600 ),
+        clientTxTime.seconds - YEARS_40_IN_SECONDS,
         clientTxTime.fractions
     };
     TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
 
     /* Now test when the client is 40 years ahead of server time .*/
-    serverTime.seconds = clientTxTime.seconds + ( 40 * 365 * 24 * 3600 );
+    serverTime.seconds = clientTxTime.seconds + YEARS_40_IN_SECONDS;
     TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
+}
+
+/**
+ * @brief Test that @ref Sntp_DeserializeResponse API can process an accepted
+ * SNTP server response, and calculate the clock offset for non-overflow cases
+ * (i.e. when the client and server times are within 34 years of each other).
+ */
+void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
+{
+    SntpTimestamp_t clientTxTime = TEST_TIMESTAMP;
+    SntpResponseData_t parsedData = { 0 };
+
+    /* Fill buffer with general SNTP response data. */
+    fillValidSntpResponseData( testBuffer, &clientTxTime );
+
+/* Common test code to validate that API can de-serialize response packet
+ * that results in a clock offset calculation overflow. */
+#define TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedClockOffset )        \
+    do {                                                                                \
+        /* Update the response packet with the server time. */                          \
+        addTimestampToResponseBuffer( &serverTime,                                      \
+                                      testBuffer,                                       \
+                                      SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );        \
+        addTimestampToResponseBuffer( &serverTime,                                      \
+                                      testBuffer,                                       \
+                                      SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );        \
+                                                                                        \
+        /* Call the API under test. */                                                  \
+        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_DeserializeResponse( &clientTxTime,        \
+                                                                  &clientTxTime,        \
+                                                                  testBuffer,           \
+                                                                  sizeof( testBuffer ), \
+                                                                  &parsedData ) );      \
+                                                                                        \
+        /* Make sure that the API has indicated in the output parameter that\
+         * clock-offset could not be calculated. */                                                       \
+        TEST_ASSERT_EQUAL( expectedOffset, parsedData.clockOffset );                                      \
+                                                                                                          \
+        /* Validate other fields in the output parameter. */                                              \
+        TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
+        TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );                                     \
+        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
+    } while( 0 )
+
+    /* Test when the client is 20 years ahead of server time to generate a negative offset
+     * result.*/
+    SntpTimestamp_t serverTime =
+    {
+        clientTxTime.seconds - YEARS_20_IN_SECONDS,
+        clientTxTime.fractions
+    };
+    int32_t expectedOffset = -YEARS_20_IN_SECONDS;
+
+    TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedOffset );
+
+    /* Now test for the client being 20 years behind server time to generate a positive
+     * offset result.*/
+    serverTime.seconds = clientTxTime.seconds + YEARS_20_IN_SECONDS;
+    expectedOffset = YEARS_20_IN_SECONDS;
+
+    TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedOffset );
 }
