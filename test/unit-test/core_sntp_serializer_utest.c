@@ -42,7 +42,7 @@
     }
 
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
-#define SNTP_PACKET_VERSION_VAL                    ( 4 << 3 )
+#define SNTP_PACKET_VERSION_VAL                    ( 4 /* Server mode*/ << 3 /* Bits 3-5 used in byte */ )
 
 /* Values for "Mode" field in an SNTP packet. */
 #define SNTP_PACKET_MODE_SERVER                    ( 4 )
@@ -71,7 +71,6 @@
 #define KOD_CODE_OTHER_EXAMPLE_1                   "AUTH"
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
-#define YEARS_10_IN_SECONDS                        ( ( 20 * 365 + 10 / 4 ) * 24 * 3600 )
 #define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
 #define YEARS_40_IN_SECONDS                        ( ( 40 * 365 + 40 / 4 ) * 24 * 3600 )
 
@@ -154,7 +153,7 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
 
     /* Make sure that the API has indicated in the output parameter that
      * clock-offset could not be calculated. */
-    TEST_ASSERT_EQUAL( expectedClockOffset, parsedData.clockOffset );
+    TEST_ASSERT_EQUAL( expectedClockOffset, parsedData.clockOffsetSec );
 
     /* Validate other fields in the output parameter. */
     TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, serverTxTime, sizeof( SntpTimestamp_t ) ) );
@@ -558,7 +557,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
                                                                   &parsedData ) );                        \
                                                                                                           \
         /* As the clock and server times are same, the clock offset, should be zero. */                   \
-        TEST_ASSERT_EQUAL( 0, parsedData.clockOffset );                                                   \
+        TEST_ASSERT_EQUAL( 0, parsedData.clockOffsetSec );                                                \
                                                                                                           \
         /* Validate other fields in the output parameter. */                                              \
         TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
