@@ -48,6 +48,10 @@
 #define SNTP_PACKET_MODE_SERVER                    ( 4 )
 #define SNTP_PACKET_MODE_CLIENT                    ( 3 )
 
+/* The least significant bit position of "Leap Indicator" field
+ * in the first byte of an SNTP packet. */
+#define SNTP_PACKET_LEAP_INDICATOR_LSB             ( 6 )
+
 /* The byte positions of SNTP packet fields in the 48 bytes sized
  * packet format. */
 #define SNTP_PACKET_STRATUM_BYTE_POS               ( 1 )
@@ -67,6 +71,7 @@
 #define KOD_CODE_OTHER_EXAMPLE_1                   "AUTH"
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
+#define YEARS_10_IN_SECONDS                        ( ( 20 * 365 + 10 / 4 ) * 24 * 3600 )
 #define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
 #define YEARS_40_IN_SECONDS                        ( ( 40 * 365 + 40 / 4 ) * 24 * 3600 )
 
@@ -81,11 +86,13 @@
 /* Buffer used for SNTP requests and responses in tests. */
 static uint8_t testBuffer[ SNTP_PACKET_BASE_SIZE ];
 
+static SntpResponseData_t parsedData;
+
 /* ============================ Helper Functions ============================ */
 
-void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
-                                   uint8_t * pResponseBuffer,
-                                   size_t startingPos )
+static void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
+                                          uint8_t * pResponseBuffer,
+                                          size_t startingPos )
 {
     /* Convert the request time into network byte order to use to fill in buffer. */
     uint32_t secsInNetOrder = htonl( pTime->seconds );
@@ -101,8 +108,8 @@ void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
     pResponseBuffer[ startingPos + 7 ] = fracsInNetOrder;       /* fractions, byte 4 */
 }
 
-void fillValidSntpResponseData( uint8_t * pBuffer,
-                                SntpTimestamp_t * pRequestTime )
+static void fillValidSntpResponseData( uint8_t * pBuffer,
+                                       SntpTimestamp_t * pRequestTime )
 {
     /* Clear the buffer. */
     memset( pBuffer, 0, SNTP_PACKET_BASE_SIZE );
@@ -121,7 +128,47 @@ void fillValidSntpResponseData( uint8_t * pBuffer,
     pBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = SNTP_PACKET_STRATUM_SECONDARY_SERVER;
 }
 
+/* Common test code that fills SNTP response packet with server times and validates
+* that @ref Sntp_DeserializeResponse API correctly calculates the clock offset.  */
+static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
+                                        SntpTimestamp_t * serverRxTime,
+                                        SntpTimestamp_t * serverTxTime,
+                                        SntpTimestamp_t * clientRxTime,
+                                        SntpStatus_t expectedStatus,
+                                        int32_t expectedClockOffset )
+{
+    /* Update the response packet with the server time. */
+    addTimestampToResponseBuffer( serverRxTime,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+    addTimestampToResponseBuffer( serverTxTime,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( expectedStatus, Sntp_DeserializeResponse( clientTxTime,
+                                                                 clientRxTime,
+                                                                 testBuffer,
+                                                                 sizeof( testBuffer ),
+                                                                 &parsedData ) );
+
+    /* Make sure that the API has indicated in the output parameter that
+     * clock-offset could not be calculated. */
+    TEST_ASSERT_EQUAL( expectedClockOffset, parsedData.clockOffset );
+
+    /* Validate other fields in the output parameter. */
+    TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, serverTxTime, sizeof( SntpTimestamp_t ) ) );
+    TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );
+    TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );
+}
+
 /* ============================   UNITY FIXTURES ============================ */
+
+/* Called before each test method. */
+void setUp()
+{
+    memset( &parsedData, 0, sizeof( parsedData ) );
+}
 
 /* Called at the beginning of the whole suite. */
 void suiteSetUp()
@@ -228,7 +275,6 @@ void test_SerializeRequest_NominalCase( void )
 void test_DeserializeResponse_InvalidParams( void )
 {
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
-    SntpResponseData_t responseData;
 
     /* Pass invalid time objects. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
@@ -236,13 +282,13 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  &testTime,
                                                  testBuffer,
                                                  sizeof( testBuffer ),
-                                                 &responseData ) );
+                                                 &parsedData ) );
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_DeserializeResponse( &testTime,
                                                  NULL,
                                                  testBuffer,
                                                  sizeof( testBuffer ),
-                                                 &responseData ) );
+                                                 &parsedData ) );
 
     /* Pass invalid buffer. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
@@ -250,7 +296,7 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  &testTime,
                                                  NULL,
                                                  sizeof( testBuffer ),
-                                                 &responseData ) );
+                                                 &parsedData ) );
 
     /* Pass a buffer size less than 48 bytes of minimum SNTP packet size. */
     TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
@@ -258,7 +304,7 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  &testTime,
                                                  testBuffer,
                                                  sizeof( testBuffer ) / 2,
-                                                 &responseData ) );
+                                                 &parsedData ) );
 
     /* Pass invalid output parameter. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
@@ -276,7 +322,6 @@ void test_DeserializeResponse_InvalidParams( void )
 void test_DeserializeResponse_Invalid_Responses( void )
 {
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
-    SntpResponseData_t parsedData = { 0 };
 
     /* Fill buffer with general SNTP response data. */
     fillValidSntpResponseData( testBuffer, &testTime );
@@ -320,7 +365,6 @@ void test_DeserializeResponse_KoD_packets( void )
     /* Use same value for request and response times, as API should not process
      * them for Kiss-o'-Death response packets. */
     SntpTimestamp_t testTime = TEST_TIMESTAMP;
-    SntpResponseData_t parsedData = { 0 };
     uint32_t KodCodeNetworkOrder = 0;
 
     /* Populate the buffer with a valid SNTP response before converting it
@@ -376,52 +420,28 @@ void test_DeserializeResponse_KoD_packets( void )
  */
 void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
 {
-    SntpTimestamp_t clientTxTime = TEST_TIMESTAMP;
-    SntpResponseData_t parsedData = { 0 };
+    SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
     /* Fill buffer with general SNTP response data. */
-    fillValidSntpResponseData( testBuffer, &clientTxTime );
-
-/* Common test code to validate that API can de-serialize response packet
- * that results in a clock offset calculation overflow. */
-#define TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime )                                             \
-    do {                                                                                            \
-        /* Update the response packet with the server time. */                                      \
-        addTimestampToResponseBuffer( &serverTime,                                                  \
-                                      testBuffer,                                                   \
-                                      SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );                    \
-        addTimestampToResponseBuffer( &serverTime,                                                  \
-                                      testBuffer,                                                   \
-                                      SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );                    \
-                                                                                                    \
-        /* Call the API under test. */                                                              \
-        TEST_ASSERT_EQUAL( SntpClockOffsetOverflow, Sntp_DeserializeResponse( &clientTxTime,        \
-                                                                              &clientTxTime,        \
-                                                                              testBuffer,           \
-                                                                              sizeof( testBuffer ), \
-                                                                              &parsedData ) );      \
-                                                                                                    \
-        /* Make sure that the API has indicated in the output parameter that
-         * clock-offset could not be calculated. */                                                       \
-        TEST_ASSERT_EQUAL( SNTP_CLOCK_OFFSET_OVERFLOW, parsedData.clockOffset );                          \
-                                                                                                          \
-        /* Validate other fields in the output parameter. */                                              \
-        TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
-        TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );                                     \
-        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
-    } while( 0 )
+    fillValidSntpResponseData( testBuffer, &clientTime );
 
     /* Test when the client is 40 years ahead of server time .*/
     SntpTimestamp_t serverTime =
     {
-        clientTxTime.seconds - YEARS_40_IN_SECONDS,
-        clientTxTime.fractions
+        clientTime.seconds - YEARS_40_IN_SECONDS,
+        clientTime.fractions
     };
-    TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
 
     /* Now test when the client is 40 years ahead of server time .*/
-    serverTime.seconds = clientTxTime.seconds + YEARS_40_IN_SECONDS;
-    TEST_API_FOR_OFFSET_OVERFLOW_CASE( serverTime );
+    serverTime.seconds = clientTime.seconds + YEARS_40_IN_SECONDS;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
 }
 
 /**
@@ -432,55 +452,103 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
 void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
 {
     SntpTimestamp_t clientTxTime = TEST_TIMESTAMP;
-    SntpResponseData_t parsedData = { 0 };
 
     /* Fill buffer with general SNTP response data. */
     fillValidSntpResponseData( testBuffer, &clientTxTime );
 
-/* Common test code to validate that API can de-serialize response packet
- * that results in a clock offset calculation overflow. */
-#define TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedClockOffset )        \
-    do {                                                                                \
-        /* Update the response packet with the server time. */                          \
-        addTimestampToResponseBuffer( &serverTime,                                      \
-                                      testBuffer,                                       \
-                                      SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );        \
-        addTimestampToResponseBuffer( &serverTime,                                      \
-                                      testBuffer,                                       \
-                                      SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );        \
-                                                                                        \
-        /* Call the API under test. */                                                  \
-        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_DeserializeResponse( &clientTxTime,        \
-                                                                  &clientTxTime,        \
-                                                                  testBuffer,           \
-                                                                  sizeof( testBuffer ), \
-                                                                  &parsedData ) );      \
-                                                                                        \
-        /* Make sure that the API has indicated in the output parameter that\
-         * clock-offset could not be calculated. */                                                       \
-        TEST_ASSERT_EQUAL( expectedOffset, parsedData.clockOffset );                                      \
-                                                                                                          \
-        /* Validate other fields in the output parameter. */                                              \
-        TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
-        TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );                                     \
-        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
-    } while( 0 )
+    /* Use the the same values for Rx and Tx times for server and client in the first couple
+     * of tests for simplicity. */
 
     /* Test when the client is 20 years ahead of server time to generate a negative offset
      * result.*/
-    SntpTimestamp_t serverTime =
+    SntpTimestamp_t serverTxTime =
     {
         clientTxTime.seconds - YEARS_20_IN_SECONDS,
         clientTxTime.fractions
     };
     int32_t expectedOffset = -YEARS_20_IN_SECONDS;
 
-    TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedOffset );
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, expectedOffset );
 
     /* Now test for the client being 20 years behind server time to generate a positive
      * offset result.*/
-    serverTime.seconds = clientTxTime.seconds + YEARS_20_IN_SECONDS;
+    serverTxTime.seconds = clientTxTime.seconds + YEARS_20_IN_SECONDS;
     expectedOffset = YEARS_20_IN_SECONDS;
 
-    TEST_API_FOR_CLOCK_OFFSET_CALCULATION( serverTime, expectedOffset );
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, expectedOffset );
+
+    /* Now test with different values for T1 (client Tx), T2 (server Rx), T3 (server Tx) and T4 (client Rx)
+     * that are used in the clock-offset calculation.
+     * The test case uses 2 seconds as network delay on both Client -> Server and Server -> Client path
+     * and 2 seconds for server processing time between receiving SNTP request and sending SNTP response */
+    SntpTimestamp_t serverRxTime =
+    {
+        clientTxTime.seconds + YEARS_20_IN_SECONDS + 2,
+        serverTxTime.fractions
+    };
+    serverTxTime.seconds = serverRxTime.seconds + 2;
+    SntpTimestamp_t clientRxTime =
+    {
+        clientTxTime.seconds + 6, /* 2 seconds each for Client -> Server, Server -> Server,
+                                   * Server -> Client */
+        clientTxTime.fractions
+    };
+    expectedOffset = YEARS_20_IN_SECONDS;
+
+    testClockOffsetCalculation( &clientTxTime, &serverRxTime,
+                                &serverTxTime, &clientRxTime,
+                                SntpSuccess, expectedOffset );
+}
+
+/**
+ * @brief Test that @ref Sntp_DeserializeResponse API can de-serialize leap-second
+ * information in an accepted SNTP response packet from a server.
+ */
+void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
+{
+    SntpTimestamp_t clientTime = TEST_TIMESTAMP;
+    SntpTimestamp_t serverTime = TEST_TIMESTAMP;
+
+    /* Fill buffer with general SNTP response data. */
+    fillValidSntpResponseData( testBuffer, &clientTime );
+
+    /* Update the response packet with the server time. */
+    addTimestampToResponseBuffer( &serverTime,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+    addTimestampToResponseBuffer( &serverTime,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+
+#define TEST_LEAP_SECOND_DESERIALIZATION( expectedLeapSecond )                                            \
+    do {                                                                                                  \
+        /* Call the API under test. */                                                                    \
+        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_DeserializeResponse( &clientTime,                            \
+                                                                  &clientTime,                            \
+                                                                  testBuffer,                             \
+                                                                  sizeof( testBuffer ),                   \
+                                                                  &parsedData ) );                        \
+                                                                                                          \
+        /* As the clock and server times are same, the clock offset, should be zero. */                   \
+        TEST_ASSERT_EQUAL( 0, parsedData.clockOffset );                                                   \
+                                                                                                          \
+        /* Validate other fields in the output parameter. */                                              \
+        TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
+        TEST_ASSERT_EQUAL( expectedLeapSecond, parsedData.leapSecondType );                               \
+        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
+    } while( 0 )
+
+    /* Update SNTP response packet to indicate an upcoming leap second insertion. */
+    testBuffer[ 0 ] = ( LastMinuteHas61Seconds << SNTP_PACKET_LEAP_INDICATOR_LSB ) |
+                      SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
+    TEST_LEAP_SECOND_DESERIALIZATION( LastMinuteHas61Seconds );
+
+    /* Update SNTP response packet to indicate an upcoming leap second deletion. */
+    testBuffer[ 0 ] = ( LastMinuteHas59Seconds << SNTP_PACKET_LEAP_INDICATOR_LSB ) |
+                      SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
+    TEST_LEAP_SECOND_DESERIALIZATION( LastMinuteHas59Seconds );
 }

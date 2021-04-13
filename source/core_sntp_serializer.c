@@ -282,8 +282,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 {
     SntpStatus_t status = SntpSuccess;
 
-    /* Variable for storing the first-order difference
-     * between timestamps. */
+    /* Variable for storing the first-order difference between timestamps. */
     int32_t firstOrderDiff = 0;
 
     assert( pClientTxTime != NULL );
@@ -294,19 +293,21 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 
     /* Calculate a sample first order difference value between the
      * server and system timestamps. */
-    if( pClientRxTime->seconds > pServerTxTime->seconds )
-    {
-        firstOrderDiff = pClientRxTime->seconds - pServerTxTime->seconds;
-    }
-    else
-    {
-        firstOrderDiff = pServerTxTime->seconds - pClientRxTime->seconds;
-    }
+    firstOrderDiff = pClientRxTime->seconds - pServerTxTime->seconds;
 
     /* Determine from the first order difference if the system time is within
-     * 34 years of server time to be able to calculate clock offset. */
-    if( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
-        == 0 )
+     * 34 years of server time to be able to calculate clock offset.
+     *
+     * Note: As the SNTP timestamp value wraps around after ~136 years (exactly at
+     * 7 Feb 2036 6h 28m 16s), the conditional logic checks first order difference
+     * in both polarities (i.e. as (Server - Client) and (Client - Server) time values )
+     * to support the edge case when the two timestamps are in different SNTP eras (for
+     * example, server time is in 2037 and client time is in 2035 ).
+     */
+    if( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
+          == 0 ) ||
+        ( ( ( -firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
+          == 0 ) )
     {
         /* Calculate the clock-offset as system time is within 34 years window
          * of server time. */
