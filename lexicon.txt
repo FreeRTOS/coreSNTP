@@ -16,6 +16,7 @@ enum
 expectedtxtime
 faqs
 feb
+fracs
 fracsinnetorder
 fracsinnetorder
 gov
@@ -49,6 +50,7 @@ pml
 posix
 pparsedresponse
 prequesttime
+prequesttxtime
 presponsebuffer
 presponsecode
 presponsepacket

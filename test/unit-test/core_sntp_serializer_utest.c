@@ -95,17 +95,17 @@ static void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
                                           size_t startingPos )
 {
     /* Convert the request time into network byte order to use to fill in buffer. */
-    uint32_t secsInNetOrder = htonl( pTime->seconds );
-    uint32_t fracsInNetOrder = htonl( pTime->fractions );
+    uint32_t secs = pTime->seconds;
+    uint32_t fracs = pTime->fractions;
 
-    pResponseBuffer[ startingPos ] = secsInNetOrder >> 24;      /* seconds, byte 1*/
-    pResponseBuffer[ startingPos + 1 ] = secsInNetOrder >> 16;  /* seconds, byte 2 */
-    pResponseBuffer[ startingPos + 2 ] = secsInNetOrder >> 8;   /* seconds, byte 3 */
-    pResponseBuffer[ startingPos + 3 ] = secsInNetOrder;        /* seconds, byte 4 */
-    pResponseBuffer[ startingPos + 4 ] = fracsInNetOrder >> 24; /* fractions, byte 1*/
-    pResponseBuffer[ startingPos + 5 ] = fracsInNetOrder >> 16; /* fractions, byte 2 */
-    pResponseBuffer[ startingPos + 6 ] = fracsInNetOrder >> 8;  /* fractions, byte 3 */
-    pResponseBuffer[ startingPos + 7 ] = fracsInNetOrder;       /* fractions, byte 4 */
+    pResponseBuffer[ startingPos ] = secs >> 24;      /* seconds, byte 1*/
+    pResponseBuffer[ startingPos + 1 ] = secs >> 16;  /* seconds, byte 2 */
+    pResponseBuffer[ startingPos + 2 ] = secs >> 8;   /* seconds, byte 3 */
+    pResponseBuffer[ startingPos + 3 ] = secs;        /* seconds, byte 4 */
+    pResponseBuffer[ startingPos + 4 ] = fracs >> 24; /* fractions, byte 1*/
+    pResponseBuffer[ startingPos + 5 ] = fracs >> 16; /* fractions, byte 2 */
+    pResponseBuffer[ startingPos + 6 ] = fracs >> 8;  /* fractions, byte 3 */
+    pResponseBuffer[ startingPos + 7 ] = fracs;       /* fractions, byte 4 */
 }
 
 static void fillValidSntpResponseData( uint8_t * pBuffer,
@@ -240,14 +240,14 @@ void test_SerializeRequest_NominalCase( void )
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* reference time */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* origin timestamp */
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        /* receive timestamp */
-        htonl( expectedTxTime.seconds ) >> 24,                 /* transmit timestamp - seconds, byte 1 */
-        htonl( expectedTxTime.seconds ) >> 16,                 /* transmit timestamp - seconds, byte 2 */
-        htonl( expectedTxTime.seconds ) >> 8,                  /* transmit timestamp - seconds, byte 3 */
-        htonl( expectedTxTime.seconds ),                       /* transmit timestamp - seconds, byte 4 */
-        htonl( expectedTxTime.fractions ) >> 24,               /* transmit timestamp - fractions, byte 1 */
-        htonl( expectedTxTime.fractions ) >> 16,               /* transmit timestamp - fractions, byte 2 */
-        htonl( expectedTxTime.fractions ) >> 8,                /* transmit timestamp - fractions, byte 3 */
-        htonl( expectedTxTime.fractions ),                     /* transmit timestamp - fractions, byte 4 */
+        expectedTxTime.seconds >> 24,                          /* transmit timestamp - seconds, byte 1 */
+        expectedTxTime.seconds >> 16,                          /* transmit timestamp - seconds, byte 2 */
+        expectedTxTime.seconds >> 8,                           /* transmit timestamp - seconds, byte 3 */
+        expectedTxTime.seconds,                                /* transmit timestamp - seconds, byte 4 */
+        expectedTxTime.fractions >> 24,                        /* transmit timestamp - fractions, byte 1 */
+        expectedTxTime.fractions >> 16,                        /* transmit timestamp - fractions, byte 2 */
+        expectedTxTime.fractions >> 8,                         /* transmit timestamp - fractions, byte 3 */
+        expectedTxTime.fractions,                              /* transmit timestamp - fractions, byte 4 */
     };
 
     /* Call the API under test. */
@@ -402,7 +402,7 @@ void test_DeserializeResponse_KoD_packets( void )
  * code with@ref Sntp_DeserializeResponse API. */
 #define TEST_API_FOR_KOD_CODE( code, expectedStatus )                                      \
     do {                                                                                   \
-        KodCodeNetworkOrder = htonl( INTEGER_VAL_OF_KOD_CODE( code ) );                    \
+        KodCodeNetworkOrder = INTEGER_VAL_OF_KOD_CODE( code );                             \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS ] = KodCodeNetworkOrder >> 24;     \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 1 ] = KodCodeNetworkOrder >> 16; \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 2 ] = KodCodeNetworkOrder >> 8;  \

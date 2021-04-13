@@ -40,16 +40,8 @@
 #define SNTP_VERSION                                        ( 4 )
 
 /**
- * @brief The bit mask for the Mode information in the first byte of
- * an SNTP packet. The "Mode" field occupies bits 0-2 of the byte.
- * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
- * for more information.
- */
-#define SNTP_MODE_BITS_MASK                                 ( 0x07 )
-
-/**
- * @brief The bit mask for the Mode information in the first byte of
- * an SNTP packet. The "Mode" field occupies bits 0-2 of the byte.
+ * @brief The bits mask for the "Mode" information in the first byte of an SNTP packet.
+ * The "Mode" field occupies bits 0-2 of the byte.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
@@ -89,12 +81,13 @@
 #define SNTP_ZERO_TIMESTAMP                                 { 0U, 0U }
 
 /**
- * @brief The position of the "Version" information
- * in the first byte of an SNTP packet.
+ * @brief The position of least significant bit of the "Version" information
+ * in the first byte of an SNTP packet. "Version" field occupies bits 3-5 of
+ * the byte.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define VERSION_POSITION                                    ( 3 )
+#define SNTP_VERSION_LSB_POSITION                           ( 3 )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "DENY", used
@@ -165,22 +158,22 @@ typedef struct SntpPacket
  */
 static const SntpPacket_t requestPacket =
 {
-    0 | ( SNTP_VERSION << VERSION_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
-    0,                                                           /* stratum */
-    0,                                                           /* poll interval */
-    0,                                                           /* precision */
-    0,                                                           /* root delay */
-    0,                                                           /* root dispersion */
-    0,                                                           /* reference ID */
-    SNTP_ZERO_TIMESTAMP,                                         /* reference time */
-    SNTP_ZERO_TIMESTAMP,                                         /* origin timestamp */
-    SNTP_ZERO_TIMESTAMP,                                         /* receive timestamp */
-    SNTP_ZERO_TIMESTAMP                                          /* transmit timestamp */
+    0 | ( SNTP_VERSION << SNTP_VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
+    0,                                                                    /* stratum */
+    0,                                                                    /* poll interval */
+    0,                                                                    /* precision */
+    0,                                                                    /* root delay */
+    0,                                                                    /* root dispersion */
+    0,                                                                    /* reference ID */
+    SNTP_ZERO_TIMESTAMP,                                                  /* reference time */
+    SNTP_ZERO_TIMESTAMP,                                                  /* origin timestamp */
+    SNTP_ZERO_TIMESTAMP,                                                  /* receive timestamp */
+    SNTP_ZERO_TIMESTAMP                                                   /* transmit timestamp */
 };
 
 /**
  * @brief Utility macro to fill 32-bit integer in word-sized
- * memory in network byte (or Little Endian) order.
+ * memory in network byte (or Big Endian) order.
  *
  * @param[out] pWordMemory Pointer to the word-sized memory in which
  * the 32-bit integer will be filled.
@@ -189,7 +182,7 @@ static const SntpPacket_t requestPacket =
  *
  * @note This utility ensures that data is filled in memory
  * in expected network byte order, as an assignment operation
- * (like *pWordMemory = htonl(wordVal)) can cause undesired side-effect
+ * (like *pWordMemory = word) can cause undesired side-effect
  * of network-byte ordering getting reversed on Little Endian platforms.
  */
 static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
@@ -197,23 +190,23 @@ static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
 {
     assert( pWordMemory != NULL );
 
-    *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) data;
-    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( data >> 8 );
-    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( data >> 16 );
-    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) ( data >> 24 );
+    *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) ( data >> 24 );
+    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( data >> 16 );
+    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( data >> 8 );
+    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) data;
 }
 
 /**
  * @brief Utility macro to generate a 32-bit integer from memory containing
- * integer in network (or Little Endian) byte order.
+ * integer in network (or Big Endian) byte order.
  * @param[in] ptr Pointer to the memory containing 32-bit integer in network
  * byte order.
  */
 #define READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( ptr )                                 \
-    ( uint32_t ) ( ( 0x000000FF & ( uint32_t ) *( ( uint8_t * ) ptr ) ) |               \
-                   ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 8 ) ) |  \
-                   ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 16 ) ) | \
-                   ( 0xFF000000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 3 ) << 24 ) ) )
+    ( uint32_t ) ( ( ( uint32_t ) *( ( uint8_t * ) ptr ) << 24 ) |                      \
+                   ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 16 ) ) | \
+                   ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 8 ) ) |  \
+                   ( ( uint32_t ) *( ( uint8_t * ) ptr + 3 ) ) )
 
 /**
  * @brief Utility to calculate clock offset of system relative to the
@@ -348,6 +341,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * packet.
  *
  * @param[in] pResponsePacket The SNTP response packet from server to parse.
+ * @param[in] pRequestTxTime The system time (in SNTP timestamp format) of
+ * sending the SNTP request to server.
  * @param[in] pResponseRxTime The system time (in SNTP timestamp format) of
  * receiving the SNTP response from server.
  * @param[out] pParsedResponse The parameter that will be populated with data
@@ -364,6 +359,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * other than "DENY", "RSTR" and "RATE".
  */
 static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket,
+                                            const SntpTimestamp_t * pRequestTxTime,
                                             const SntpTimestamp_t * pResponseRxTime,
                                             SntpResponseData_t * pParsedResponse )
 {
@@ -406,6 +402,8 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
     {
         /* Server has responded successfully to the time request. */
 
+        SntpTimestamp_t serverRxTime;
+
         /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
          * to the time request. */
         pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
@@ -422,11 +420,17 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
                                           ( pResponsePacket->leapVersionMode
                                             >> SNTP_LEAP_INDICATOR_LSB_POSITION );
 
+        /* Store the "receive" time in SNTP response packet in host order. */
+        serverRxTime.seconds =
+            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->receiveTime.seconds );
+        serverRxTime.fractions =
+            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->receiveTime.fractions );
+
         /* Calculate system clock offset relative to server time, if possible, within
          * the 64 bit integer width of the SNTP timestamp. */
-        status = calculateClockOffset( &pResponsePacket->originTime,
-                                       &pResponsePacket->receiveTime,
-                                       &pResponsePacket->transmitTime,
+        status = calculateClockOffset( pRequestTxTime,
+                                       &serverRxTime,
+                                       &pParsedResponse->serverTime,
                                        pResponseRxTime,
                                        &pParsedResponse->clockOffset );
     }
@@ -532,6 +536,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
          * populate the output parameter. */
 
         status = parseValidSntpResponse( pResponsePacket,
+                                         pRequestTime,
                                          pResponseRxTime,
                                          pParsedResponse );
     }
