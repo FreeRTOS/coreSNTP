@@ -321,32 +321,56 @@ void test_DeserializeResponse_InvalidParams( void )
  */
 void test_DeserializeResponse_Invalid_Responses( void )
 {
-    SntpTimestamp_t testTime = TEST_TIMESTAMP;
+    SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
     /* Fill buffer with general SNTP response data. */
-    fillValidSntpResponseData( testBuffer, &testTime );
+    fillValidSntpResponseData( testBuffer, &clientTime );
 
-    /* Test with SNTP packet containing a non-server value in the "Mode" field. */
+    /* ******* Test when SNTP packet does not a non-server value in the "Mode" field. **** */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_CLIENT;
 
     /* Call the API under test. */
-    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &testTime,
-                                                                      &testTime,
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
                                                                       testBuffer,
                                                                       sizeof( testBuffer ),
                                                                       &parsedData ) );
 
+    /******** Test when SNTP response packet does not
+     *  have "originate" timestamp matching
+     * the "transmit" time sent by the client in the SNTP
+     * request. ************/
+    SntpTimestamp_t originateTime = TEST_TIMESTAMP;
+
     /* Set the Mode field to the correct value for Server. */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
 
-    /* Corrupt the "originate" timestamp to test with an SNTP response packet that does not
-     * have the "originate" timestamp matching the timestamp sent in the request. */
-    testBuffer[ SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS ]++;
-    testBuffer[ SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS + 1 ]++;
+    /* Test when only the seconds part of the "originate" timestamp does not match
+     * the client request time .*/
+    originateTime.seconds = clientTime.seconds + 1;
+    addTimestampToResponseBuffer( &originateTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
 
     /* Call the API under test. */
-    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &testTime,
-                                                                      &testTime,
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Test when only the fractions part of the "originate" timestamp does not match
+     * the client request time .*/
+    originateTime.seconds = clientTime.seconds;
+    originateTime.fractions = clientTime.fractions + 1;
+    addTimestampToResponseBuffer( &originateTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+
+
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
                                                                       testBuffer,
                                                                       sizeof( testBuffer ),
                                                                       &parsedData ) );
@@ -378,7 +402,7 @@ void test_DeserializeResponse_KoD_packets( void )
  * code with@ref Sntp_DeserializeResponse API. */
 #define TEST_API_FOR_KOD_CODE( code, expectedStatus )                                      \
     do {                                                                                   \
-        KodCodeNetworkOrder = htonl( INTEGER_VAL_OF_KOD_CODE( KOD_CODE_DENY ) );           \
+        KodCodeNetworkOrder = htonl( INTEGER_VAL_OF_KOD_CODE( code ) );                    \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS ] = KodCodeNetworkOrder >> 24;     \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 1 ] = KodCodeNetworkOrder >> 16; \
         testBuffer[ SNTP_PACKET_KOD_CODE_FIRST_BYTE_POS + 2 ] = KodCodeNetworkOrder >> 8;  \
@@ -393,10 +417,10 @@ void test_DeserializeResponse_KoD_packets( void )
                                                      &parsedData ) );                      \
                                                                                            \
         /* Test that API has populated the output parameter with the parsed \
-         * KoD code. */                                              \
-        TEST_ASSERT_EQUAL( INTEGER_VAL_OF_KOD_CODE( KOD_CODE_DENY ), \
-                           parsedData.rejectedResponseCode );        \
-                                                                     \
+         * KoD code. */                                       \
+        TEST_ASSERT_EQUAL( INTEGER_VAL_OF_KOD_CODE( code ),   \
+                           parsedData.rejectedResponseCode ); \
+                                                              \
     } while( 0 )
 
     /* Test Kiss-o'-Death server response with "DENY" code. */
@@ -406,11 +430,11 @@ void test_DeserializeResponse_KoD_packets( void )
     TEST_API_FOR_KOD_CODE( KOD_CODE_RSTR, SntpRejectedResponseChangeServer );
 
     /* Test Kiss-o'-Death server response with "RATE" code. */
-    TEST_API_FOR_KOD_CODE( KOD_CODE_RATE, SntpRejectedResponseChangeServer );
+    TEST_API_FOR_KOD_CODE( KOD_CODE_RATE, SntpRejectedResponseRetryWithBackoff );
 
     /* ***** Test de-serialization of Kiss-o'-Death server response with other codes ***** */
-    TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_1, SntpRejectedResponseChangeServer );
-    TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_2, SntpRejectedResponseChangeServer );
+    TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_1, SntpRejectedResponseOtherCode );
+    TEST_API_FOR_KOD_CODE( KOD_CODE_OTHER_EXAMPLE_2, SntpRejectedResponseOtherCode );
 }
 
 /**
