@@ -3,6 +3,7 @@ api
 ascii
 backoff
 buffersize
+clienttxtime
 clockoffset
 com
 coresntp
@@ -14,6 +15,7 @@ endif
 enum
 expectedtxtime
 faqs
+feb
 fracsinnetorder
 fracsinnetorder
 gov
@@ -67,6 +69,7 @@ rootdelay
 rootdisp
 rootdispersion
 rstr
+rx
 secsinnetorder
 secsinnetorder
 serializerequest
@@ -88,6 +91,7 @@ struct
 sublicense
 transmittime
 trng
+tx
 uint
 utc
 wordmemory
