@@ -40,7 +40,7 @@
 #define SNTP_VERSION                                        ( 4 )
 
 /**
- * @brief The bits mask for the "Mode" information in the first byte of an SNTP packet.
+ * @brief The bit mask for the "Mode" information in the first byte of an SNTP packet.
  * The "Mode" field occupies bits 0-2 of the byte.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
@@ -383,7 +383,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
             READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->refId );
 
         /* Determine the return code based on the Kiss-o'-Death code. */
-        switch( READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->refId ) )
+        switch( pParsedResponse->rejectedResponseCode )
         {
             case KOD_CODE_DENY_UINT_VALUE:
             case KOD_CODE_RSTR_UINT_VALUE:

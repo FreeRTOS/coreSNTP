@@ -90,15 +90,15 @@
  * arithmetic calculation of system clock offset relative to the server time
  * due to overflow.
  *
- * The application should use this macro against the seconds part of the clock
- * offset value i.e. @ref SntpResponseData_t.clockOffset.seconds. If the seconds
- * part is set to this macro, then the entire clock offset value is unusable.
+ * The application should use this macro against the the clock offset returned 
+ * through @ref SntpResponseData_t.clockOffset. If the value is set to this 
+ * this macro, then the clock offset value is unusable.
  *
  * @note A clock offset overflow occurs if the system time is beyond 34 years
  * (in the past or future) of the server time.
  *
- * @note The clock offset as a value with 62 significant bits and 2 sign bits
- * in a 64 bit integer. This macro uses a value that cannot be a valid clock
+ * @note The clock offset is a value with 30 significant bits and 2 sign bits
+ * in a 32 bit integer. This macro uses a value that cannot be a valid clock
  * offset value as a valid value will always have the 2 most significant
  * bits set as either zero (i.e. to represent positive offset) or one
  * (i.e. to represent negative offset).
@@ -166,8 +166,8 @@ typedef enum SntpStatus
  *
  * @note A leap second is an adjustment made in atomic clock time because Earth's rotation
  * can be inconsistent. Leap seconds are usually incorporated as an extra second insertion
- * or second deletion in the last minute before midnight i.e. in the minute of 23h:59h UTC
- * on the 31st of June or December. For more information on leap seconds, refer to
+ * or second deletion in the last minute before midnight i.e. in the minute of 23h:59m UTC
+ * on the last day of June or December. For more information on leap seconds, refer to
  * https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs.
  */
 typedef enum SntpLeapSecondInfo
