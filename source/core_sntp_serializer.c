@@ -306,15 +306,25 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
          * of server time. */
         int32_t firstOrderDiffSend;
         int32_t firstOrderDiffRecv;
+        int32_t sumOfFirstOrderDiffs;
 
         /* Perform ( T2 - T1 ) offset calculation of SNTP Request packet path. */
         firstOrderDiffSend = pServerRxTime->seconds - pClientTxTime->seconds;
 
         /* Perform ( T3 - T4 ) offset calculation of SNTP Response packet path. */
-        firstOrderDiffRecv = pServerTxTime->seconds - pClientRxTime->seconds;
+        firstOrderDiffRecv = -firstOrderDiff;
 
         /* Perform second order calculation of using average of the above offsets. */
-        *pClockOffset = ( firstOrderDiffSend + firstOrderDiffRecv ) >> 1;
+        sumOfFirstOrderDiffs = firstOrderDiffSend + firstOrderDiffRecv;
+        *pClockOffset = sumOfFirstOrderDiffs >> 1;
+
+        /* According to the C standard Section 6.5.7, the value of a right shift
+         * on a negative (signed) value is implementation-dependent. Thus, the
+         * following logic exists to ensure sign-extension for right shift operation. */
+        if( sumOfFirstOrderDiffs < 0 )
+        {
+            *pClockOffset = ( sumOfFirstOrderDiffs >> 1 ) | 0x8000000;
+        }
     }
     else
     {
@@ -432,7 +442,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
                                        &serverRxTime,
                                        &pParsedResponse->serverTime,
                                        pResponseRxTime,
-                                       &pParsedResponse->clockOffset );
+                                       &pParsedResponse->clockOffsetSec );
     }
 
     return status;

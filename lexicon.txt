@@ -4,7 +4,7 @@ ascii
 backoff
 buffersize
 clienttxtime
-clockoffset
+clockoffsetsec
 com
 coresntp
 de

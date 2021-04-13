@@ -90,8 +90,8 @@
  * arithmetic calculation of system clock offset relative to the server time
  * due to overflow.
  *
- * The application should use this macro against the the clock offset returned 
- * through @ref SntpResponseData_t.clockOffset. If the value is set to this 
+ * The application should use this macro against the the clock offset returned
+ * through @ref SntpResponseData_t.clockOffsetSec. If the value is set to this
  * this macro, then the clock offset value is unusable.
  *
  * @note A clock offset overflow occurs if the system time is beyond 34 years
@@ -236,7 +236,7 @@ typedef struct SntpResponse
      * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW, and the @ref Sntp_DeserializeResponse
      * API will return #SntpClockOffsetOverflow.
      */
-    int32_t clockOffset;
+    int32_t clockOffsetSec;
 } SntpResponseData_t;
 
 
