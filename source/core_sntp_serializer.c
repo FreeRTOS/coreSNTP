@@ -566,7 +566,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
     }
     else
     {
-        uint32_t exactIntervalForAccuracy = 0, exactIntervalCopy = 0;
+        uint32_t exactIntervalForAccuracy = 0;
         uint8_t log2PollInterval = 0;
 
         /* Calculate the  poll interval required for achieving the exact desired clock accuracy
@@ -588,7 +588,6 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
          *                               Clock Frequency Tolerance
          */
         exactIntervalForAccuracy = ( desiredAccuracy * 1000 ) / clockFreqTolerance;
-        exactIntervalCopy = exactIntervalForAccuracy;
 
         /* Calculate the floor value of log2 of the exact poll interval value. */
         while( exactIntervalForAccuracy != 0 )

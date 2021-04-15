@@ -578,7 +578,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
 
 /**
  * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
- * the poll interval period as the closes power of 2 value for achieveing the
+ * the poll interval period as the closes power of 2 value for achieving the
  * desired clock accuracy.
  */
 void test_CalculatePollInterval_InvalidParams( void )
@@ -602,14 +602,12 @@ void test_CalculatePollInterval_InvalidParams( void )
 
 /**
  * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
- * the poll interval period as the closes power of 2 value for achieveing the
+ * the poll interval period as the closes power of 2 value for achieving the
  * desired clock accuracy.
  */
 void test_CalculatePollInterval_Nominal( void )
 {
     uint32_t pollInterval = 0;
-    uint16_t clockTolerance = 0;
-    uint16_t desiredAccuracy = 0;
     uint32_t expectedInterval = 0;
 
     /* Test the SNTPv4 specification example of 200 PPM clock frequency and
@@ -620,9 +618,9 @@ void test_CalculatePollInterval_Nominal( void )
                                                                 &pollInterval ) );
     TEST_ASSERT_EQUAL( expectedInterval, pollInterval );
 
-    /* Test another case where the exact poll interval for achieveing desired frequency
-    * is an exponent of 2 value. For 512 seconds (or 2^9) poll interval, the maximum
-    * clock drift with 125 PPM is 125 * 512 = 64000 microseconds = 64 milliseconds.  */
+    /* Test another case where the exact poll interval for achieving desired frequency
+     * is an exponent of 2 value. For 512 seconds (or 2^9) poll interval, the maximum
+     * clock drift with 125 PPM is 125 * 512 = 64000 microseconds = 64 milliseconds.  */
     expectedInterval = 0x00000200;
     TEST_ASSERT_EQUAL( SntpSuccess, Sntp_CalculatePollInterval( 125 /* Clock Tolerance (PPM) */,
                                                                 64 /* Desired Accuracy (ms)*/,

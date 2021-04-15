@@ -267,7 +267,7 @@ typedef struct SntpResponse
  *
  * @return This function returns one of the following:
  * - #SntpSuccess when serialization operation is successful.
- * - #SntpBadParameter if an invalid parameter is passed.
+ * - #SntpErrorBadParameter if an invalid parameter is passed.
  * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * for serializing an SNTP request packet.
  */
@@ -321,7 +321,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * - #SntpSuccess if the de-serialization operation is successful.
  * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
  * but clock-offset cannot be calculated due to overflow.
- * - #SntpBadParameter if an invalid parameter is passed.
+ * - #SntpErrorBadParameter if an invalid parameter is passed.
  * - #SntpBufferTooSmall if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
  * - #SntpInvalidResponse if the response fails sanity checks expected in an
@@ -358,7 +358,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
  * standard way to represent the value. According to the SNTPv4 specification,
  * an SNTP client SHOULD NOT a poll interval less than 15 seconds.
  *
- * @param[in] clockFrequencyTolerance The frequency tolerance of system clock
+ * @param[in] clockFreqTolerance The frequency tolerance of system clock
  * in parts per million (PPM) units. This parameter MUST be non-zero.
  * @param[in] desiredAccuracy The acceptable maximum drift, in milliseconds,
  * for the system clock. The maximum value (0xFFFF) represents ~1 minute of
@@ -366,13 +366,13 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
  * @param[out] pPollInterval This is filled with the poll interval, in seconds
  * calculated as the closest power of 2 value that will achieve either the
  * exact desired or higher clock accuracy @p desiredAccuracy, for the given clock
- * frequency tolerance, @p clockTolerance.
+ * frequency tolerance, @p clockFreqTolerance.
  *
  * @return Returns #SntpSuccess if calculation is successful; otherwise,
  * #SntpErrorBadParameter for an invalid parameter passed to the function.
  */
 /* @[define_sntp_calculatepollinterval] */
-SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockTolerance,
+SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
                                          uint16_t desiredAccuracy,
                                          uint32_t * pPollInterval );
 /* @[define_sntp_calculatepollinterval] */

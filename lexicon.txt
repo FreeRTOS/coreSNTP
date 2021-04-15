@@ -4,12 +4,14 @@ ascii
 backoff
 buffersize
 clienttxtime
+clockfreqtolerance
 clockoffsetsec
 com
 coresntp
 de
 december
 deserializeresponse
+desiredaccuracy
 endian
 endif
 enum
@@ -49,6 +51,8 @@ pcurrenttime
 pml
 posix
 pparsedresponse
+ppm
+ppollinterval
 prequesttime
 prequesttxtime
 presponsebuffer
@@ -76,9 +80,9 @@ secsinnetorder
 secsinnetorder
 serializerequest
 sntp
-sntpbadparameter
 sntpbuffertoosmall
 sntpclockoffsetoverflow
+sntperrorbadparameter
 sntperrorbuffertoosmall
 sntpinvalidresponse
 sntprejectedresponsechangeserver
