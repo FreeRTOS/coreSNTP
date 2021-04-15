@@ -42,7 +42,7 @@
     }
 
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
-#define SNTP_PACKET_VERSION_VAL                    ( 4 /* Server mode*/ << 3 /* Bits 3-5 used in byte */ )
+#define SNTP_PACKET_VERSION_VAL                    ( 4 /* Version */ << 3 /* Bits 3-5 used in byte */ )
 
 /* Values for "Mode" field in an SNTP packet. */
 #define SNTP_PACKET_MODE_SERVER                    ( 4 )
