@@ -575,3 +575,57 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
                       SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
     TEST_LEAP_SECOND_DESERIALIZATION( LastMinuteHas59Seconds );
 }
+
+/**
+ * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
+ * the poll interval period as the closes power of 2 value for achieveing the
+ * desired clock accuracy.
+ */
+void test_CalculatePollInterval_InvalidParams( void )
+{
+    uint32_t pollInterval = 0;
+
+    /* Test with invalid clock frequency. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_CalculatePollInterval( 0,
+                                                                          100,
+                                                                          &pollInterval ) );
+    /* Test with invalid desired accuracy. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_CalculatePollInterval( 100,
+                                                                          0,
+                                                                          &pollInterval ) );
+
+    /* Test with invalid output parameter. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_CalculatePollInterval( 100,
+                                                                          50,
+                                                                          NULL ) );
+}
+
+/**
+ * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
+ * the poll interval period as the closes power of 2 value for achieveing the
+ * desired clock accuracy.
+ */
+void test_CalculatePollInterval_Nominal( void )
+{
+    uint32_t pollInterval = 0;
+    uint16_t clockTolerance = 0;
+    uint16_t desiredAccuracy = 0;
+    uint32_t expectedInterval = 0;
+
+    /* Test the SNTPv4 specification example of 200 PPM clock frequency and
+     * 1 minute of desired accuracy. */
+    expectedInterval = 0x00040000;
+    TEST_ASSERT_EQUAL( SntpSuccess, Sntp_CalculatePollInterval( 200 /* Clock Tolerance */,
+                                                                1 /* minute */ * 60 * 1000 /* Desired Accuracy */,
+                                                                &pollInterval ) );
+    TEST_ASSERT_EQUAL( expectedInterval, pollInterval );
+
+    /* Test another case where the exact poll interval for achieveing desired frequency
+    * is an exponent of 2 value. For 512 seconds (or 2^9) poll interval, the maximum
+    * clock drift with 125 PPM is 125 * 512 = 64000 microseconds = 64 milliseconds.  */
+    expectedInterval = 0x00000200;
+    TEST_ASSERT_EQUAL( SntpSuccess, Sntp_CalculatePollInterval( 125 /* Clock Tolerance (PPM) */,
+                                                                64 /* Desired Accuracy (ms)*/,
+                                                                &pollInterval ) );
+    TEST_ASSERT_EQUAL( expectedInterval, pollInterval );
+}

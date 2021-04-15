@@ -553,3 +553,56 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
 
     return status;
 }
+
+SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
+                                         uint16_t desiredAccuracy,
+                                         uint32_t * pPollInterval )
+{
+    SntpStatus_t status = SntpSuccess;
+
+    if( ( clockFreqTolerance == 0 ) || ( desiredAccuracy == 0 ) || ( pPollInterval == NULL ) )
+    {
+        status = SntpErrorBadParameter;
+    }
+    else
+    {
+        uint32_t exactIntervalForAccuracy = 0, exactIntervalCopy = 0;
+        uint8_t log2PollInterval = 0;
+
+        /* Calculate the  poll interval required for achieving the exact desired clock accuracy
+         * with the following formulae:
+         *
+         * System Clock Drift Rate ( microseconds / second ) = Clock Frequency Tolerance (in PPM )
+         * Maximum Clock Drift ( milliseconds ) = Desired Accuracy ( milliseconds )
+         *
+         * Poll Interval ( seconds ) =     Maximum Clock Drift
+         *                              ---------------------------
+         *                                System Clock Drift Rate
+         *
+         *                           =  Maximum Drift ( milliseconds ) * 1000 ( microseconds / millisecond )
+         *                             ------------------------------------------------------------------------
+         *                                        System Clock Drift Rate ( microseconds / second )
+         *
+         *                           =    Desired Accuracy * 1000
+         *                             ------------------------------
+         *                               Clock Frequency Tolerance
+         */
+        exactIntervalForAccuracy = ( desiredAccuracy * 1000 ) / clockFreqTolerance;
+        exactIntervalCopy = exactIntervalForAccuracy;
+
+        /* Calculate the floor value of log2 of the exact poll interval value. */
+        while( exactIntervalForAccuracy != 0 )
+        {
+            log2PollInterval++;
+            exactIntervalForAccuracy /= 2;
+        }
+
+        log2PollInterval--;
+
+        /* Calculate the poll interval as the closest exponent of 2 value that achieves
+         * equal or higher accuracy than the desired accuracy. */
+        *pPollInterval = ( 1 << log2PollInterval );
+    }
+
+    return status;
+}
