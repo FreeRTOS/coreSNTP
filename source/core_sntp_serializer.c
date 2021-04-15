@@ -316,6 +316,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 
         /* Perform second order calculation of using average of the above offsets. */
         sumOfFirstOrderDiffs = firstOrderDiffSend + firstOrderDiffRecv;
+
         /* Use division instead of a bit shift to guarantee sign extension
          * regardless of compiler implementation. */
         *pClockOffset = sumOfFirstOrderDiffs / 2;
