@@ -625,5 +625,15 @@ void test_CalculatePollInterval_Nominal( void )
     TEST_ASSERT_EQUAL( SntpSuccess, Sntp_CalculatePollInterval( 125 /* Clock Tolerance (PPM) */,
                                                                 64 /* Desired Accuracy (ms)*/,
                                                                 &pollInterval ) );
+
+    /* Test for maximum possible value of calculated poll interval when the clock frequency
+     * tolerance is minimum (i.e. 1 PPM or high accuracy system clock ) but the desired accuracy
+     * is very low (i.e. largest value of 16 bit parameter as 65535 ms OR ~ 1 minute).
+     * This test proves that the 32-bit
+     * width of poll integer value can hold the largest calculation of poll interval value. */
+    expectedInterval = 0x02000000; /* 536,870,912 seconds OR ~ 17 years */
+    TEST_ASSERT_EQUAL( SntpSuccess, Sntp_CalculatePollInterval( 1 /* Clock Tolerance (PPM) */,
+                                                                UINT16_MAX /* Desired Accuracy (ms)*/,
+                                                                &pollInterval ) );
     TEST_ASSERT_EQUAL( expectedInterval, pollInterval );
 }

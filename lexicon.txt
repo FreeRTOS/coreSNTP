@@ -15,6 +15,7 @@ desiredaccuracy
 endian
 endif
 enum
+expectedinterval
 expectedtxtime
 faqs
 feb
