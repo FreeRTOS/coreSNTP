@@ -351,10 +351,10 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
  * is 200 parts per million (PPM) and the required accuracy is one minute,
  * the maximum timeout is about 3.5 days". In this example, the system
  * clock frequency tolerance is 200 PPM and the desired accuracy is
- * 60000 milliseconds (or 1 minute ) for which this API function
+ * 60000 milliseconds (or 1 minute) for which this API function
  * will return the maximum poll interval value as 2^18 seconds (or ~3 days).
  *
- * @note The poll interval returned is an exponent of 2 value, which is the
+ * @note The poll interval returned is a power of 2, which is the
  * standard way to represent the value. According to the SNTPv4 specification,
  * an SNTP client SHOULD NOT a poll interval less than 15 seconds.
  *
