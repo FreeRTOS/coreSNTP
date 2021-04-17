@@ -41,7 +41,7 @@
  * an (S)NTP server, it can add authentication data after the SNTP packet is
  * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_PACKET_BASE_SIZE                        ( 48U )
+#define SNTP_PACKET_BASE_SIZE                  ( 48U )
 
 /**
  * @brief Number of SNTP timestamp fractions in 1 microsecond.
@@ -54,18 +54,7 @@
  * part of system time is n microseconds, the fractions value to be used for the
  * SNTP timestamp fraction part will be n * SNTP_FRACTION_VALUE_PER_MICROSECOND.
  */
-#define SNTP_FRACTION_VALUE_PER_MICROSECOND          ( 4295U )
-
-/**
- * @brief Number of SNTP timestamp resolution of 232 picoseconds per microsecond.
- *
- * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
- * resolution of 2^(-32) seconds ~ 232 picoseconds.
- *
- * @note The application can use this value to convert fractions part of system
- * time into SNTP timestamp format.
- */
-#define SNTP_FRACTION_RESOLUTIONS_PER_MICROSECOND    ( 4295U )
+#define SNTP_FRACTION_VALUE_PER_MICROSECOND    ( 4295U )
 
 /**
  * @brief The fixed-length of any Kiss-o'-Death message ASCII code sent
@@ -74,7 +63,7 @@
  * from the client. For more information on the Kiss-o'-Death codes, refer to the
  * [SNTPv4 specification Section 8](https://tools.ietf.org/html/rfc4330#section-8).
  */
-#define SNTP_KISS_OF_DEATH_CODE_LENGTH               ( 4U )
+#define SNTP_KISS_OF_DEATH_CODE_LENGTH         ( 4U )
 
 /**
  * @brief The value for the #SntpResponseData_t.rejectedResponseCode member
@@ -83,7 +72,7 @@
  * The server sends a "kiss-code" only when it rejects an SNTP request
  * with a Kiss-o'-Death message.
  */
-#define SNTP_KISS_OF_DEATH_CODE_INVALID              ( 0U )
+#define SNTP_KISS_OF_DEATH_CODE_NONE           ( 0U )
 
 /**
  * @brief The value for clock offset that indicates inability to perform
@@ -103,45 +92,7 @@
  * bits set as either zero (i.e. to represent positive offset) or one
  * (i.e. to represent negative offset).
  */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                   ( 0x7FFFFFFFU )
-
-/**
- * @brief The fixed-length of any Kiss-o'-Death message ASCII code sent
- * in an SNTP server response.
- * @note An SNTP server sends a Kiss-o'-Death message to reject a time request
- * from the client. For more information on the Kiss-o'-Death codes, refer to the
- * [SNTPv4 specification Section 8](https://tools.ietf.org/html/rfc4330#section-8).
- */
-#define SNTP_KISS_OF_DEATH_CODE_LENGTH               ( 4U )
-
-/**
- * @brief The value for the #SntpResponseData_t.rejectedResponseCode member
- * when that the server response packet does not contain a Kiss-o'-Death
- * message, and therefore, does not have a "kiss code".
- * The server sends a "kiss-code" only when it rejects an SNTP request
- * with a Kiss-o'-Death message.
- */
-#define SNTP_KISS_OF_DEATH_CODE_NONE                 ( 0U )
-
-/**
- * @brief The value for clock offset that indicates inability to perform
- * arithmetic calculation of system clock offset relative to the server time
- * due to overflow.
- *
- * The application should use this macro against the the clock offset returned
- * through @ref SntpResponseData_t.clockOffsetSec. If the value is set to this
- * this macro, then the clock offset value is unusable.
- *
- * @note A clock offset overflow occurs if the system time is beyond 34 years
- * (in the past or future) of the server time.
- *
- * @note The clock offset is a value with 30 significant bits and 2 sign bits
- * in a 32 bit integer. This macro uses a value that cannot be a valid clock
- * offset value as a valid value will always have the 2 most significant
- * bits set as either zero (i.e. to represent positive offset) or one
- * (i.e. to represent negative offset).
- */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                   ( 0x7FFFFFFFU )
+#define SNTP_CLOCK_OFFSET_OVERFLOW             ( 0x7FFFFFFFU )
 
 /**
  * @ingroup core_sntp_enum_types
