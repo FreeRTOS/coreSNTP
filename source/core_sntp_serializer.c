@@ -316,15 +316,10 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 
         /* Perform second order calculation of using average of the above offsets. */
         sumOfFirstOrderDiffs = firstOrderDiffSend + firstOrderDiffRecv;
-        *pClockOffset = sumOfFirstOrderDiffs >> 1;
 
-        /* According to the C standard Section 6.5.7, the value of a right shift
-         * on a negative (signed) value is implementation-dependent. Thus, the
-         * following logic exists to ensure sign-extension for right shift operation. */
-        if( sumOfFirstOrderDiffs < 0 )
-        {
-            *pClockOffset = ( sumOfFirstOrderDiffs >> 1 ) | 0x8000000;
-        }
+        /* Use division instead of a bit shift to guarantee sign extension
+         * regardless of compiler implementation. */
+        *pClockOffset = sumOfFirstOrderDiffs / 2;
     }
     else
     {
@@ -346,7 +341,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * then this function will set the associated rejection code in the output parameter
  * while setting the remaining members to zero.
  * If the server has accepted the time request, then the function will set the
- * rejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID,
+ * rejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_NONE,
  * and set the other the members with appropriate data extracted from the response
  * packet.
  *
@@ -406,6 +401,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
             default:
                 status = SntpRejectedResponseOtherCode;
+                break;
         }
     }
     else
@@ -416,7 +412,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
          * to the time request. */
-        pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
+        pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_NONE;
 
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */

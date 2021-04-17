@@ -42,7 +42,7 @@
     }
 
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
-#define SNTP_PACKET_VERSION_VAL                    ( 4 /* Server mode*/ << 3 /* Bits 3-5 used in byte */ )
+#define SNTP_PACKET_VERSION_VAL                    ( 4 /* Version */ << 3 /* Bits 3-5 used in byte */ )
 
 /* Values for "Mode" field in an SNTP packet. */
 #define SNTP_PACKET_MODE_SERVER                    ( 4 )
@@ -158,7 +158,7 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
     /* Validate other fields in the output parameter. */
     TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, serverTxTime, sizeof( SntpTimestamp_t ) ) );
     TEST_ASSERT_EQUAL( NoLeapSecond, parsedData.leapSecondType );
-    TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );
+    TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_NONE, parsedData.rejectedResponseCode );
 }
 
 /* ============================   UNITY FIXTURES ============================ */
@@ -562,7 +562,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
         /* Validate other fields in the output parameter. */                                              \
         TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
         TEST_ASSERT_EQUAL( expectedLeapSecond, parsedData.leapSecondType );                               \
-        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_INVALID, parsedData.rejectedResponseCode );            \
+        TEST_ASSERT_EQUAL( SNTP_KISS_OF_DEATH_CODE_NONE, parsedData.rejectedResponseCode );               \
     } while( 0 )
 
     /* Update SNTP response packet to indicate an upcoming leap second insertion. */
