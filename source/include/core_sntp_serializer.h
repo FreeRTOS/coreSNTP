@@ -257,7 +257,7 @@ typedef struct SntpResponse
  *
  * @return This function returns one of the following:
  * - #SntpSuccess when serialization operation is successful.
- * - #SntpBadParameter if an invalid parameter is passed.
+ * - #SntpErrorBadParameter if an invalid parameter is passed.
  * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * for serializing an SNTP request packet.
  */
@@ -311,7 +311,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * - #SntpSuccess if the de-serialization operation is successful.
  * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
  * but clock-offset cannot be calculated due to overflow.
- * - #SntpBadParameter if an invalid parameter is passed.
+ * - #SntpErrorBadParameter if an invalid parameter is passed.
  * - #SntpBufferTooSmall if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
  * - #SntpInvalidResponse if the response fails sanity checks expected in an
@@ -330,5 +330,42 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                                        size_t bufferSize,
                                        SntpResponseData_t * pParsedResponse );
 /* @[define_sntp_deserializeresponse] */
+
+/**
+ * @brief Utility to calculate the poll interval of sending periodic time queries
+ * to servers to achieve a desired system clock accuracy for a given
+ * frequency tolerance of the system clock.
+ *
+ * For example, from the SNTPv4 specification, "if the frequency tolerance
+ * is 200 parts per million (PPM) and the required accuracy is one minute,
+ * the maximum timeout is about 3.5 days". In this example, the system
+ * clock frequency tolerance is 200 PPM and the desired accuracy is
+ * 60000 milliseconds (or 1 minute) for which this API function
+ * will return the maximum poll interval value as 2^18 seconds (or ~3 days).
+ *
+ * @note The poll interval returned is a power of 2, which is the
+ * standard way to represent the value. According to the SNTPv4 specification,
+ * an SNTP client SHOULD NOT a poll interval less than 15 seconds.
+ *
+ * @param[in] clockFreqTolerance The frequency tolerance of system clock
+ * in parts per million (PPM) units. This parameter MUST be non-zero.
+ * @param[in] desiredAccuracy The acceptable maximum drift, in milliseconds,
+ * for the system clock. The maximum value (0xFFFF) represents ~1 minute of
+ * desired clock accuracy. This parameter MUST be non-zero.
+ * @param[out] pPollInterval This is filled with the poll interval, in seconds
+ * calculated as the closest power of 2 value that will achieve either the
+ * exact desired or higher clock accuracy @p desiredAccuracy, for the given clock
+ * frequency tolerance, @p clockFreqTolerance.
+ *
+ * @return Returns #SntpSuccess if calculation is successful; otherwise,
+ * #SntpErrorBadParameter for an invalid parameter passed to the function.
+ */
+/* @[define_sntp_calculatepollinterval] */
+SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
+                                         uint16_t desiredAccuracy,
+                                         uint32_t * pPollInterval );
+/* @[define_sntp_calculatepollinterval] */
+
+
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */
