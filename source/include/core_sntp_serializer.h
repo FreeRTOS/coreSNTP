@@ -72,7 +72,7 @@
  * The server sends a "kiss-code" only when it rejects an SNTP request
  * with a Kiss-o'-Death message.
  */
-#define SNTP_KISS_OF_DEATH_CODE_INVALID        ( 0U )
+#define SNTP_KISS_OF_DEATH_CODE_NONE           ( 0U )
 
 /**
  * @brief The value for clock offset that indicates inability to perform
@@ -209,7 +209,7 @@ typedef struct SntpResponse
      * bytes long.
      *
      * @note If the server does not send a Kiss-o'-Death message in its
-     * response, this value will be #SNTP_KISS_OF_DEATH_CODE_INVALID.
+     * response, this value will be #SNTP_KISS_OF_DEATH_CODE_NONE.
      */
     uint32_t rejectedResponseCode;
 
@@ -284,7 +284,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * based on the rejection code.
  * If the server response represents an accepted SNTP client request, then the API
  * function will set the #SntpResponseData_t.rejectedResponseCode member of
- * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID.
+ * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_NONE.
  *
  * @note If the server has positively responded with its clock time, then this API
  * function will calculate the clock-offset ONLY if the system clock is within

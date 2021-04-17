@@ -341,7 +341,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
  * then this function will set the associated rejection code in the output parameter
  * while setting the remaining members to zero.
  * If the server has accepted the time request, then the function will set the
- * rejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_INVALID,
+ * rejectedResponseCode member of the output parameter to #SNTP_KISS_OF_DEATH_CODE_NONE,
  * and set the other the members with appropriate data extracted from the response
  * packet.
  *
@@ -412,7 +412,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
          * to the time request. */
-        pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_INVALID;
+        pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_NONE;
 
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */
