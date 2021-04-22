@@ -41,7 +41,7 @@
  * an (S)NTP server, it can add authentication data after the SNTP packet is
  * serialized with the @ref Sntp_SerializeRequest API function.
  */
-#define SNTP_PACKET_BASE_SIZE                  ( 48U )
+#define SNTP_PACKET_BASE_SIZE                         ( 48U )
 
 /**
  * @brief Number of SNTP timestamp fractions in 1 microsecond.
@@ -52,9 +52,50 @@
  * @note The application can use this value to convert microseconds part of system
  * time into SNTP timestamp fractions. For example, if the microseconds
  * part of system time is n microseconds, the fractions value to be used for the
- * SNTP timestamp fraction part will be n * SNTP_FRACTION_VALUE_PER_MICROSECOND.
+ * SNTP timestamp part will be n * SNTP_FRACTION_VALUE_PER_MICROSECOND.
  */
-#define SNTP_FRACTION_VALUE_PER_MICROSECOND    ( 4295U )
+#define SNTP_FRACTION_VALUE_PER_MICROSECOND           ( 4295U )
+
+/**
+ * @brief The seconds part of SNTP time at the UNIX epoch time, which represents
+ * an offset of 70 years (in seconds) between SNTP epoch and UNIX epoch time.
+ * SNTP uses 1st Jan 1900 UTC as the epoch time, whereas UNIX standard uses
+ * 1st Jan 1970 UTC as the epoch time, thereby, causing an offset of 70 years
+ * between them.
+ *
+ *  Difference of 70 years = ((70 * 365) + 17 leap days) * 24 * 3600 seconds
+ *
+ * @note If your system follows UNIX time, the application can use this value to
+ * convert seconds part of a system time to seconds part of the equivalent SNTP
+ * time. For example, if the seconds part of system time is n seconds, the seconds
+ * value to be used for the SNTP timestamp will be n + SNTP_TO_UNIX_OFFSET_SECS.
+ */
+#define SNTP_TIME_AT_UNIX_EPOCH_SECS                  ( 2208988800U )
+
+/**
+ * @brief The seconds value of SNTP timestamp for the largest UNIX time when
+ * using signed 32-bit integer for seconds.
+ * The largest time representable with a 32-bit signed integer in UNIX time
+ * is 19 Jan 2038 3h 14m 7s UTC. However, as the SNTP time overflows at
+ * 7 Feb 2036 6h 28m 16s UTC, therefore, the SNTP time for the largest UNIX time
+ * represents the time duration between the 2 timestamps.
+ *
+ * SNTP Time at Largest       Time Duration in the range
+ * Signed 32-bit UNIX time =  [7 Feb 2036 6:28:16, 19 Jan 2038 3:14:07]
+ */
+#define SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS           ( 61505151U )
+
+/**
+ * @brief The UNIX time (in seconds) at the smallest SNTP time in era 1,
+ * i.e. UNIX time at 7 Feb 2036 6:28:16 UTC/
+ *
+ * Time Duration = 7 Feb 6:28:16 UTC (SNTP Era 1 Epoch) -
+ *                 1 Jan 1970 0:0:0 UTC (UNIX epoch)
+ *               = 66 years, 37 days, 6 hours, 28 minutes and 16 seconds
+ *               = ((66 * 365) + 16 leap days) * 24 * 3600) + (6 * 3600)
+ *                 + (28 * 60) + 16
+ */
+#define UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME    ( 2085978496U )
 
 /**
  * @brief The fixed-length of any Kiss-o'-Death message ASCII code sent
@@ -63,7 +104,7 @@
  * from the client. For more information on the Kiss-o'-Death codes, refer to the
  * [SNTPv4 specification Section 8](https://tools.ietf.org/html/rfc4330#section-8).
  */
-#define SNTP_KISS_OF_DEATH_CODE_LENGTH         ( 4U )
+#define SNTP_KISS_OF_DEATH_CODE_LENGTH                ( 4U )
 
 /**
  * @brief The value for the #SntpResponseData_t.rejectedResponseCode member
@@ -72,7 +113,7 @@
  * The server sends a "kiss-code" only when it rejects an SNTP request
  * with a Kiss-o'-Death message.
  */
-#define SNTP_KISS_OF_DEATH_CODE_NONE           ( 0U )
+#define SNTP_KISS_OF_DEATH_CODE_NONE                  ( 0U )
 
 /**
  * @brief The value for clock offset that indicates inability to perform
@@ -92,7 +133,8 @@
  * bits set as either zero (i.e. to represent positive offset) or one
  * (i.e. to represent negative offset).
  */
-#define SNTP_CLOCK_OFFSET_OVERFLOW             ( 0x7FFFFFFFU )
+#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFFU )
+
 
 /**
  * @ingroup core_sntp_enum_types
@@ -144,7 +186,13 @@ typedef enum SntpStatus
      * @brief Calculation of system clock offset relative to server
      * underwent overflow.
      */
-    SntpClockOffsetOverflow
+    SntpClockOffsetOverflow,
+
+    /**
+     * @brief SNTP timestamp cannot be converted to UNIX time as time does not lie
+     * in time range supported by Sntp_ConvertToUnixTime.
+     */
+    SntpErrorTimeNotSupported
 } SntpStatus_t;
 
 /**
@@ -367,5 +415,38 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 /* @[define_sntp_calculatepollinterval] */
 
 
+/**
+ * @brief Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to
+ * UNIX timestamp (that uses 1st Jan 1970 as the epoch).
+ *
+ * @note This function can ONLY handle conversions of SNTP timestamps that lie in the
+ * range from 1st Jan 1970 0h 0m 0s, the UNIX epoch time, to 19th Jan 2038 3h 14m 7s,
+ * the maximum UNIX time that can be represented in a signed 32 bit integer. (The
+ * limitation is to support systems that use signed 32-bit integer to represent the
+ * seconds part of the UNIX time.)
+ *
+ * @note This function supports overflow of the SNTP timestamp (from the 7 Feb 2036
+ * 6h 28m 16s time, i.e. SNTP era 1) by treating the timestamps with seconds part
+ * in the range [0, 61,505,152] seconds where the upper limit represents the UNIX
+ * overflow time (i.e. 19 Jan 2038 3h 14m 7s) for systems that use signed 32-bit
+ * integer to represent time.
+ *
+ * @param[in] pSntpTime The SNTP timestamp to convert to UNIX time.
+ * @param[out] pUnixTimeSecs This will be filled with the seconds part of the
+ * UNIX time equivalent of the SNTP time, @p pSntpTime.
+ * @param[out] pUnixTimeMs This will be filled with the microseconds part of
+ * the UNIX time equivalent of the SNTP time, @p pSntpTime.
+ *
+ * @return Returns one of the following:
+ *  - #SntpSuccess if conversion to UNIX time is successful
+ *  - #SntpErrorBadParameter if any of the passed parameter is NULL.
+ *  - #SntpErrorTimeNotSupported if the passed SNTP time does not lie in the
+ * supported time range.
+ */
+/* @[define_sntp_ConvertToUnixTime] */
+SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
+                                     uint32_t * pUnixTimeSecs,
+                                     uint32_t * pUnixTimeMs );
+/* @[define_sntp_ConvertToUnixTime] */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */

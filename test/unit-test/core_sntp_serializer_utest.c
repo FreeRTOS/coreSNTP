@@ -637,3 +637,106 @@ void test_CalculatePollInterval_Nominal( void )
                                                                 &pollInterval ) );
     TEST_ASSERT_EQUAL( expectedInterval, pollInterval );
 }
+
+
+/**
+ * @brief Tests the @ref Sntp_ConvertToUnixTime utility function returns
+ * expected error when invalid parameters or unsupported timestamps are passed.
+ */
+void test_ConvertToUnixTime_InvalidParams( void )
+{
+    SntpTimestamp_t sntpTime;
+
+    /* Use same memory for UNIX seconds and microseconds as we are not
+     * testing those values. */
+    uint32_t unixTime;
+
+    /* Test with NULL SNTP time. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( NULL,
+                                                                      &unixTime,
+                                                                      &unixTime ) );
+    /* Test with NULL output parameters. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( &sntpTime,
+                                                                      NULL,
+                                                                      &unixTime ) );
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( &sntpTime,
+                                                                      &unixTime,
+                                                                      NULL ) );
+
+    /* Test with time before UNIX epoch or 1st Jan 1970 .*/
+    sntpTime.seconds = SNTP_TIME_AT_UNIX_EPOCH_SECS - 5;
+    TEST_ASSERT_EQUAL( SntpErrorTimeNotSupported, Sntp_ConvertToUnixTime( &sntpTime,
+                                                                          &unixTime,
+                                                                          &unixTime ) );
+
+    /* Test with timestamp that after largest UNIX time for signed 32-bit integer systems
+     * (i.e. after 18 Jan 2036 3:14:07) */
+    sntpTime.seconds = SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS + 5;
+    TEST_ASSERT_EQUAL( SntpErrorTimeNotSupported, Sntp_ConvertToUnixTime( &sntpTime,
+                                                                          &unixTime,
+                                                                          &unixTime ) );
+}
+
+/**
+ * @brief Tests the @ref Sntp_ConvertToUnixTime utility function returns
+ * expected error when invalid parameters or unsupported timestamps are passed.
+ */
+void test_ConvertToUnixTime_Nominal( void )
+{
+    SntpTimestamp_t sntpTime = TEST_TIMESTAMP;
+    uint32_t unixTimeSecs;
+    uint32_t unixTimeMs;
+
+#define TEST_SNTP_TO_UNIX_CONVERSION( sntpTimeSecs, sntpTimeFracs,               \
+                                      expectedUnixTimeSecs, expectedUnixTimeMs ) \
+    do {                                                                         \
+        /* Set the SNTP timestamps. */                                           \
+        sntpTime.seconds = sntpTimeSecs;                                         \
+        sntpTime.fractions = sntpTimeFracs;                                      \
+                                                                                 \
+        /* Call API under test. */                                               \
+        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_ConvertToUnixTime( &sntpTime,       \
+                                                                &unixTimeSecs,   \
+                                                                &unixTimeMs ) ); \
+        /* Validate the generated UNIX time. */                                  \
+        TEST_ASSERT_EQUAL( expectedUnixTimeSecs, unixTimeSecs );                 \
+        TEST_ASSERT_EQUAL( expectedUnixTimeMs, unixTimeMs );                     \
+    } while( 0 )
+
+    /* Test with SNTP time at UNIX epoch. .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( SNTP_TIME_AT_UNIX_EPOCH_SECS, /* Sntp Seconds. */
+                                  0 /* Sntp  Fractions. */,
+                                  0 /* Unix Seconds */,
+                                  0 /* Unix Microseconds */ );
+
+    /* Test with SNTP time in the range between UNIX epoch and Smallest SNTP time in Era 1 .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( SNTP_TIME_AT_UNIX_EPOCH_SECS + 1000 /* Sntp Seconds. */,
+                                  500 /* Sntp  Fractions. */,
+                                  1000 /* Unix Seconds */,
+                                  500 / SNTP_FRACTION_VALUE_PER_MICROSECOND /* Unix Microseconds */ );
+
+    /* Test with SNTP time at largest SNTP time in Era 0 .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( UINT32_MAX /* Sntp Seconds. */,
+                                  0 /* Sntp Fractions. */,
+                                  UINT32_MAX - SNTP_TIME_AT_UNIX_EPOCH_SECS, /* Unix Seconds */
+                                  0 /* Unix Microseconds */ );
+
+    /* Test with SNTP time at smallest SNTP time in Era 1 .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( UINT32_MAX + 1 /* Sntp Seconds. */,
+                                  0 /* Sntp Fractions. */,
+                                  UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME, /* Unix Seconds */
+                                  0 /* Unix Microseconds */ );
+
+    /* Test SNTP time in the range [SNTP Era 1 Epoch, 32-bit signed UNIX max time] .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( UINT32_MAX + 1000 /* Sntp Seconds. */,
+                                  4000 /* Sntp Fractions. */,
+                                  UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + 999, /* Unix Seconds */
+                                  4000 / SNTP_FRACTION_VALUE_PER_MICROSECOND /* Unix Microseconds */ );
+
+    /* Test with SNTP time that represents the 32-bit signed maximum UNIX time
+     * (i.e. at 19 Jan 2038 3:14:07 )  .*/
+    TEST_SNTP_TO_UNIX_CONVERSION( SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS /* Sntp Seconds. */,
+                                  0 /* Sntp Fractions. */,
+                                  INT32_MAX, /* Unix Seconds */
+                                  0 /* Unix Microseconds */ );
+}
