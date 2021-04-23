@@ -439,7 +439,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  *
  * @return Returns one of the following:
  *  - #SntpSuccess if conversion to UNIX time is successful
- *  - #SntpErrorBadParameter if any of the passed parameter is NULL.
+ *  - #SntpErrorBadParameter if any of the passed parameters are NULL.
  *  - #SntpErrorTimeNotSupported if the passed SNTP time does not lie in the
  * supported time range.
  */
