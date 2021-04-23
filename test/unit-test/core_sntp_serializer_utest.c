@@ -578,8 +578,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
 
 /**
  * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
- * the poll interval period as the closes power of 2 value for achieving the
- * desired clock accuracy.
+ * returns error for invalid parameters passed to the API.
  */
 void test_CalculatePollInterval_InvalidParams( void )
 {
