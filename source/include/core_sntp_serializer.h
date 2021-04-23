@@ -434,8 +434,8 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  * @param[in] pSntpTime The SNTP timestamp to convert to UNIX time.
  * @param[out] pUnixTimeSecs This will be filled with the seconds part of the
  * UNIX time equivalent of the SNTP time, @p pSntpTime.
- * @param[out] pUnixTimeMs This will be filled with the microseconds part of
- * the UNIX time equivalent of the SNTP time, @p pSntpTime.
+ * @param[out] pUnixTimeMicrosecs This will be filled with the microseconds part
+ * of the UNIX time equivalent of the SNTP time, @p pSntpTime.
  *
  * @return Returns one of the following:
  *  - #SntpSuccess if conversion to UNIX time is successful
@@ -446,7 +446,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 /* @[define_sntp_ConvertToUnixTime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      uint32_t * pUnixTimeSecs,
-                                     uint32_t * pUnixTimeMs );
+                                     uint32_t * pUnixTimeMicrosecs );
 /* @[define_sntp_ConvertToUnixTime] */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */

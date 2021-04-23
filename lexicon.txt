@@ -64,7 +64,7 @@ pserverrxtime
 pservertxtime
 psntptime
 ptr
-punixtimems
+punixtimemicrosecs
 punixtimesecs
 pwordmemory
 randomnum

@@ -604,11 +604,11 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      uint32_t * pUnixTimeSecs,
-                                     uint32_t * pUnixTimeMs )
+                                     uint32_t * pUnixTimeMicrosecs )
 {
     SntpStatus_t status = SntpSuccess;
 
-    if( ( pSntpTime == NULL ) || ( pUnixTimeSecs == NULL ) || ( pUnixTimeMs == NULL ) )
+    if( ( pSntpTime == NULL ) || ( pUnixTimeSecs == NULL ) || ( pUnixTimeMicrosecs == NULL ) )
     {
         status = SntpErrorBadParameter;
     }
@@ -639,7 +639,7 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
         }
 
         /* Convert SNTP fractions to microseconds for UNIX time. */
-        *pUnixTimeMs = pSntpTime->fractions / SNTP_FRACTION_VALUE_PER_MICROSECOND;
+        *pUnixTimeMicrosecs = pSntpTime->fractions / SNTP_FRACTION_VALUE_PER_MICROSECOND;
     }
 
     return status;
