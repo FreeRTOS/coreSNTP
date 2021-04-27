@@ -54,6 +54,7 @@ posix
 pparsedresponse
 ppm
 ppollinterval
+prequestpacket
 prequesttime
 prequesttxtime
 presponsebuffer
@@ -90,6 +91,7 @@ sntperrorbadparameter
 sntperrorbuffertoosmall
 sntperrortimenotsupported
 sntpinvalidresponse
+sntppollintervalcannotbecalculated
 sntprejectedresponsechangeserver
 sntprejectedresponseothercode
 sntprejectedresponseretrywithbackoff
