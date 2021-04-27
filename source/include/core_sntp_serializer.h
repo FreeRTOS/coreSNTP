@@ -192,7 +192,7 @@ typedef enum SntpStatus
      * @brief Poll interval value is under 1 second which cannot be calculated
      *  by @ref Sntp_CalculatedPollInterval.
      */
-    SntpPollIntervalCannotBeCalculated,
+    SntpZeroPollInterval,
 
     /**
      * @brief SNTP timestamp cannot be converted to UNIX time as time does not lie
@@ -399,7 +399,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
  *
  * @note The poll interval returned is a power of 2, which is the
  * standard way to represent the value. According to the SNTPv4 specification
- * Best Practices, an SNTP client SHOULD NOT a poll interval less than 15 seconds.
+ * Best Practices, an SNTP client SHOULD NOT have a poll interval less than 15 seconds.
  * https://tools.ietf.org/html/rfc4330#section-10. This API function DOES NOT
  * support poll interval calculation less than 1 second.
  *
@@ -416,8 +416,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
  * @return Returns one of the following:
  *  - #SntpSuccess if calculation is successful.
  *  - #SntpErrorBadParameter for an invalid parameter passed to the function.
- *  - #SntpPollIntervalCannotBeCalculated if calculated poll interval is less
- * than 1 second.
+ *  - #SntpZeroPollInterval if calculated poll interval is less than 1 second.
  */
 /* @[define_sntp_calculatepollinterval] */
 SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,

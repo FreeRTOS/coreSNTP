@@ -598,10 +598,10 @@ void test_CalculatePollInterval_InvalidParams( void )
                                                                           50,
                                                                           NULL ) );
 
-    /* Test with parameters that require poll interval value of than 1 second. */
-    TEST_ASSERT_EQUAL( SntpPollIntervalCannotBeCalculated, Sntp_CalculatePollInterval( 10000 /* High Error Clock. */,
-                                                                                       1 /* High Accuracy Requirement */,
-                                                                                       &pollInterval ) );
+    /* Test with parameters that cause poll interval value of less than 1 second. */
+    TEST_ASSERT_EQUAL( SntpZeroPollInterval, Sntp_CalculatePollInterval( 10000 /* High Error Clock. */,
+                                                                         1 /* High Accuracy Requirement */,
+                                                                         &pollInterval ) );
 }
 
 /**

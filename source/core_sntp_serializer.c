@@ -570,7 +570,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
         if( exactIntervalForAccuracy == 0U )
         {
             /* Poll interval value is less than 1 second, and is not supported by the function. */
-            status = SntpPollIntervalCannotBeCalculated;
+            status = SntpZeroPollInterval;
         }
         else
         {

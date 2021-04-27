@@ -91,13 +91,13 @@ sntperrorbadparameter
 sntperrorbuffertoosmall
 sntperrortimenotsupported
 sntpinvalidresponse
-sntppollintervalcannotbecalculated
 sntprejectedresponsechangeserver
 sntprejectedresponseothercode
 sntprejectedresponseretrywithbackoff
 sntpsuccess
 sntptimestamp
 sntpv
+sntpzeropollinterval
 startingpos
 startingpos
 struct
