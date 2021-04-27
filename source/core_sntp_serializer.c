@@ -556,14 +556,14 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 {
     SntpStatus_t status = SntpSuccess;
 
-    if( ( clockFreqTolerance == 0 ) || ( desiredAccuracy == 0 ) || ( pPollInterval == NULL ) )
+    if( ( clockFreqTolerance == 0U ) || ( desiredAccuracy == 0U ) || ( pPollInterval == NULL ) )
     {
         status = SntpErrorBadParameter;
     }
     else
     {
-        uint32_t exactIntervalForAccuracy = 0;
-        uint8_t log2PollInterval = 0;
+        uint32_t exactIntervalForAccuracy = 0U;
+        uint8_t log2PollInterval = 0U;
 
         /* Calculate the  poll interval required for achieving the exact desired clock accuracy
          * with the following formulae:
@@ -583,20 +583,32 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
          *                             ------------------------------
          *                               Clock Frequency Tolerance
          */
-        exactIntervalForAccuracy = ( desiredAccuracy * 1000 ) / clockFreqTolerance;
+        exactIntervalForAccuracy = ( ( uint32_t ) desiredAccuracy * 1000U ) / clockFreqTolerance;
 
-        /* Calculate the floor value of log2 of the exact poll interval value. */
-        while( exactIntervalForAccuracy != 0 )
+        /* Check if calculated poll interval value falls in the supported range of seconds. */
+        if( exactIntervalForAccuracy == 0U )
         {
-            log2PollInterval++;
-            exactIntervalForAccuracy /= 2;
+            /* Poll interval value is less than 1 second, and is not supported by the function. */
+            status = SntpPollIntervalCannotBeCalculated;
         }
+        else
+        {
+            /* To calculate the log 2 value of the exact poll interval value, first determine the highest
+             * bit set in the value. */
+            while( exactIntervalForAccuracy != 0U )
+            {
+                log2PollInterval++;
+                exactIntervalForAccuracy /= 2U;
+            }
 
-        log2PollInterval--;
+            /* Convert the highest bit in the exact poll interval value to to the nearest integer
+             * value lower or equal to the log2 of the exact poll interval value. */
+            log2PollInterval--;
 
-        /* Calculate the poll interval as the closest exponent of 2 value that achieves
-         * equal or higher accuracy than the desired accuracy. */
-        *pPollInterval = ( 1 << log2PollInterval );
+            /* Calculate the poll interval as the closest exponent of 2 value that achieves
+             * equal or higher accuracy than the desired accuracy. */
+            *pPollInterval = ( 1U << ( uint32_t ) log2PollInterval );
+        }
     }
 
     return status;

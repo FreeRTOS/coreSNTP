@@ -577,8 +577,8 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
 }
 
 /**
- * @brief Tests the @ref Sntp_CalculatePollInterval utility function calculates
- * returns error for invalid parameters passed to the API.
+ * @brief Tests the @ref Sntp_CalculatePollInterval utility function returns
+ * error for invalid parameters passed to the API.
  */
 void test_CalculatePollInterval_InvalidParams( void )
 {
@@ -597,6 +597,11 @@ void test_CalculatePollInterval_InvalidParams( void )
     TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_CalculatePollInterval( 100,
                                                                           50,
                                                                           NULL ) );
+
+    /* Test with parameters that require poll interval value of than 1 second. */
+    TEST_ASSERT_EQUAL( SntpPollIntervalCannotBeCalculated, Sntp_CalculatePollInterval( 10000 /* High Error Clock. */,
+                                                                                       1 /* High Accuracy Requirement */,
+                                                                                       &pollInterval ) );
 }
 
 /**
