@@ -45,7 +45,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_BITS_MASK                                 ( 0x07 )
+#define SNTP_MODE_BITS_MASK                                 ( 0x07U )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
@@ -59,7 +59,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER                                    ( 4 )
+#define SNTP_MODE_SERVER                                    ( 4U )
 
 /**
  * @brief The position of the least significant bit of the "Leap Indicator" field
@@ -73,7 +73,7 @@
  * @brief Value of Stratum field in SNTP packet representing a Kiss-o'-Death message
  * from server.
  */
-#define SNTP_KISS_OF_DEATH_STRATUM                          ( 0 )
+#define SNTP_KISS_OF_DEATH_STRATUM                          ( 0U )
 
 /**
  * @brief The position of least significant bit of the "Version" information
@@ -175,12 +175,21 @@ static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
  * integer in network (or Big Endian) byte order.
  * @param[in] ptr Pointer to the memory containing 32-bit integer in network
  * byte order.
+ *
+ * @return The host representation of the 32-bit integer in the passed word
+ * memory.
  */
-#define READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( ptr )                                 \
-    ( uint32_t ) ( ( ( uint32_t ) *( ( uint8_t * ) ptr ) << 24 ) |                      \
-                   ( 0x00FF0000 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 1 ) << 16 ) ) | \
-                   ( 0x0000FF00 & ( ( uint32_t ) *( ( uint8_t * ) ptr + 2 ) << 8 ) ) |  \
-                   ( ( uint32_t ) *( ( uint8_t * ) ptr + 3 ) ) )
+static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
+{
+    const uint8_t * pMemStartByte = ( const uint8_t * ) ptr;
+
+    assert( ptr != NULL );
+
+    return ( uint32_t ) ( ( ( uint32_t ) *( pMemStartByte ) << 24 ) |
+                          ( 0x00FF0000U & ( ( uint32_t ) *( pMemStartByte + 1 ) << 16 ) ) |
+                          ( 0x0000FF00U & ( ( uint32_t ) *( pMemStartByte + 2 ) << 8 ) ) |
+                          ( ( uint32_t ) *( pMemStartByte + 3 ) ) );
+}
 
 /**
  * @brief Utility to calculate clock offset of system relative to the
@@ -250,7 +259,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     SntpStatus_t status = SntpSuccess;
 
     /* Variable for storing the first-order difference between timestamps. */
-    int32_t firstOrderDiff = 0;
+    uint32_t firstOrderDiff = 0;
 
     assert( pClientTxTime != NULL );
     assert( pServerRxTime != NULL );
@@ -272,28 +281,28 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
      * example, server time is in 2037 and client time is in 2035 ).
      */
     if( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
-          == 0 ) ||
-        ( ( ( -firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
-          == 0 ) )
+          == 0U ) ||
+        ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
+          == 0U ) )
     {
         /* Calculate the clock-offset as system time is within 34 years window
          * of server time. */
-        int32_t firstOrderDiffSend;
-        int32_t firstOrderDiffRecv;
-        int32_t sumOfFirstOrderDiffs;
+        uint32_t firstOrderDiffSend;
+        uint32_t firstOrderDiffRecv;
+        uint32_t sumOfFirstOrderDiffs;
 
         /* Perform ( T2 - T1 ) offset calculation of SNTP Request packet path. */
         firstOrderDiffSend = pServerRxTime->seconds - pClientTxTime->seconds;
 
         /* Perform ( T3 - T4 ) offset calculation of SNTP Response packet path. */
-        firstOrderDiffRecv = -firstOrderDiff;
+        firstOrderDiffRecv = 0U - firstOrderDiff;
 
         /* Perform second order calculation of using average of the above offsets. */
         sumOfFirstOrderDiffs = firstOrderDiffSend + firstOrderDiffRecv;
 
         /* Use division instead of a bit shift to guarantee sign extension
          * regardless of compiler implementation. */
-        *pClockOffset = sumOfFirstOrderDiffs / 2;
+        *pClockOffset = ( ( int32_t ) sumOfFirstOrderDiffs / 2 );
     }
     else
     {
@@ -349,7 +358,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
     assert( pParsedResponse != NULL );
 
     /* Clear the output parameter memory to zero. */
-    memset( pParsedResponse, 0, sizeof( *pParsedResponse ) );
+    ( void ) memset( pParsedResponse, 0, sizeof( *pParsedResponse ) );
 
     /* Determine if the server has accepted or rejected the request for time. */
     if( pResponsePacket->stratum == SNTP_KISS_OF_DEATH_STRATUM )
@@ -359,7 +368,7 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         /* Extract the kiss-code sent by the server from the "Reference ID" field
          * of the SNTP packet. */
         pParsedResponse->rejectedResponseCode =
-            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->refId );
+            readWordFromNetworkByteOrderMemory( &pResponsePacket->refId );
 
         /* Determine the return code based on the Kiss-o'-Death code. */
         switch( pParsedResponse->rejectedResponseCode )
@@ -384,6 +393,19 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 
         SntpTimestamp_t serverRxTime;
 
+        /* Map of integer value to SntpLeapSecondInfo_t enumeration type for the
+         * "Leap Indicator" field in the first byte of an SNTP packet.
+         * Note: This map is used to not violate MISRA Rule 10.5 when directly
+         * converting an integer to enumeration type.
+         */
+        const SntpLeapSecondInfo_t leapIndicatorTypeMap[] =
+        {
+            NoLeapSecond,
+            LastMinuteHas61Seconds,
+            LastMinuteHas59Seconds,
+            AlarmServerNotSynchronized
+        };
+
         /* Set the Kiss-o'-Death code value to NULL as server has responded favorably
          * to the time request. */
         pParsedResponse->rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_NONE;
@@ -391,20 +413,20 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
         /* Fill the output parameter with the server time which is the
          * "transmit" time in the response packet. */
         pParsedResponse->serverTime.seconds =
-            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->transmitTime.seconds );
+            readWordFromNetworkByteOrderMemory( &pResponsePacket->transmitTime.seconds );
         pParsedResponse->serverTime.fractions =
-            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->transmitTime.fractions );
+            readWordFromNetworkByteOrderMemory( &pResponsePacket->transmitTime.fractions );
 
         /* Extract information of any upcoming leap second from the response. */
-        pParsedResponse->leapSecondType = ( SntpLeapSecondInfo_t )
-                                          ( pResponsePacket->leapVersionMode
-                                            >> SNTP_LEAP_INDICATOR_LSB_POSITION );
+        pParsedResponse->leapSecondType = leapIndicatorTypeMap[
+            ( pResponsePacket->leapVersionMode
+              >> SNTP_LEAP_INDICATOR_LSB_POSITION ) ];
 
         /* Store the "receive" time in SNTP response packet in host order. */
         serverRxTime.seconds =
-            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->receiveTime.seconds );
+            readWordFromNetworkByteOrderMemory( &pResponsePacket->receiveTime.seconds );
         serverRxTime.fractions =
-            READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->receiveTime.fractions );
+            readWordFromNetworkByteOrderMemory( &pResponsePacket->receiveTime.fractions );
 
         /* Calculate system clock offset relative to server time, if possible, within
          * the 64 bit integer width of the SNTP timestamp. */
@@ -482,7 +504,7 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                                        SntpResponseData_t * pParsedResponse )
 {
     SntpStatus_t status = SntpSuccess;
-    SntpPacket_t * pResponsePacket = ( SntpPacket_t * ) pResponseBuffer;
+    const SntpPacket_t * pResponsePacket = ( const SntpPacket_t * ) pResponseBuffer;
 
     if( ( pRequestTime == NULL ) || ( pResponseRxTime == NULL ) ||
         ( pResponseBuffer == NULL ) || ( pParsedResponse == NULL ) )
@@ -508,9 +530,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
             /* Validate that the server has sent the client's request timestamp in the
              * "originate" timestamp field of the response. */
             if( ( pRequestTime->seconds !=
-                  READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->originTime.seconds ) ) ||
+                  readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.seconds ) ) ||
                 ( pRequestTime->fractions !=
-                  READ_WORD_FROM_NETWORK_BYTE_ORDER_MEMORY( &pResponsePacket->originTime.fractions ) ) )
+                  readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.fractions ) ) )
             {
                 status = SntpInvalidResponse;
             }

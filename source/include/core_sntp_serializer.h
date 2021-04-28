@@ -133,7 +133,7 @@
  * bits set as either zero (i.e. to represent positive offset) or one
  * (i.e. to represent negative offset).
  */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFFU )
+#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFF )
 
 
 /**
