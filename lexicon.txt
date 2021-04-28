@@ -54,6 +54,7 @@ posix
 pparsedresponse
 ppm
 ppollinterval
+prequestpacket
 prequesttime
 prequesttxtime
 presponsebuffer
@@ -96,6 +97,7 @@ sntprejectedresponseretrywithbackoff
 sntpsuccess
 sntptimestamp
 sntpv
+sntpzeropollinterval
 startingpos
 startingpos
 struct

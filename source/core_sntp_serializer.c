@@ -37,7 +37,7 @@
  * @brief The version of SNTP supported by the coreSNTP library by complying
  * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
  */
-#define SNTP_VERSION                                        ( 4 )
+#define SNTP_VERSION                                        ( 4U )
 
 /**
  * @brief The bit mask for the "Mode" information in the first byte of an SNTP packet.
@@ -52,7 +52,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT                                    ( 3 )
+#define SNTP_MODE_CLIENT                                    ( 3U )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
@@ -74,11 +74,6 @@
  * from server.
  */
 #define SNTP_KISS_OF_DEATH_STRATUM                          ( 0 )
-
-/**
- * @brief Constant to represent an empty SNTP timestamp value.
- */
-#define SNTP_ZERO_TIMESTAMP                                 { 0U, 0U }
 
 /**
  * @brief The position of least significant bit of the "Version" information
@@ -149,27 +144,6 @@ typedef struct SntpPacket
     SntpTimestamp_t receiveTime;  /* receive timestamp */
     SntpTimestamp_t transmitTime; /* transmit timestamp */
 } SntpPacket_t;
-
-/**
- * @brief Object representing data that is common to any SNTP request.
- *
- * @note The @ref Sntp_SerializeRequest API will fill the "originate
- * timestamp" with value provided by the application.
- */
-static const SntpPacket_t requestPacket =
-{
-    0 | ( SNTP_VERSION << SNTP_VERSION_LSB_POSITION ) | SNTP_MODE_CLIENT, /*leap indicator | version number | mode */
-    0,                                                                    /* stratum */
-    0,                                                                    /* poll interval */
-    0,                                                                    /* precision */
-    0,                                                                    /* root delay */
-    0,                                                                    /* root dispersion */
-    0,                                                                    /* reference ID */
-    SNTP_ZERO_TIMESTAMP,                                                  /* reference time */
-    SNTP_ZERO_TIMESTAMP,                                                  /* origin timestamp */
-    SNTP_ZERO_TIMESTAMP,                                                  /* receive timestamp */
-    SNTP_ZERO_TIMESTAMP                                                   /* transmit timestamp */
-};
 
 /**
  * @brief Utility macro to fill 32-bit integer in word-sized
@@ -468,8 +442,15 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
     {
         SntpPacket_t * pRequestPacket = ( SntpPacket_t * ) pBuffer;
 
-        /* Fill the buffer with standard data for an SNTP request packet.*/
-        memcpy( pBuffer, &requestPacket, sizeof( SntpPacket_t ) );
+        /* Fill the buffer with zero as most fields are zero for a standard SNTP
+         * request packet.*/
+        ( void ) memset( pBuffer, 0, sizeof( SntpPacket_t ) );
+
+        /* Set the first byte of the request packet for "Version" and "Mode" fields */
+        pRequestPacket->leapVersionMode = 0U /* Leap Indicator */ |
+                                          ( SNTP_VERSION << SNTP_VERSION_LSB_POSITION ) /* Version Number */ |
+                                          SNTP_MODE_CLIENT /* Mode */;
+
 
         /* Add passed random number to non-significant bits of the fractions part
          * of the transmit timestamp.
@@ -556,16 +537,16 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 {
     SntpStatus_t status = SntpSuccess;
 
-    if( ( clockFreqTolerance == 0 ) || ( desiredAccuracy == 0 ) || ( pPollInterval == NULL ) )
+    if( ( clockFreqTolerance == 0U ) || ( desiredAccuracy == 0U ) || ( pPollInterval == NULL ) )
     {
         status = SntpErrorBadParameter;
     }
     else
     {
-        uint32_t exactIntervalForAccuracy = 0;
-        uint8_t log2PollInterval = 0;
+        uint32_t exactIntervalForAccuracy = 0U;
+        uint8_t log2PollInterval = 0U;
 
-        /* Calculate the  poll interval required for achieving the exact desired clock accuracy
+        /* Calculate the poll interval required for achieving the exact desired clock accuracy
          * with the following formulae:
          *
          * System Clock Drift Rate ( microseconds / second ) = Clock Frequency Tolerance (in PPM )
@@ -583,20 +564,32 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
          *                             ------------------------------
          *                               Clock Frequency Tolerance
          */
-        exactIntervalForAccuracy = ( desiredAccuracy * 1000 ) / clockFreqTolerance;
+        exactIntervalForAccuracy = ( ( uint32_t ) desiredAccuracy * 1000U ) / clockFreqTolerance;
 
-        /* Calculate the floor value of log2 of the exact poll interval value. */
-        while( exactIntervalForAccuracy != 0 )
+        /* Check if calculated poll interval value falls in the supported range of seconds. */
+        if( exactIntervalForAccuracy == 0U )
         {
-            log2PollInterval++;
-            exactIntervalForAccuracy /= 2;
+            /* Poll interval value is less than 1 second, and is not supported by the function. */
+            status = SntpZeroPollInterval;
         }
+        else
+        {
+            /* To calculate the log 2 value of the exact poll interval value, first determine the highest
+             * bit set in the value. */
+            while( exactIntervalForAccuracy != 0U )
+            {
+                log2PollInterval++;
+                exactIntervalForAccuracy /= 2U;
+            }
 
-        log2PollInterval--;
+            /* Convert the highest bit in the exact poll interval value to the nearest integer
+             * value lower or equal to the log2 of the exact poll interval value. */
+            log2PollInterval--;
 
-        /* Calculate the poll interval as the closest exponent of 2 value that achieves
-         * equal or higher accuracy than the desired accuracy. */
-        *pPollInterval = ( 1 << log2PollInterval );
+            /* Calculate the poll interval as the closest exponent of 2 value that achieves
+             * equal or higher accuracy than the desired accuracy. */
+            *pPollInterval = ( ( ( uint32_t ) 1U ) << log2PollInterval );
+        }
     }
 
     return status;
