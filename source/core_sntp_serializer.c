@@ -441,14 +441,14 @@ static SntpStatus_t parseValidSntpResponse( const SntpPacket_t * pResponsePacket
 }
 
 
-SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
+SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
                                     uint32_t randomNumber,
                                     void * pBuffer,
                                     size_t bufferSize )
 {
     SntpStatus_t status = SntpSuccess;
 
-    if( pCurrentTime == NULL )
+    if( pRequestTime == NULL )
     {
         status = SntpErrorBadParameter;
     }
@@ -483,14 +483,14 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pCurrentTime,
          * part of the timestamp affects only ~15 microseconds of information
          * (calculated as 0xFFFF * 232 picoseconds).
          */
-        pCurrentTime->fractions = ( pCurrentTime->fractions
+        pRequestTime->fractions = ( pRequestTime->fractions
                                     | ( randomNumber >> 16 ) );
 
         /* Update the request buffer with request timestamp in network byte order. */
         fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.seconds,
-                                      pCurrentTime->seconds );
+                                      pRequestTime->seconds );
         fillWordMemoryInNetworkOrder( &pRequestPacket->transmitTime.fractions,
-                                      pCurrentTime->fractions );
+                                      pRequestTime->fractions );
     }
 
     return status;
