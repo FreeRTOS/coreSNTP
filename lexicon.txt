@@ -36,6 +36,7 @@ june
 kod
 leapversionmode
 lsb
+misra
 nist
 noleapsecond
 noninfringement
