@@ -568,7 +568,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
         uint32_t exactIntervalForAccuracy = 0U;
         uint8_t log2PollInterval = 0U;
 
-        /* Calculate the  poll interval required for achieving the exact desired clock accuracy
+        /* Calculate the poll interval required for achieving the exact desired clock accuracy
          * with the following formulae:
          *
          * System Clock Drift Rate ( microseconds / second ) = Clock Frequency Tolerance (in PPM )
@@ -604,7 +604,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
                 exactIntervalForAccuracy /= 2U;
             }
 
-            /* Convert the highest bit in the exact poll interval value to to the nearest integer
+            /* Convert the highest bit in the exact poll interval value to the nearest integer
              * value lower or equal to the log2 of the exact poll interval value. */
             log2PollInterval--;
 
