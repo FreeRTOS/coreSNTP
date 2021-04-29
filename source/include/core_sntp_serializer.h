@@ -133,7 +133,7 @@
  * bits set as either zero (i.e. to represent positive offset) or one
  * (i.e. to represent negative offset).
  */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFFU )
+#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFF )
 
 
 /**
@@ -380,7 +380,7 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
 /* @[define_sntp_deserializeresponse] */
 SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                                        const SntpTimestamp_t * pResponseRxTime,
-                                       const void * pBuffer,
+                                       const void * pResponseBuffer,
                                        size_t bufferSize,
                                        SntpResponseData_t * pParsedResponse );
 /* @[define_sntp_deserializeresponse] */
