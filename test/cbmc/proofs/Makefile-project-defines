@@ -14,7 +14,8 @@
 ################################################################
 
 # Flags to pass to goto-cc for compilation (typically those passed to gcc -c)
-# COMPILE_FLAGS =
+COMPILE_FLAGS += -fPIC
+COMPILE_FLAGS += -std=gnu90
 
 # Flags to pass to goto-cc for linking (typically those passed to gcc)
 # LINK_FLAGS =
@@ -25,7 +26,8 @@
 # You will want to decide what order that comes in relative to the other
 # include directories in your project.
 #
-# INCLUDES =
+INCLUDES += -I$(SRCDIR)/test/cbmc/include
+INCLUDES += -I$(SRCDIR)/source/include
 
 # Preprocessor definitions -D...
 # DEFINES =
