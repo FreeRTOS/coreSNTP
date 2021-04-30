@@ -1,3 +1,4 @@
+PROOF_ROOT ?= $(abspath .)
 
 # Absolute path to the root of the source tree.
 #
