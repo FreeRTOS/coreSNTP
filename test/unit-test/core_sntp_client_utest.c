@@ -62,9 +62,9 @@ static SntpServerInfo_t testServers[] =
         SNTP_DEFAULT_SERVER_PORT
     }
 };
-static UdpTransportIntf_t transportIntf;
+static UdpTransportInterface_t transportIntf;
 static NetworkContext_t netContext;
-static SntpAuthenticationIntf_t authIntf;
+static SntpAuthenticationInterface_t authIntf;
 static SntpAuthContext_t authContext;
 
 /* Variables for configuring behavior of interface functions. */
@@ -377,55 +377,54 @@ void test_Init_InvalidParams( void )
                                   &authIntf ) );
 }
 
-
 /**
  * @brief Test @ref Sntp_Init API correctly initializes a context.
  */
 void test_Init_Nominal( void )
 {
-#define TEST_SNTP_INIT_SUCCESS( pAuthIntf )                                                               \
-    do {                                                                                                  \
-        /* Call the API under test. */                                                                    \
-        TEST_ASSERT_EQUAL( SntpSuccess,                                                                   \
-                           Sntp_Init( &context,                                                           \
-                                      testServers,                                                        \
-                                      sizeof( testServers ) / sizeof( SntpServerInfo_t ),                 \
-                                      testBuffer,                                                         \
-                                      sizeof( testBuffer ),                                               \
-                                      dnsResolve,                                                         \
-                                      getTime,                                                            \
-                                      setTime,                                                            \
-                                      &transportIntf,                                                     \
-                                      pAuthIntf ) );                                                      \
-                                                                                                          \
-        /* Make sure that the passed parameters have been set in the context. */                          \
-        TEST_ASSERT_EQUAL( testServers, context.pTimeServers );                                           \
-        TEST_ASSERT_EQUAL( sizeof( testServers ) / sizeof( SntpServerInfo_t ), context.numOfServers );    \
-        TEST_ASSERT_EQUAL_PTR( testBuffer, context.pNetworkBuffer );                                      \
-        TEST_ASSERT_EQUAL( sizeof( testBuffer ), context.bufferSize );                                    \
-        TEST_ASSERT_EQUAL_PTR( dnsResolve, context.resolveDnsFunc );                                      \
-        TEST_ASSERT_EQUAL_PTR( getTime, context.getTimeFunc );                                            \
-        TEST_ASSERT_EQUAL_PTR( setTime, context.setTimeFunc );                                            \
-        TEST_ASSERT_EQUAL_MEMORY( &transportIntf,                                                         \
-                                  &context.networkIntf,                                                   \
-                                  sizeof( UdpTransportIntf_t ) );                                         \
-        if( pAuthIntf == NULL )                                                                           \
-        {                                                                                                 \
-            TEST_ASSERT_NULL( context.authIntf.pAuthContext );                                            \
-            TEST_ASSERT_NULL( context.authIntf.generateClientAuth );                                      \
-            TEST_ASSERT_NULL( context.authIntf.validateServer );                                          \
-        }                                                                                                 \
-        else                                                                                              \
-        {                                                                                                 \
-            TEST_ASSERT_EQUAL_MEMORY( &authIntf, &context.authIntf, sizeof( SntpAuthenticationIntf_t ) ); \
-        }                                                                                                 \
-                                                                                                          \
-        /* Validate the initialization of the state members of the context. */                            \
-        TEST_ASSERT_EQUAL( 0, context.currentServerIndex );                                               \
-        TEST_ASSERT_EQUAL( 0, context.currentServerIpV4Addr );                                            \
-        TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );                                          \
-        TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );                                        \
-        TEST_ASSERT_EQUAL( SNTP_PACKET_BASE_SIZE, context.sntpPacketSize );                               \
+#define TEST_SNTP_INIT_SUCCESS( pAuthIntf )                                                                    \
+    do {                                                                                                       \
+        /* Call the API under test. */                                                                         \
+        TEST_ASSERT_EQUAL( SntpSuccess,                                                                        \
+                           Sntp_Init( &context,                                                                \
+                                      testServers,                                                             \
+                                      sizeof( testServers ) / sizeof( SntpServerInfo_t ),                      \
+                                      testBuffer,                                                              \
+                                      sizeof( testBuffer ),                                                    \
+                                      dnsResolve,                                                              \
+                                      getTime,                                                                 \
+                                      setTime,                                                                 \
+                                      &transportIntf,                                                          \
+                                      pAuthIntf ) );                                                           \
+                                                                                                               \
+        /* Make sure that the passed parameters have been set in the context. */                               \
+        TEST_ASSERT_EQUAL( testServers, context.pTimeServers );                                                \
+        TEST_ASSERT_EQUAL( sizeof( testServers ) / sizeof( SntpServerInfo_t ), context.numOfServers );         \
+        TEST_ASSERT_EQUAL_PTR( testBuffer, context.pNetworkBuffer );                                           \
+        TEST_ASSERT_EQUAL( sizeof( testBuffer ), context.bufferSize );                                         \
+        TEST_ASSERT_EQUAL_PTR( dnsResolve, context.resolveDnsFunc );                                           \
+        TEST_ASSERT_EQUAL_PTR( getTime, context.getTimeFunc );                                                 \
+        TEST_ASSERT_EQUAL_PTR( setTime, context.setTimeFunc );                                                 \
+        TEST_ASSERT_EQUAL_MEMORY( &transportIntf,                                                              \
+                                  &context.networkIntf,                                                        \
+                                  sizeof( UdpTransportInterface_t ) );                                         \
+        if( pAuthIntf == NULL )                                                                                \
+        {                                                                                                      \
+            TEST_ASSERT_NULL( context.authIntf.pAuthContext );                                                 \
+            TEST_ASSERT_NULL( context.authIntf.generateClientAuth );                                           \
+            TEST_ASSERT_NULL( context.authIntf.validateServer );                                               \
+        }                                                                                                      \
+        else                                                                                                   \
+        {                                                                                                      \
+            TEST_ASSERT_EQUAL_MEMORY( &authIntf, &context.authIntf, sizeof( SntpAuthenticationInterface_t ) ); \
+        }                                                                                                      \
+                                                                                                               \
+        /* Validate the initialization of the state members of the context. */                                 \
+        TEST_ASSERT_EQUAL( 0, context.currentServerIndex );                                                    \
+        TEST_ASSERT_EQUAL( 0, context.currentServerIpV4Addr );                                                 \
+        TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );                                               \
+        TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );                                             \
+        TEST_ASSERT_EQUAL( SNTP_PACKET_BASE_SIZE, context.sntpPacketSize );                                    \
     } while( 0 )
 
     /* Test when an authentication interface is not passed. */

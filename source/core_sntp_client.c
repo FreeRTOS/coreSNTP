@@ -41,8 +41,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         SntpResolveDns_t resolveDnsFunc,
                         SntpGetTime_t getSystemTimeFunc,
                         SntpSetTime_t setSystemTimeFunc,
-                        const UdpTransportIntf_t * pTransportIntf,
-                        const SntpAuthenticationIntf_t * pAuthIntf )
+                        const UdpTransportInterface_t * pTransportIntf,
+                        const SntpAuthenticationInterface_t * pAuthIntf )
 {
     SntpStatus_t status = SntpSuccess;
 
@@ -88,12 +88,12 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
         pContext->setTimeFunc = setSystemTimeFunc;
 
         /* Copy contents of UDP transport interface to context. */
-        ( void ) memcpy( &pContext->networkIntf, pTransportIntf, sizeof( UdpTransportIntf_t ) );
+        ( void ) memcpy( &pContext->networkIntf, pTransportIntf, sizeof( UdpTransportInterface_t ) );
 
         /* If authentication interface has been passed, copy its contents to the context. */
         if( pAuthIntf != NULL )
         {
-            ( void ) memcpy( &pContext->authIntf, pAuthIntf, sizeof( SntpAuthenticationIntf_t ) );
+            ( void ) memcpy( &pContext->authIntf, pAuthIntf, sizeof( SntpAuthenticationInterface_t ) );
         }
 
         /* Initialize the packet size member to the standard minimum SNTP packet size.*/

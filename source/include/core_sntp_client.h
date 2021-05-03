@@ -34,6 +34,7 @@
 
 /* Standard include. */
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 /* Include coreSNTP Serializer header. */
@@ -48,7 +49,7 @@
  *
  * @param[in] pTimeServer The time-server whose IPv4 address is to be resolved.
  * @param[out] pIpV4Addr This should be filled with the resolved IPv4 address.
- * of @a pTimeServer.
+ * of @p pTimeServer.
  *
  * @return `true` if DNS resolution is successful; otherwise `false` to represent
  * failure.
@@ -146,11 +147,14 @@ typedef struct NetworkContext NetworkContext_t;
  * @param[in] bytesToSend The size of data in @p pBuffer to send.
  *
  * @return The function SHOULD return one of the following integer codes:
- * 0 when all data is successfully transmitted over the network.
- * -1 when only partial data is sent over the network, and operation can be
- * retried to send the remaining data.
- * -2 when the send operation failed to send any data, and operation
- * cannot be re-tried.
+ * - @p bytesToSend when all requested data is successfully transmitted over the
+ * network.
+ * - >0 value representing number of bytes sent when only partial data is sent
+ * over the network.
+ * - 0 when no data could be sent over the network (due to network buffer being
+ * full, for example), and the send operation can be retried.
+ * - -2 when the send operation failed to send any data due to an internal error,
+ * and operation cannot be retried.
  */
 typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
                                             const SntpServerInfo_t * pTimeServer,
@@ -170,11 +174,14 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  * server.
  *
  * @return The function SHOULD return one of the following integer codes:
- * 0 when @p bytesToRecv data is successfully read from the network.
- * -1 when only partial data is received from the network, and operation can be
- * re-tried to read the remaining data.
- * -2 when the read operation failed to receive any data, and operation cannot
- * be re-tried.
+ * - @p bytesToRecv value if all the requested number of bytes are received
+ * from the network.
+ * - > 0 value representing number of bytes received when partial data is
+ * received from the network.
+ * - ZERO when no data is available on the network, and the operation can be
+ * retried.
+ * - -2 when the read operation failed due to internal error, and operation cannot
+ * be retried.
  */
 typedef int32_t ( * UdpTransportRecvFrom_t )( NetworkContext_t * pNetworkContext,
                                               SntpServerInfo_t * pTimeServer,
@@ -192,7 +199,7 @@ typedef struct UdpTransportIntf
                                       * network socket information. */
     UdpTransportSendTo_t sendTo;     /**<@brief The user-defined UDP send function. */
     UdpTransportRecvFrom_t recvFrom; /**<@brief The user-defined UDP receive function. */
-} UdpTransportIntf_t;
+} UdpTransportInterface_t;
 
 /**
  * @ingroup core_sntp_struct_types
@@ -313,7 +320,7 @@ typedef struct SntpAuthenticationIntf
      * response.
      */
     SntpValidateAuthCode_t validateServer;
-} SntpAuthenticationIntf_t;
+} SntpAuthenticationInterface_t;
 
 /**
  * @ingroup core_sntp_struct_types
@@ -374,7 +381,7 @@ typedef struct SntpContext
      * @brief The user-defined interface for performing User Datagram Protocol (UDP)
      * send and receive network operations.
      */
-    UdpTransportIntf_t networkIntf;
+    UdpTransportInterface_t networkIntf;
 
     /**
      * @brief The user-defined interface for incorporating security mechanism of
@@ -384,7 +391,7 @@ typedef struct SntpContext
      * @note If the application will not use security mechanism for any of the
      * configured servers, then this interface can be undefined.
      */
-    SntpAuthenticationIntf_t authIntf;
+    SntpAuthenticationInterface_t authIntf;
 
     /**
      * @brief Cache of the resolved Ipv4 address of the current server being used for
@@ -418,10 +425,12 @@ typedef struct SntpContext
  * @param[out] pContext The user-supplied memory for the context that will be
  * initialized to represent an SNTP client.
  * @param[in] pTimeServers The list of decreasing order of priority of time
- * servers that should be used by the SNTP client.
+ * servers that should be used by the SNTP client. This list MUST stay in
+ * scope for all the time of use of the context.
+ * @param[in] numOfServers The number of servers in the list, @p pTimeServers.
  * @param[in] pNetworkBuffer The user-supplied memory that will be used for
  * storing network data for SNTP client-server communication. The buffer
- * MUST stay in scope for all the time the context is in use.
+ * MUST stay in scope for all the time of use of the context.
  * @param[in] bufferSize The size of the passed buffer @p pNetworkBuffer. The buffer
  * SHOULD be appropriately sized for storing an entire SNTP packet which includes
  * both #SNTP_PACKET_BASE_SIZE bytes of standard SNTP packet size, and space for
@@ -435,9 +444,12 @@ typedef struct SntpContext
  * time for every successful time response received from a server.
  * @param[in] pUdpTransportIntf The user-defined function for performing network
  * send/recv operations over UDP.
- * @param[in] pAuthIntf (Optional) The user-defined interface for generating
- * client authentication in SNTP requests and authenticating servers in SNTP
- * responses, if security mechanism is used in SNTP communication with server.
+ * @param[in] pAuthIntf The user-defined interface for generating client authentication
+ * in SNTP requests and authenticating servers in SNTP responses, if security mechanism
+ * is used in SNTP communication with server(s). If security mechanism is not used in
+ * communication with any of the configured servers (in @p pTimeServers), then the
+ * @ref SntpAuthenticationInterface_t does not need to be defined and this parameter
+ * can be NULL.
  *
  * @return This function returns one of the following:
  * - #SntpSuccess if the context is initialized.
@@ -454,8 +466,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         SntpResolveDns_t resolveDnsFunc,
                         SntpGetTime_t getSystemTimeFunc,
                         SntpSetTime_t setSystemTimeFunc,
-                        const UdpTransportIntf_t * pTransportIntf,
-                        const SntpAuthenticationIntf_t * pAuthIntf );
+                        const UdpTransportInterface_t * pTransportIntf,
+                        const SntpAuthenticationInterface_t * pAuthIntf );
 /* @[define_sntp_init] */
 
 
