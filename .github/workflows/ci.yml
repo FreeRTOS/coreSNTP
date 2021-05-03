@@ -60,8 +60,6 @@ jobs:
         uses: FreeRTOS/CI-CD-Github-Actions/formatting@main
         with:
           path: ./
-          exclude-dirs: ./.git/objects/b0/
-          exclude-files: ./.git/objects/b0/b7c8b79940dbb90f554adfc0aa899bb7692c77
   git-secrets:
     runs-on: ubuntu-latest
     steps:
