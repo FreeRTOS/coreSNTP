@@ -91,5 +91,5 @@ jobs:
         uses: FreeRTOS/CI-CD-GitHub-Actions/link-verifier@main
         with:
           path: ./
-          exclude-dirs: test/cbmc
+          exclude-dirs: ./test/cbmc
           include-file-types: .c,.h,.dox
