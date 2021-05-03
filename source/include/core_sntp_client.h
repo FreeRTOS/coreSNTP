@@ -47,7 +47,7 @@
  * used every time the @ref Sntp_SendTimeRequest API is called.
  *
  * @param[in] pTimeServer The time-server whose IPv4 address is to be resolved.
- * @param[out] pIpV4Addr This should be filled with the resolve IPv4 address
+ * @param[out] pIpV4Addr This should be filled with the resolved IPv4 address.
  * of @a pTimeServer.
  *
  * @return `true` if DNS resolution is successful; otherwise `false` to represent
@@ -128,7 +128,7 @@ typedef struct SntpServerInfo
  * @typedef NetworkContext_t
  * @brief A user-defined type for context that is passed to the transport interface functions.
  * It MUST be defined by the user to use the library.
- * It is of incomplete type to allow user to defined to the the needs of their transport
+ * It is of incomplete type to allow user to define to the needs of their transport
  * interface implementation.
  */
 struct NetworkContext;
@@ -148,7 +148,7 @@ typedef struct NetworkContext NetworkContext_t;
  * @return The function SHOULD return one of the following integer codes:
  * 0 when all data is successfully transmitted over the network.
  * -1 when only partial data is sent over the network, and operation can be
- * re-tried to send the remaining data.
+ * retried to send the remaining data.
  * -2 when the send operation failed to send any data, and operation
  * cannot be re-tried.
  */
@@ -237,8 +237,7 @@ typedef struct SntpAuthContext SntpAuthContext_t;
  * @return The function SHOULD return one of the following integer codes:
  * - #SntpSuccess when the server is successfully authenticated.
  * - #SntpErrorBufferTooSmall when the user-supplied buffer (to the SntpContext_t through
- * Sntp_Init) is not large enough to hold
- *  authentication data.
+ * Sntp_Init) is not large enough to hold authentication data.
  * - #SntpErrorAuthFailure for failure to generate authentication data due to internal
  * error.
  */
