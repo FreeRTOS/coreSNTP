@@ -82,6 +82,6 @@ add_subdirectory( unit-test )
 add_custom_target( coverage
     COMMAND ${CMAKE_COMMAND} -DUNITY_DIR=${UNITY_DIR}
     -P ${MODULE_ROOT_DIR}/tools/unity/coverage.cmake
-    DEPENDS unity core_sntp_utest
+    DEPENDS unity core_sntp_client_utest core_sntp_serializer_utest
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
