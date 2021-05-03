@@ -61,8 +61,17 @@ list(APPEND utest_dep_list
             ${real_name}
         )
 
-set(utest_name "${project_name}_utest")
+set(utest_name "${project_name}_serializer_utest")
 set(utest_source "${project_name}_serializer_utest.c")
+create_test(${utest_name}
+            ${utest_source}
+            "${utest_link_list}"
+            "${utest_dep_list}"
+            "${test_include_directories}"
+        )
+
+set(utest_name "${project_name}_client_utest")
+set(utest_source "${project_name}_client_utest.c")
 create_test(${utest_name}
             ${utest_source}
             "${utest_link_list}"

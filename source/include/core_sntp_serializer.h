@@ -135,7 +135,6 @@
  */
 #define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFF )
 
-
 /**
  * @ingroup core_sntp_enum_types
  * @brief Enumeration of status codes that can be returned
@@ -198,7 +197,21 @@ typedef enum SntpStatus
      * @brief SNTP timestamp cannot be converted to UNIX time as time does not lie
      * in time range supported by Sntp_ConvertToUnixTime.
      */
-    SntpErrorTimeNotSupported
+    SntpErrorTimeNotSupported,
+
+    /**
+     * @brief Time server is not authenticated from the authentication data in its response.
+     * This status can be returned by the user-supplied definition of the
+     * @ref SntpValidateAuthCode_t authentication interface.
+     */
+    SntpServerNotAuthenticated,
+
+    /**
+     * @brief Failure from the user-supplied authentication interface, @ref SntpAuthenticationIntf_t,
+     * in either generating authentication data for SNTP request OR validating the authentication
+     * data in SNTP response from server.
+     */
+    SntpErrorAuthFailure
 } SntpStatus_t;
 
 /**
@@ -225,9 +238,12 @@ typedef enum SntpLeapSecondInfo
 /**
  * @ingroup core_sntp_struct_types
  * @brief Structure representing an SNTP timestamp.
+ *
  * @note The SNTP timestamp uses 1st January 1900 0h 0m 0s Coordinated Universal Time (UTC)
  * as the primary epoch i.e. the timestamp represents current time as the amount of time since
  * the epoch time.
+ * Refer to the [SNTPv4 specification](https://tools.ietf.org/html/rfc4330#section-3) for more
+ * information of the SNTP timestamp format.
  */
 typedef struct SntpTimestamp
 {
@@ -272,6 +288,10 @@ typedef struct SntpResponse
      * server time calculated from client request and server response
      * times. This information can be used to synchronize the system clock
      * with a "slew" or "step" correction approach.
+     *
+     * @note The library calculates the clock-offset value using the On-Wire
+     * protocol suggested by the NTPv4 specification. For more information,
+     * refer to https://tools.ietf.org/html/rfc5905#section-8.
      *
      * @note The system clock MUST be within 34 years (in the past or future)
      * of the server time for this calculation. This is a fundamental limitation
