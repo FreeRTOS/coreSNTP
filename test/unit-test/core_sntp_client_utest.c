@@ -55,10 +55,12 @@ static SntpServerInfo_t testServers[] =
 {
     {
         "my.ntp.server.1",
+        strlen( "my.ntp.server.1" ),
         SNTP_DEFAULT_SERVER_PORT
     },
     {
         "my.ntp.server.2",
+        strlen( "my.ntp.server.2" ),
         SNTP_DEFAULT_SERVER_PORT
     }
 };
@@ -70,7 +72,6 @@ static SntpAuthContext_t authContext;
 /* Variables for configuring behavior of interface functions. */
 static bool dnsResolveRetCode = true;
 static uint32_t dnsResolveAddr = TEST_SERVER_ADDR;
-static bool getTimeRetCode = true;
 static bool setTimeRetCode = true;
 static int32_t UpdSendRetCode = 0;
 static int32_t UpdRecvCode = 0;
@@ -78,7 +79,7 @@ static int32_t UpdRecvCode = 0;
 /* ========================= Helper Functions ============================ */
 
 /* Test definition of the @ref SntpResolveDns_t interface. */
-bool dnsResolve( const char * pServerAddr,
+bool dnsResolve( const SntpServerInfo_t * pServerAddr,
                  uint32_t * pIpV4Addr )
 {
     TEST_ASSERT_NOT_NULL( pServerAddr );
@@ -90,15 +91,13 @@ bool dnsResolve( const char * pServerAddr,
 }
 
 /* Test definition of the @ref SntpGetTime_t interface. */
-bool getTime( SntpTimestamp_t * pCurrentTime )
+void getTime( SntpTimestamp_t * pCurrentTime )
 {
     TEST_ASSERT_NOT_NULL( pCurrentTime );
-
-    return getTimeRetCode;
 }
 
 /* Test definition of the @ref SntpSetTime_t interface. */
-bool setTime( const char * pTimeServer,
+bool setTime( const SntpServerInfo_t * pTimeServer,
               const SntpTimestamp_t * pServerTime,
               int32_t clockOffsetSec )
 {
@@ -111,35 +110,41 @@ bool setTime( const char * pTimeServer,
 
 /* Test definition of the @ref UdpTransportSendTo_t interface. */
 int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
-                   const SntpServerInfo_t * pTimeServer,
+                   uint32_t serverAddr,
+                   uint16_t serverPort,
                    const void * pBuffer,
                    size_t bytesToSend )
 {
     TEST_ASSERT_NOT_NULL( pNetworkContext );
-    TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pBuffer );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, bytesToSend );
+
+    ( void ) serverAddr;
+    ( void ) serverPort;
 
     return UpdSendRetCode;
 }
 
 /* Test definition of the @ref UdpTransportRecvFrom_t interface. */
 int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
-                     SntpServerInfo_t * pTimeServer,
+                     uint32_t serverAddr,
+                     uint16_t serverPort,
                      void * pBuffer,
                      size_t bytesToRecv )
 {
     TEST_ASSERT_NOT_NULL( pNetworkContext );
-    TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pBuffer );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, bytesToRecv );
+
+    ( void ) serverAddr;
+    ( void ) serverPort;
 
     return UpdRecvCode;
 }
 
 /* Test definition for @ref SntpGenerateAuthCode_t interface. */
 SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
-                                 const char * pTimeServer,
+                                 const SntpServerInfo_t * pTimeServer,
                                  void * pBuffer,
                                  size_t bufferSize,
                                  size_t * pAuthCodeSize )
@@ -154,10 +159,10 @@ SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
 }
 
 /* Test definition for @ref SntpValidateAuthCode_t interface. */
-SntpStatus_t validateServer( SntpAuthContext_t * pContext,
-                             const char * pTimeServer,
-                             const void * pResponseData,
-                             size_t responseSize )
+SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
+                                 const SntpServerInfo_t * pTimeServer,
+                                 const void * pResponseData,
+                                 size_t responseSize )
 {
     TEST_ASSERT_NOT_NULL( pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
@@ -175,7 +180,6 @@ void setUp()
     /* Reset the global variables. */
     dnsResolveRetCode = true;
     dnsResolveAddr = TEST_SERVER_ADDR;
-    getTimeRetCode = true;
     setTimeRetCode = true;
     UpdSendRetCode = 0;
     UpdRecvCode = 0;
@@ -188,7 +192,7 @@ void setUp()
     /* Set the auth interface object. */
     authIntf.pAuthContext = &authContext;
     authIntf.generateClientAuth = generateClientAuth;
-    authIntf.validateServer = validateServer;
+    authIntf.validateServerAuth = validateServerAuth;
 
     /* Clear the network buffer. */
     memset( &testBuffer, 0, sizeof( testBuffer ) );
@@ -363,7 +367,7 @@ void test_Init_InvalidParams( void )
                                   &transportIntf,
                                   &authIntf ) );
     authIntf.generateClientAuth = generateClientAuth;
-    authIntf.validateServer = NULL;
+    authIntf.validateServerAuth = NULL;
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_Init( &context,
                                   testServers,
@@ -412,7 +416,7 @@ void test_Init_Nominal( void )
         {                                                                                                      \
             TEST_ASSERT_NULL( context.authIntf.pAuthContext );                                                 \
             TEST_ASSERT_NULL( context.authIntf.generateClientAuth );                                           \
-            TEST_ASSERT_NULL( context.authIntf.validateServer );                                               \
+            TEST_ASSERT_NULL( context.authIntf.validateServerAuth );                                           \
         }                                                                                                      \
         else                                                                                                   \
         {                                                                                                      \

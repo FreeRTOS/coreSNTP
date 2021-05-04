@@ -40,6 +40,41 @@
 /* Include coreSNTP Serializer header. */
 #include "core_sntp_serializer.h"
 
+/* SNTP_DO_NOT_USE_CUSTOM_CONFIG allows building the SNTP library
+ * without a custom config. If a custom config is provided, the
+ * SNTP_DO_NOT_USE_CUSTOM_CONFIG macro should not be defined. */
+#ifndef SNTP_DO_NOT_USE_CUSTOM_CONFIG
+    /* Include custom config file before other headers. */
+    #include "core_sntp_config.h"
+#endif
+
+/* Include config defaults header to get default values of configs not
+ * defined in core_sntp_config.h file. */
+#include "core_sntp_config_defaults.h"
+
+/**
+ * @brief The default UDP port supported by SNTP/NTP servers for client-server
+ * communication.
+ *
+ * @note It is possible for a server to use a different port number than
+ * the default port when using the Network Time Security protocol as the security
+ * mechanism for SNTP communication. For more information, refer to Section 4.1.8
+ * of [RFC 8915](https://tools.ietf.org/html/rfc8915).
+ */
+#define SNTP_DEFAULT_SERVER_PORT    ( 123U )
+
+/**
+ * @brief core_sntp_struct_types
+ * @brief Structure representing information for a time server.
+ */
+typedef struct SntpServerInfo
+{
+    const char * pServerName; /**<@brief The time server name. */
+    size_t serverNameLength;  /**<@brief The length of the server name.*/
+    uint16_t port;            /**<@brief The UDP port supported by the server
+                               * for SNTP/NTP communication. */
+} SntpServerInfo_t;
+
 /**
  * @ingroup core_sntp_callback_types
  * @brief Interface for user-defined function to resolve time server domain-name
@@ -54,7 +89,7 @@
  * @return `true` if DNS resolution is successful; otherwise `false` to represent
  * failure.
  */
-typedef bool ( * SntpResolveDns_t )( const char * pServerAddr,
+typedef bool ( * SntpResolveDns_t )( const SntpServerInfo_t * pServerAddr,
                                      uint32_t * pIpV4Addr );
 
 /**
@@ -72,7 +107,7 @@ typedef bool ( * SntpResolveDns_t )( const char * pServerAddr,
  * @return `true` if obtaining system time is successful; otherwise `false` to
  * represent failure.
  */
-typedef bool ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
+typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
 
 /**
  * @ingroup core_sntp_callback_types
@@ -98,31 +133,9 @@ typedef bool ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * @return `true` if setting system time is successful; otherwise `false` to
  * represent failure.
  */
-typedef bool ( * SntpSetTime_t )( const char * pTimeServer,
+typedef bool ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   const SntpTimestamp_t * pServerTime,
                                   int32_t clockOffsetSec );
-
-/**
- * @brief The default UDP port supported by SNTP/NTP servers for client-server
- * communication.
- *
- * @note It is possible for a server to use a different port number than
- * the default port when using the Network Time Security protocol as the security
- * mechanism for SNTP communication. For more information, refer to Section 4.1.8
- * of [RFC 8915](https://tools.ietf.org/html/rfc8915).
- */
-#define SNTP_DEFAULT_SERVER_PORT    ( 123U )
-
-/**
- * @brief core_sntp_struct_types
- * @brief Structure representing information for a time server.
- */
-typedef struct SntpServerInfo
-{
-    const char * pServerName; /**<@brief The time server endpoint. */
-    uint16_t port;            /**<@brief The UDP port supported by the server
-                               * for SNTP/NTP communication. */
-} SntpServerInfo_t;
 
 /**
  * @ingroup core_sntp_struct_types
@@ -142,22 +155,24 @@ typedef struct NetworkContext NetworkContext_t;
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
- * @param[in] pTimeServer The time server to send the data to.
+ * @param[in] serverAddr The IPv4 address of the time server to send the data to.
+ * @param[in] serverPort The port of the server to send data to.
  * @param[in] pBuffer The buffer containing the data to send over the network.
  * @param[in] bytesToSend The size of data in @p pBuffer to send.
  *
  * @return The function SHOULD return one of the following integer codes:
  * - @p bytesToSend when all requested data is successfully transmitted over the
  * network.
- * - >0 value representing number of bytes sent when only partial data is sent
+ * - > 0 value representing number of bytes sent when only partial data is sent
  * over the network.
  * - 0 when no data could be sent over the network (due to network buffer being
  * full, for example), and the send operation can be retried.
- * - -2 when the send operation failed to send any data due to an internal error,
+ * - < 0 when the send operation failed to send any data due to an internal error,
  * and operation cannot be retried.
  */
 typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
-                                            const SntpServerInfo_t * pTimeServer,
+                                            uint32_t serverAddr,
+                                            uint16_t serverPort,
                                             const void * pBuffer,
                                             size_t bytesToSend );
 
@@ -168,7 +183,8 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
- * @param[in] pTimeServer The time server to receive data from.
+ * @param[in] pTimeServer The IPv4 address of the time server to receive data from.
+ * @param[in] serverPort The port of the server to receive data from.
  * @param[out] pBuffer This SHOULD be filled with data received from the network.
  * @param[in] bytesToRecv The expected number of bytes to receive from the
  * server.
@@ -180,11 +196,12 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  * received from the network.
  * - ZERO when no data is available on the network, and the operation can be
  * retried.
- * - -2 when the read operation failed due to internal error, and operation cannot
+ * - < 0 when the read operation failed due to internal error, and operation cannot
  * be retried.
  */
 typedef int32_t ( * UdpTransportRecvFrom_t )( NetworkContext_t * pNetworkContext,
-                                              SntpServerInfo_t * pTimeServer,
+                                              uint32_t serverAddr,
+                                              uint16_t serverPort,
                                               void * pBuffer,
                                               size_t bytesToRecv );
 
@@ -237,19 +254,21 @@ typedef struct SntpAuthContext SntpAuthContext_t;
  * @param[in, out] pBuffer This buffer SHOULD be filled with the authentication
  * code generated from the #SNTP_PACKET_BASE_SIZE bytes of SNTP request data
  * present in it.
- * @param[in] bufferSize The maximum amount of data that can be held by
- * the buffer, @p pBuffer.
- * @param[out] pAuthCodeSize The size of authentication data filled in the buffer.
+ * @param[in] bufferSize The maximum amount of data that can be held by the buffer,
+ * @p pBuffer.
+ * @param[out] pAuthCodeSize This should be filled with size of the authentication
+ * data appended to the SNTP request buffer, @p pBuffer. This value plus
+ * #SNTP_PACKET_BASE_SIZE should not exceed the buffer size, @p bufferSize.
  *
  * @return The function SHOULD return one of the following integer codes:
- * - #SntpSuccess when the server is successfully authenticated.
+ * - #SntpSuccess when the authentication data is successfully appended to @p pBuffer.
  * - #SntpErrorBufferTooSmall when the user-supplied buffer (to the SntpContext_t through
- * Sntp_Init) is not large enough to hold authentication data.
+ * @ref Sntp_Init) is not large enough to hold authentication data.
  * - #SntpErrorAuthFailure for failure to generate authentication data due to internal
  * error.
  */
 typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
-                                                  const char * pTimeServer,
+                                                  const SntpServerInfo_t * pTimeServer,
                                                   void * pBuffer,
                                                   size_t bufferSize,
                                                   size_t * pAuthCodeSize );
@@ -288,7 +307,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
  * error.
  */
 typedef SntpStatus_t (* SntpValidateAuthCode_t )( SntpAuthContext_t * pContext,
-                                                  const char * pTimeServer,
+                                                  const SntpServerInfo_t * pTimeServer,
                                                   const void * pResponseData,
                                                   size_t responseSize );
 
@@ -319,7 +338,7 @@ typedef struct SntpAuthenticationIntf
      * @brief The user-defined function to authenticating server from its SNTP
      * response.
      */
-    SntpValidateAuthCode_t validateServer;
+    SntpValidateAuthCode_t validateServerAuth;
 } SntpAuthenticationInterface_t;
 
 /**
@@ -409,10 +428,10 @@ typedef struct SntpContext
     SntpTimestamp_t lastRequestTime;
 
     /**
-     * @brief State variable for storing the size of the SNTP packet that includes
+     * @brief State member for storing the size of the SNTP packet that includes
      * both #SNTP_PACKET_BASE_SIZE bytes plus any authentication data, if a security
      * mechanism is used.
-     * This state variable is used for expecting the same size for an SNTP response
+     * This value is used for expecting the same size for an SNTP response
      * from the server.
      */
     size_t sntpPacketSize;
@@ -469,6 +488,45 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         const UdpTransportInterface_t * pTransportIntf,
                         const SntpAuthenticationInterface_t * pAuthIntf );
 /* @[define_sntp_init] */
+
+
+/**
+ * @brief Sends a request for time from the currently configured server (in the
+ * context).
+ * If the user has provided an authentication interface, the client
+ * authentication code is appended to the request before sending over the network
+ * by calling the @ref SntpGenerateAuthCode_t function of the
+ * @ref SntpAuthenticationInterface_t.
+ *
+ * @note This function will ONLY send a request if there is a server available
+ * in the configured list that had not rejected an earlier request for time.
+ * This adheres to the Best Practice functionality specified in [Section 10 Point 8
+ * of SNTPv4 specification](https://tools.ietf.org/html/rfc4330#section-10).
+ *
+ * @param[in] pContext The context representing an SNTPv4 client.
+ * @param[in] randomNumber A random number serializing the SNTP request packet
+ * to protect against replay attacks as suggested by SNTPv4 specification in
+ * [RFC 4330 Section 3](https://tools.ietf.org/html/rfc4330#section-3). It is
+ * RECOMMENDED that a True Random Generator is used to generate the random number.
+ *
+ * @return The API function returns one of the following:
+ *  - #SntpSuccess if a time request is successfully sent to the currently configured
+ * time server in the context.
+ *  - #SntpErrorBadParameter if any invalid parameter is passed to the function.
+ *  - #SntpErrorChangeServer if there is no server remaining in the list of configured
+ * servers that has not rejected a prior time request.
+ *  - #SntpErrorDnsFailure if there is failure in the user-defined function for
+ * DNS resolution of the time server.
+ *  - #SntpErrorNetworkFailure if the SNTP request could not be sent over the network
+ * through the user-defined transport interface.
+ *  - #SntpErrorAuthFailure if there was a failure in generating the client
+ * authentication code in the user-defined authentication interface.
+ */
+/* @[define_sntp_sendtimerequest] */
+SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
+                                   uint32_t randomNumber );
+/* @[define_sntp_sendtimerequest] */
+
 
 
 #endif /* ifndef CORE_SNTP_CLIENT_H_ */
