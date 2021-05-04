@@ -7,7 +7,8 @@
 
 # coreSNTP library source files.
 set( CORE_SNTP_SOURCES
-     "${CMAKE_CURRENT_LIST_DIR}/source/core_sntp_serializer.c" )
+     "${CMAKE_CURRENT_LIST_DIR}/source/core_sntp_serializer.c"
+     "${CMAKE_CURRENT_LIST_DIR}/source/core_sntp_client.c" )
 
 # coreSNTP library Public Include directories.
 set( CORE_SNTP_INCLUDE_PUBLIC_DIRS
