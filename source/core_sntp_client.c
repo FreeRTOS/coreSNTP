@@ -342,6 +342,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                             "NetworkBufferSize=%lu",
                             ( unsigned long ) authDataSize,
                             ( unsigned long ) pContext->bufferSize ) );
+                status = SntpErrorAuthFailure;
             }
             else
             {
