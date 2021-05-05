@@ -60,6 +60,7 @@ jobs:
         uses: FreeRTOS/CI-CD-Github-Actions/formatting@main
         with:
           path: ./
+          exclude-dirs: .git
   git-secrets:
     runs-on: ubuntu-latest
     steps:
@@ -90,4 +91,5 @@ jobs:
         uses: FreeRTOS/CI-CD-GitHub-Actions/link-verifier@main
         with:
           path: ./
+          exclude-dirs: cbmc
           include-file-types: .c,.h,.dox
