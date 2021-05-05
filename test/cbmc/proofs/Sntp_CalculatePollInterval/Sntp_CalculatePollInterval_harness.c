@@ -29,10 +29,9 @@
 
 void harness()
 {
+    uint16_t clockFreqTolerance;
+    uint16_t desiredAccuracy;
+    uint32_t pollInterval;
 
-  uint16_t clockFreqTolerance;
-  uint16_t desiredAccuracy;
-  uint32_t pollInterval;
-
-  Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, &pollInterval);
+    Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, &pollInterval );
 }
