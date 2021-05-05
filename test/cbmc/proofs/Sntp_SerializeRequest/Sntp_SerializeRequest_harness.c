@@ -37,6 +37,8 @@ void harness()
 
     pRequestTime = malloc( sizeof( SntpTimestamp_t ) );
 
+    __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
+    
     pBuffer = malloc( bufferSize );
 
     Sntp_SerializeRequest( pRequestTime, randomNumber, pBuffer, bufferSize );
