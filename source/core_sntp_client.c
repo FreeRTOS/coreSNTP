@@ -131,7 +131,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  *
  * @note This functions supports the edge case of SNTP timestamp overflow
  * when @p pCurrentTime represents time in NTP era 1 (i.e. time since 7 Feb 2036)
- * and the @p OlderTime represents tim in NTP era 0 (i.e. time since 1st Jan 1900).
+ * and the @p OlderTime represents time in NTP era 0 (i.e. time since 1st Jan 1900).
  *
  * @return Returns the calculated time duration between the two timestamps.
  */

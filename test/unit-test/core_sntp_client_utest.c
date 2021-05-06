@@ -526,7 +526,7 @@ void test_Sntp_SendTimeRequest_ErrorCases()
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_SendTimeRequest( NULL, rand() % UINT32_MAX ) );
 
-    /* Test case when no remaning server exists to request time from. */
+    /* Test case when no remaining server exists to request time from. */
     context.currentServerIndex = sizeof( testServers ) / sizeof( SntpServerInfo_t );
     TEST_ASSERT_EQUAL( SntpErrorChangeServer,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
@@ -619,7 +619,7 @@ void test_SendTimeRequest_Nominal( void )
 
 #define TEST_SUCCESS_CASE( generateClientAuthFunc, timeBeforeLoop, timeIn1stIteration )                                         \
     do {                                                                                                                        \
-        /* Reset indices to lists controling behavior of interface functions. */                                                \
+        /* Reset indices to lists controlling behavior of interface functions. */                                               \
         currentTimeIndex = 0;                                                                                                   \
         currentUdpSendCodeIndex = 0;                                                                                            \
                                                                                                                                 \
