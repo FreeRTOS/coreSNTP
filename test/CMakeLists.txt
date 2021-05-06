@@ -46,7 +46,7 @@ target_include_directories( coverity_analysis
                              ${CORE_SNTP_INCLUDE_PUBLIC_DIRS} )
 
 # Build SNTP library target without custom config dependency.
-target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )                             
+target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
 
 #  ==================================== Unit Test Configuration ====================================
 

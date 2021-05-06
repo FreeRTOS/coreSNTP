@@ -52,13 +52,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
         ( getSystemTimeFunc == NULL ) || ( setSystemTimeFunc == NULL ) ||
         ( pTransportIntf == NULL ) )
     {
-        LogError( ( "Invalid parameter: Following pointer parameters cannot be NULL: "
-                    "pContext=%p, pTimeServers=%p, pNetworkBuffer=%p, resolveDnsFunc=%p, "
-                    "getSystemTimeFunc=%p, setSystemTimeFunc=%p, pTransportIntf=%p",
-                    ( void * ) pContext, ( void * ) pTimeServers,
-                    ( void * ) pNetworkBuffer, ( void * ) resolveDnsFunc,
-                    ( void * ) getSystemTimeFunc, ( void * ) setSystemTimeFunc,
-                    ( void * ) pTransportIntf ) );
+        LogError( ( "Invalid parameter: Pointer parameters (except pAuthIntf) cannot be NULL" ) );
 
         status = SntpErrorBadParameter;
     }
@@ -129,6 +123,43 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
 }
 
 /**
+ * @brief Utility to calculate the difference in milliseconds between 2
+ * SNTP timestamps.
+ *
+ * @param[in] pCurrentTime The more recent timestamp.
+ * @param[in] pOlderTime The older timestamp.
+ *
+ * @note This functions supports the edge case of SNTP timestamp overflow
+ * when @p pCurrentTime represents time in NTP era 1 (i.e. time since 7 Feb 2036)
+ * and the @p OlderTime represents tim in NTP era 0 (i.e. time since 1st Jan 1900).
+ *
+ * @return Returns the calculated time duration between the two timestamps.
+ */
+static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
+                                        const SntpTimestamp_t * pOlderTime )
+{
+    uint32_t timeDiffMs = 0U;
+
+    assert( pCurrentTime != NULL );
+    assert( pOlderTime != NULL );
+
+    timeDiffMs = ( pCurrentTime->seconds - pOlderTime->seconds ) * 1000U;
+
+    if( pCurrentTime->fractions > pOlderTime->fractions )
+    {
+        timeDiffMs += ( pCurrentTime->fractions - pOlderTime->fractions ) /
+                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U );
+    }
+    else
+    {
+        timeDiffMs -= ( pOlderTime->fractions - pCurrentTime->fractions ) /
+                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U );
+    }
+
+    return timeDiffMs;
+}
+
+/**
  * @brief Sends SNTP request packet to the passed server over the network
  * using transport interface's send function.
  *
@@ -169,7 +200,7 @@ static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
     size_t bytesRemaining = packetSize;
     int32_t totalBytesSent = 0, bytesSent = 0;
     SntpTimestamp_t lastSendTime;
-    uint16_t timeSinceLastSendMs;
+    uint32_t timeSinceLastSendMs;
     bool sendError = false;
 
     assert( pPacket != NULL );
@@ -211,9 +242,7 @@ static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
             bytesRemaining -= ( size_t ) bytesSent;
             totalBytesSent += bytesSent;
             pIndex += bytesSent;
-            LogDebug( ( "BytesSent=%ld, BytesRemaining=%lu",
-                        ( long int ) bytesSent,
-                        ( unsigned long ) bytesRemaining ) );
+            LogDebug( ( "BytesSent=%d, BytesRemaining=%lu", bytesSent, bytesRemaining ) );
         }
         else
         {
@@ -223,16 +252,13 @@ static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
             getTimeFunc( &currentTime );
 
             /* Calculate time elapsed since last data was sent over network. */
-            timeSinceLastSendMs = ( currentTime.seconds - lastSendTime.seconds ) * 1000U +
-                                  ( ( currentTime.fractions - lastSendTime.fractions ) /
-                                    ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U ) );
+            timeSinceLastSendMs = calculateElapsedTimeMs( &currentTime, &lastSendTime );
 
             /* Check for timeout if we have been waiting to send any data over the network. */
             if( timeSinceLastSendMs >= SNTP_SEND_RETRY_TIMEOUT_MS )
             {
                 LogError( ( "Unable to send request packet: Timed out retrying send: "
-                            "SendRetryTimeout=%uMs",
-                            ( unsigned int ) SNTP_SEND_RETRY_TIMEOUT_MS ) );
+                            "SendRetryTimeout=%uMs", SNTP_SEND_RETRY_TIMEOUT_MS ) );
                 sendError = true;
             }
         }
@@ -241,6 +267,63 @@ static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
     return ( sendError == false ) ? SntpSuccess : SntpErrorNetworkFailure;
 }
 
+/**
+ * @brief Adds client authentication data to SNTP request packet by calling the
+ * authentication interface.
+ *
+ * @param[in] pContext The SNTP context.
+ *
+ * @return Returns one of the following:
+ * - #SntpSuccess for success call to the interface function for appending client
+ * authentication data.
+ * - #SntpErrorAuthError when the interface returns an error OR the interface
+ * returns an incorrect size of the client authentication data.
+ * - #SntpBufferTooSmall if the interface returns the status for the request packet
+ * buffer being too small to add client authentication data.
+ */
+static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
+{
+    SntpStatus_t status = SntpSuccess;
+    size_t authDataSize = 0U;
+
+    assert( pContext != NULL );
+    assert( pContext->authIntf.generateClientAuth != NULL );
+
+    status = pContext->authIntf.generateClientAuth( pContext->authIntf.pAuthContext,
+                                                    &pContext->pTimeServers[ pContext->currentServerIndex ],
+                                                    pContext->pNetworkBuffer,
+                                                    pContext->bufferSize,
+                                                    &authDataSize );
+
+    if( status != SntpSuccess )
+    {
+        LogError( ( "Unable to send time request: Client authentication function failed: "
+                    "RetStatus=%u", status ) );
+    }
+
+    /* Sanity check that the returned authentication data size fits in the remaining space
+     * of the request buffer besides the first #SNTP_PACKET_BASE_SIZE bytes. */
+    else if( authDataSize > ( pContext->bufferSize - SNTP_PACKET_BASE_SIZE ) )
+    {
+        LogError( ( "Unable to send time request: Invalid authentication code size: "
+                    "AuthCodeSize=%lu, NetworkBufferSize=%lu",
+                    ( unsigned long ) authDataSize, ( unsigned long ) pContext->bufferSize ) );
+        status = SntpErrorAuthFailure;
+    }
+    else
+    {
+        /* With the authentication data added. calculate total SNTP request packet size. The same
+         * size would be expected in the SNTP response from server. */
+        pContext->sntpPacketSize = SNTP_PACKET_BASE_SIZE + authDataSize;
+
+        LogInfo( ( "Appended client authentication code to SNTP request packet:"
+                   " AuthCodeSize=%lu, TotalPacketSize=%lu",
+                   ( unsigned long ) pContext->sntpPacketSize,
+                   ( unsigned long ) pContext->sntpPacketSize ) );
+    }
+
+    return status;
+}
 
 SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                    uint32_t randomNumber )
@@ -260,8 +343,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
          * that has not already rejected a prior request. */
         if( pContext->currentServerIndex >= pContext->numOfServers )
         {
-            LogError( ( "Cannot request time: All configured servers rejected prior time "
-                        "requests: Re-initialize context with new servers" ) );
+            LogError( ( "Cannot request time: All servers have rejected time requests: "
+                        "Re-initialize context with new servers" ) );
             status = SntpErrorChangeServer;
         }
         else
@@ -269,27 +352,24 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
             /* Set local variable for the currently indexed server to use for time
              * query. */
             pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
-            LogDebug( ( "Using server %.*s at index %lu for time query",
-                        ( int ) pServer->serverNameLength, pServer->pServerName,
-                        ( unsigned long ) pContext->currentServerIndex ) );
+
+            LogDebug( ( "Using server %.*s for time query", ( int ) pServer->serverNameLen, pServer->pServerName ) );
         }
 
         if( status == SntpSuccess )
         {
             /* Perform DNS resolution of the currently indexed server in the list
              * of configured servers. */
-            if( pContext->resolveDnsFunc( pServer,
-                                          &pContext->currentServerIpV4Addr ) == false )
+            if( pContext->resolveDnsFunc( pServer, &pContext->currentServerAddr ) == false )
             {
                 LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
-                            ( int ) pServer->serverNameLength, pServer->pServerName ) );
+                            ( int ) pServer->serverNameLen, pServer->pServerName ) );
+
                 status = SntpErrorDnsFailure;
             }
             else
             {
-                LogInfo( ( "Time Server DNS resolved: Server=%.*s, Address=0x%08X",
-                           ( int ) pServer->serverNameLength, pServer->pServerName,
-                           ( unsigned int ) pContext->currentServerIpV4Addr ) );
+                LogDebug( ( "Server DNS resolved: Address=0x%08X", pContext->currentServerAddr ) );
             }
         }
 
@@ -297,10 +377,6 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
         {
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
-
-            LogInfo( ( "Obtained current time for SNTP request: Seconds=%u, Fractions=%u",
-                       pContext->lastRequestTime.seconds,
-                       pContext->lastRequestTime.fractions ) );
 
             /* Generate SNTP request packet with the current system time and
              * the passed random number. */
@@ -318,47 +394,14 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
          * authentication data to SNTP request buffer. */
         if( ( status == SntpSuccess ) && ( pContext->authIntf.generateClientAuth != NULL ) )
         {
-            size_t authDataSize = 0U;
-            status = pContext->authIntf.generateClientAuth( pContext->authIntf.pAuthContext,
-                                                            pServer,
-                                                            pContext->pNetworkBuffer,
-                                                            pContext->bufferSize,
-                                                            &authDataSize );
-
-            if( status != SntpSuccess )
-            {
-                LogError( ( "Unable to send time request: Client authentication function failed: "
-                            "RetStatus=%u", status ) );
-            }
-
-            /* Sanity check that the returned authentication data size fits in the remaining space
-             * of the request buffer besides the first #SNTP_PACKET_BASE_SIZE bytes. */
-            else if( authDataSize > ( pContext->bufferSize - SNTP_PACKET_BASE_SIZE ) )
-            {
-                LogError( ( "Unable to send time request: Invalid authentication code size "
-                            "returned by interface function: AuthCodeSize=%lu, "
-                            "NetworkBufferSize=%lu",
-                            ( unsigned long ) authDataSize,
-                            ( unsigned long ) pContext->bufferSize ) );
-                status = SntpErrorAuthFailure;
-            }
-            else
-            {
-                /* With the authentication data added. calculate total SNTP request packet size. The same
-                 * size would be expected in the SNTP response from server. */
-                pContext->sntpPacketSize = SNTP_PACKET_BASE_SIZE + authDataSize;
-                LogInfo( ( "Appended client authentication code to SNTP request packet:"
-                           " AuthCodeSize=%lu, TotalPacketSize=%lu",
-                           ( unsigned long ) pContext->sntpPacketSize,
-                           ( unsigned long ) pContext->sntpPacketSize ) );
-            }
+            status = addClientAuthentication( pContext );
         }
 
         if( status == SntpSuccess )
         {
             /* Send the request packet over the network to the time server. */
             status = sendSntpPacket( &pContext->networkIntf,
-                                     pContext->currentServerIpV4Addr,
+                                     pContext->currentServerAddr,
                                      pContext->pTimeServers[ pContext->currentServerIndex ].port,
                                      pContext->getTimeFunc,
                                      pContext->pNetworkBuffer,

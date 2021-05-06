@@ -43,11 +43,18 @@
 /* Test IPv4 address for time server. */
 #define TEST_SERVER_ADDR    ( 0xAABBCCDD )
 
+/* Utility to convert milliseconds to fractions value in
+ * SNTP timestamp. */
+#define CONVERT_MS_TO_FRACTIONS( MS ) \
+    ( MS * 1000 * SNTP_FRACTION_VALUE_PER_MICROSECOND )
+
+/* Test definition of NetworkContext_t structure. */
 typedef struct NetworkContext
 {
     int udpSocket;
 } NetworkContext_t;
 
+/* Test definition of SntpAuthContext_t structure. */
 typedef struct SntpAuthContext
 {
     uint32_t keyId;
@@ -490,7 +497,7 @@ void test_Init_Nominal( void )
                                                                                                                \
         /* Validate the initialization of the state members of the context. */                                 \
         TEST_ASSERT_EQUAL( 0, context.currentServerIndex );                                                    \
-        TEST_ASSERT_EQUAL( 0, context.currentServerIpV4Addr );                                                 \
+        TEST_ASSERT_EQUAL( 0, context.currentServerAddr );                                                     \
         TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );                                               \
         TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );                                             \
         TEST_ASSERT_EQUAL( SNTP_PACKET_BASE_SIZE, context.sntpPacketSize );                                    \
@@ -579,11 +586,9 @@ void test_Sntp_SendTimeRequest_ErrorCases()
 
     /* Test case when transport send operation times out due to no data being
      * sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration. */
-    currentTimeList[ 1 ].fractions = 0;                                   /* SntpGetTime_t call before the loop in sendSntpPacket. */
-    currentTimeList[ 2 ].fractions = ( SNTP_SEND_RETRY_TIMEOUT_MS / 2 ) * /* SntpGetTime_t call in 1st iteration of loop. */
-                                     SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000;
-    currentTimeList[ 3 ].fractions = ( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ) * /* SntpGetTime_t call in 2nd iteration of loop. */
-                                     SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000;
+    currentTimeList[ 1 ].fractions = 0;                                                         /* SntpGetTime_t call before the loop in sendSntpPacket. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 ); /* SntpGetTime_t call in 1st iteration of loop. */
+    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ); /* SntpGetTime_t call in 2nd iteration of loop. */
     udpSendRetCodes[ currentUdpSendCodeIndex ] = 0;
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
@@ -594,11 +599,10 @@ void test_Sntp_SendTimeRequest_ErrorCases()
 
     /* Test case when transport send timeout occurs with partial data being initially
      * no data sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration after that. */
-    udpSendRetCodes[ 0 ] = 5;                                         /* 1st return value for partial data send. */
-    udpSendRetCodes[ 1 ] = 0;                                         /* 2nd return value for no data send. */
-    currentTimeList[ 2 ].fractions = 0;                               /* SntpGetTime_t call in 1st iteration of loop. */
-    currentTimeList[ 3 ].fractions = ( SNTP_SEND_RETRY_TIMEOUT_MS ) * /* SntpGetTime_t call in 2nd iteration of loop. */
-                                     SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000;
+    udpSendRetCodes[ 0 ] = 5;                                                               /* 1st return value for partial data send. */
+    udpSendRetCodes[ 1 ] = 0;                                                               /* 2nd return value for no data send. */
+    currentTimeList[ 2 ].fractions = 0;                                                     /* SntpGetTime_t call in 1st iteration of loop. */
+    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS ); /* SntpGetTime_t call in 2nd iteration of loop. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
 }
@@ -613,35 +617,52 @@ void test_SendTimeRequest_Nominal( void )
     /* Set the size of authentication data within the SNTP packet. */
     authCodeSize = sizeof( testBuffer ) - SNTP_PACKET_BASE_SIZE - 1;
 
-#define TEST_SUCCESS_CASE( generateClientAuthFunc )                                                                                        \
-    do {                                                                                                                                   \
-        /* Reset indices to lists controling behavior of interface functions. */                                                           \
-        currentTimeIndex = 0;                                                                                                              \
-        currentUdpSendCodeIndex = 0;                                                                                                       \
-                                                                                                                                           \
-        /* Set the parameter expectations and behavior of call to serializer function .*/                                                  \
-        Sntp_SerializeRequest_ExpectAndReturn( &context.lastRequestTime, randNum,                                                          \
-                                               testBuffer, sizeof( testBuffer ), SntpSuccess );                                            \
-                                                                                                                                           \
-        /* Set expected packet size of SNTP request, depending on whether client  authentication data is used. */                          \
-        expectedBytesToSend = ( generateClientAuthFunc == NULL ) ?                                                                         \
-                              SNTP_PACKET_BASE_SIZE : SNTP_PACKET_BASE_SIZE + authCodeSize;                                                \
-                                                                                                                                           \
-        /* Set the @ref SntpGenerateAuthCode_t interface in the context. */                                                                \
-        context.authIntf.generateClientAuth = generateClientAuthFunc;                                                                      \
-                                                                                                                                           \
-        /* Set the behavior of the transport send and get time interface functions. */                                                     \
-        udpSendRetCodes[ 0 ] = 0;                                             /* 1st return value for partial data send. */                \
-        udpSendRetCodes[ 1 ] = expectedBytesToSend;                           /* 2nd return value for no data send. */                     \
-        currentTimeList[ 2 ].fractions = 0;                                   /* Get time call in 1st iteration of sendSntpPacket loop. */ \
-        currentTimeList[ 3 ].fractions = ( SNTP_SEND_RETRY_TIMEOUT_MS - 1 ) * /* Get time call in 2nd iteration of sendSntpPacket loop. */ \
-                                         SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000;                                                       \
-        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_SendTimeRequest( &context, randNum ) );                                                       \
+#define TEST_SUCCESS_CASE( generateClientAuthFunc, timeBeforeLoop, timeIn1stIteration )                                         \
+    do {                                                                                                                        \
+        /* Reset indices to lists controling behavior of interface functions. */                                                \
+        currentTimeIndex = 0;                                                                                                   \
+        currentUdpSendCodeIndex = 0;                                                                                            \
+                                                                                                                                \
+        /* Set the parameter expectations and behavior of call to serializer function .*/                                       \
+        Sntp_SerializeRequest_ExpectAndReturn( &context.lastRequestTime, randNum,                                               \
+                                               testBuffer, sizeof( testBuffer ), SntpSuccess );                                 \
+                                                                                                                                \
+        /* Set expected packet size of SNTP request, depending on whether client  authentication data is used. */               \
+        expectedBytesToSend = ( generateClientAuthFunc == NULL ) ?                                                              \
+                              SNTP_PACKET_BASE_SIZE : SNTP_PACKET_BASE_SIZE + authCodeSize;                                     \
+                                                                                                                                \
+        /* Set the @ref SntpGenerateAuthCode_t interface in the context. */                                                     \
+        context.authIntf.generateClientAuth = generateClientAuthFunc;                                                           \
+                                                                                                                                \
+        /* Set the behavior of the transport send and get time interface functions. */                                          \
+        udpSendRetCodes[ 0 ] = 0;                                      /* 1st return value for partial data send. */            \
+        udpSendRetCodes[ 1 ] = expectedBytesToSend;                    /* 2nd return value for no data send. */                 \
+        currentTimeList[ 1 ].seconds = timeBeforeLoop.seconds;         /* Time call in before loop  in sendSntpPacket. */       \
+        currentTimeList[ 1 ].fractions = timeBeforeLoop.fractions;     /* Time call in before loop in sendSntpPacket loop. */   \
+        currentTimeList[ 2 ].seconds = timeIn1stIteration.seconds;     /* Time call in 1st iteration of sendSntpPacket loop. */ \
+        currentTimeList[ 2 ].fractions = timeIn1stIteration.fractions; /* Time call in 1st iteration of sendSntpPacket loop. */ \
+        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_SendTimeRequest( &context, randNum ) );                                            \
     } while( 0 )
 
+    SntpTimestamp_t beforeLoopTime;
+    SntpTimestamp_t inLoopTime;
+    beforeLoopTime.seconds = 0;
+    beforeLoopTime.fractions = 0;
+    inLoopTime.seconds = 0;
+    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
+
     /* Test when no authentication interface is provided. */
-    TEST_SUCCESS_CASE( NULL );
+    TEST_SUCCESS_CASE( NULL, beforeLoopTime, inLoopTime );
 
     /* Test when an authentication interface is provided. */
-    TEST_SUCCESS_CASE( generateClientAuth );
+    TEST_SUCCESS_CASE( generateClientAuth, beforeLoopTime, inLoopTime );
+
+    /* Test edge case when SNTP time overflows (i.e. at 7 Feb 2036 6h 28m 16s UTC )
+     * during the send operation. */
+    beforeLoopTime.seconds = UINT32_MAX;
+    beforeLoopTime.fractions = UINT32_MAX; /* Last time in SNTP era 0. */
+    inLoopTime.seconds = 0;                /* Time in SNTP era 1. */
+    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
+    /* Test when an authentication interface is provided. */
+    TEST_SUCCESS_CASE( generateClientAuth, beforeLoopTime, inLoopTime );
 }

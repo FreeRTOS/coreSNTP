@@ -62,7 +62,7 @@ create_real_library(${real_name}
                     "${mock_name}"
         )
 
-# As both Mock and Real libraries targets contain the 
+# As both Mock and Real libraries targets contain the
 # symbols for the core_sntp_serializer.c file, the linking
 # order has the mock library first for the core_sntp_client_utest.c
 # to use the mock for Serializer API calls.

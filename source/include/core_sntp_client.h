@@ -70,7 +70,7 @@
 typedef struct SntpServerInfo
 {
     const char * pServerName; /**<@brief The time server name. */
-    size_t serverNameLength;  /**<@brief The length of the server name.*/
+    size_t serverNameLen;     /**<@brief The length of the server name.*/
     uint16_t port;            /**<@brief The UDP port supported by the server
                                * for SNTP/NTP communication. */
 } SntpServerInfo_t;
@@ -418,7 +418,7 @@ typedef struct SntpContext
      * As a Best Practice functionality, the client library attempts to resolve the
      * DNS of the time-server every time the @ref Sntp_SendTimeRequest API is called.
      */
-    uint32_t currentServerIpV4Addr;
+    uint32_t currentServerAddr;
 
     /**
      * @brief Cache of the timestamp of sending the last time request to a server

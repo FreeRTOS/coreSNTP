@@ -38,7 +38,7 @@
 #define PrintfDebug( ... )    printf( "Debug: " __VA_ARGS__ ); printf( "\n" )
 
 /* Build with Debug level. */
-#define LOGGING_LEVEL_DEBUG    1
+/*#define LOGGING_LEVEL_DEBUG    1 */
 
 #ifdef LOGGING_LEVEL_ERROR
     #define LogError( message )    PrintfError message
