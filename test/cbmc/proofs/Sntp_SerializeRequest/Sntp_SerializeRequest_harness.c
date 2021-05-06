@@ -34,6 +34,7 @@ void harness()
     uint32_t randomNumber;
     void * pBuffer;
     size_t bufferSize;
+    SntpStatus_t sntpStatus;
 
     pRequestTime = malloc( sizeof( SntpTimestamp_t ) );
 
@@ -41,5 +42,8 @@ void harness()
 
     pBuffer = malloc( bufferSize );
 
-    Sntp_SerializeRequest( pRequestTime, randomNumber, pBuffer, bufferSize );
+    sntpStatus = Sntp_SerializeRequest( pRequestTime, randomNumber, pBuffer, bufferSize );
+
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpSuccess ), "The return value is a valid SNTP Status" );
+  
 }
