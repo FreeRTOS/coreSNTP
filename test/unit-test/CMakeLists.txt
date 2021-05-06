@@ -20,7 +20,7 @@ list(APPEND mock_include_list
         )
 #list the definitions of your mocks to control what to be included
 list(APPEND mock_define_list
-                "SNTP_DO_NOT_USE_CUSTOM_CONFIG"
+                ""
         )
 
 # ================= Create the library under test here ==================
@@ -32,6 +32,7 @@ list(APPEND real_source_files
 # list the directories the module under test includes
 list(APPEND real_include_directories
                 ${CORE_SNTP_INCLUDE_PUBLIC_DIRS}
+                ${CMAKE_CURRENT_LIST_DIR}
         )
 
 # =====================  Create UnitTest Code here   =====================

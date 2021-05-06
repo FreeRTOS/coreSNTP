@@ -136,7 +136,7 @@ int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
                    const void * pBuffer,
                    size_t bytesToSend )
 {
-    TEST_ASSERT_NOT_NULL( pNetworkContext );
+    TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
     TEST_ASSERT_EQUAL( expectedBytesToSend, bytesToSend );
 
@@ -167,7 +167,7 @@ int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
                      void * pBuffer,
                      size_t bytesToRecv )
 {
-    TEST_ASSERT_NOT_NULL( pNetworkContext );
+    TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, bytesToRecv );
 
@@ -184,9 +184,9 @@ SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
                                  size_t bufferSize,
                                  size_t * pAuthCodeSize )
 {
-    TEST_ASSERT_NOT_NULL( pContext );
+    TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
-    TEST_ASSERT_NOT_NULL( pBuffer );
+    TEST_ASSERT_EQUAL_PTR( testBuffer, pBuffer );
     TEST_ASSERT_NOT_NULL( pAuthCodeSize );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, bufferSize );
 
@@ -201,9 +201,9 @@ SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
                                  const void * pResponseData,
                                  size_t responseSize )
 {
-    TEST_ASSERT_NOT_NULL( pContext );
+    TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
-    TEST_ASSERT_NOT_NULL( pResponseData );
+    TEST_ASSERT_EQUAL_PTR( testBuffer, pResponseData );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, responseSize );
 
     return validateServerAuthRetCode;
