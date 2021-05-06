@@ -32,27 +32,28 @@
 
 /************* Define Logging Macros using printf function ***********/
 
-#define PrintfError( str, ... )    printf( "Error:"str,  ## __VA_ARGS__ )
-#define PrintfWarn( str, ... )     printf( "Warn:"str,  ## __VA_ARGS__ )
-#define PrintfInfo( str, ... )     printf( "Info:"str,  ## __VA_ARGS__ )
-#define PrintfDebug( str, ... )    printf( "Debug:"str,  ## __VA_ARGS__ )
+#define PrintfError( ... )    printf( "Error: "__VA_ARGS__ );  printf( "\n" )
+#define PrintfWarn( ... )     printf( "Warn: "__VA_ARGS__ );  printf( "\n" )
+#define PrintfInfo( ... )     printf( "Info: " __VA_ARGS__ ); printf( "\n" )
+#define PrintfDebug( ... )    printf( "Debug: " __VA_ARGS__ ); printf( "\n" )
 
-/*#define LOGGING_LEVEL_ERROR */
+/* Build with Debug level. */
+#define LOGGING_LEVEL_DEBUG    1
 
 #ifdef LOGGING_LEVEL_ERROR
     #define LogError( message )    PrintfError message
 #elif defined( LOGGING_LEVEL_WARNING )
     #define LogError( message )    PrintfError message
-    #define LogError( message )    PrintfWarn message
+    #define LogWarn( message )     PrintfWarn message
 #elif defined( LOGGING_LEVEL_INFO )
     #define LogError( message )    PrintfError message
-    #define LogError( message )    PrintfWarn message
-    #define LogError( message )    PrintfInfo message
-#elif defined( LOGGING_INFO_DEBUG )
+    #define LogWarn( message )     PrintfWarn message
+    #define LogInfo( message )     PrintfInfo message
+#elif defined( LOGGING_LEVEL_DEBUG )
     #define LogError( message )    PrintfError message
-    #define LogError( message )    PrintfWarn message
-    #define LogError( message )    PrintfInfo message
-    #define LogError( message )    PrintfDebug message
+    #define LogWarn( message )     PrintfWarn message
+    #define LogInfo( message )     PrintfInfo message
+    #define LogDebug( message )    PrintfDebug message
 #endif /* ifdef LOGGING_LEVEL_ERROR */
 
 /**************************************************/

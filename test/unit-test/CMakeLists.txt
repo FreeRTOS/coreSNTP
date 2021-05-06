@@ -29,6 +29,7 @@ list(APPEND mock_define_list
 list(APPEND real_source_files
                 ${CORE_SNTP_SOURCES}
         )
+
 # list the directories the module under test includes
 list(APPEND real_include_directories
                 ${CORE_SNTP_INCLUDE_PUBLIC_DIRS}
@@ -61,7 +62,12 @@ create_real_library(${real_name}
                     "${mock_name}"
         )
 
+# As both Mock and Real libraries targets contain the 
+# symbols for the core_sntp_serializer.c file, the linking
+# order has the mock library first for the core_sntp_client_utest.c
+# to use the mock for Serializer API calls.
 list(APPEND utest_link_list
+            -l${mock_name}
             lib${real_name}.a
         )
 
@@ -69,9 +75,9 @@ list(APPEND utest_dep_list
             ${real_name}
         )
 
-# core_sntp_serializer_utest target        
-set(utest_name "${project_name}_serializer_utest")
-set(utest_source "${project_name}_serializer_utest.c")
+# core_sntp_client_utest target
+set(utest_name "${project_name}_client_utest")
+set(utest_source "${project_name}_client_utest.c")
 create_test(${utest_name}
             ${utest_source}
             "${utest_link_list}"
@@ -79,13 +85,16 @@ create_test(${utest_name}
             "${test_include_directories}"
         )
 
-# core_sntp_client_utest target
+# Redefine the linking list as the mock is not needed for
+# the core_sntp_serializer tests.
+set(utest_link_list "")
 list(APPEND utest_link_list
-        -l${mock_name}
+        lib${real_name}.a
     )
 
-set(utest_name "${project_name}_client_utest")
-set(utest_source "${project_name}_client_utest.c")
+# core_sntp_serializer_utest target
+set(utest_name "${project_name}_serializer_utest")
+set(utest_source "${project_name}_serializer_utest.c")
 create_test(${utest_name}
             ${utest_source}
             "${utest_link_list}"

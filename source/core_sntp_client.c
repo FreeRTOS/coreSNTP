@@ -173,11 +173,9 @@ static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
     bool sendError = false;
 
     assert( pPacket != NULL );
-    assert( pTimeServer != NULL );
-    assert( pContext != NULL );
     assert( getTimeFunc != NULL );
     assert( pNetworkIntf != NULL );
-    assert( packetSize > SNTP_PACKET_BASE_SIZE );
+    assert( packetSize >= SNTP_PACKET_BASE_SIZE );
 
     /* Record the starting time of attempting to send data. This begins the retry timeout
      * window. */
@@ -272,7 +270,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
              * query. */
             pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
             LogDebug( ( "Using server %.*s at index %lu for time query",
-                        pServer->serverNameLength, pServer->pServerName,
+                        ( int ) pServer->serverNameLength, pServer->pServerName,
                         ( unsigned long ) pContext->currentServerIndex ) );
         }
 
@@ -284,14 +282,14 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                           &pContext->currentServerIpV4Addr ) == false )
             {
                 LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
-                            pServer->serverNameLength, pServer->pServerName ) );
+                            ( int ) pServer->serverNameLength, pServer->pServerName ) );
                 status = SntpErrorDnsFailure;
             }
             else
             {
                 LogInfo( ( "Time Server DNS resolved: Server=%.*s, Address=0x%08X",
-                           pServer->serverNameLength, pServer->pServerName,
-                           ( unsigned int ) &pContext->currentServerIpV4Addr ) );
+                           ( int ) pServer->serverNameLength, pServer->pServerName,
+                           ( unsigned int ) pContext->currentServerIpV4Addr ) );
             }
         }
 
@@ -300,7 +298,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
 
-            LogInfo( ( "Obtained current time for SNTP request: Seconds=%u, Fractions=%s",
+            LogInfo( ( "Obtained current time for SNTP request: Seconds=%u, Fractions=%u",
                        pContext->lastRequestTime.seconds,
                        pContext->lastRequestTime.fractions ) );
 

@@ -138,6 +138,8 @@ int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
+    TEST_ASSERT_EQUAL( dnsResolveAddr, serverAddr );
+    TEST_ASSERT_EQUAL( SNTP_DEFAULT_SERVER_PORT, serverPort );
     TEST_ASSERT_EQUAL( expectedBytesToSend, bytesToSend );
 
     ( void ) serverAddr;
@@ -169,6 +171,8 @@ int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
+    TEST_ASSERT_EQUAL( dnsResolveAddr, serverAddr );
+    TEST_ASSERT_EQUAL( SNTP_DEFAULT_SERVER_PORT, serverPort );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, bytesToRecv );
 
     ( void ) serverAddr;
@@ -615,16 +619,16 @@ void test_SendTimeRequest_Nominal( void )
         currentTimeIndex = 0;                                                                                                              \
         currentUdpSendCodeIndex = 0;                                                                                                       \
                                                                                                                                            \
+        /* Set the parameter expectations and behavior of call to serializer function .*/                                                  \
+        Sntp_SerializeRequest_ExpectAndReturn( &context.lastRequestTime, randNum,                                                          \
+                                               testBuffer, sizeof( testBuffer ), SntpSuccess );                                            \
+                                                                                                                                           \
         /* Set expected packet size of SNTP request, depending on whether client  authentication data is used. */                          \
         expectedBytesToSend = ( generateClientAuthFunc == NULL ) ?                                                                         \
                               SNTP_PACKET_BASE_SIZE : SNTP_PACKET_BASE_SIZE + authCodeSize;                                                \
                                                                                                                                            \
         /* Set the @ref SntpGenerateAuthCode_t interface in the context. */                                                                \
         context.authIntf.generateClientAuth = generateClientAuthFunc;                                                                      \
-                                                                                                                                           \
-        /* Set the parameter expectations and behavior of call to serializer function .*/                                                  \
-        Sntp_SerializeRequest_ExpectAndReturn( &context.lastRequestTime, randNum,                                                          \
-                                               testBuffer, sizeof( testBuffer ), SntpSuccess );                                            \
                                                                                                                                            \
         /* Set the behavior of the transport send and get time interface functions. */                                                     \
         udpSendRetCodes[ 0 ] = 0;                                             /* 1st return value for partial data send. */                \
