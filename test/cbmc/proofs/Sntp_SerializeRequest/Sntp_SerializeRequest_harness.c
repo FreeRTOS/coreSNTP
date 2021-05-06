@@ -44,5 +44,5 @@ void harness()
 
     sntpStatus = Sntp_SerializeRequest( pRequestTime, randomNumber, pBuffer, bufferSize );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpSuccess ), "The return value is a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
 }

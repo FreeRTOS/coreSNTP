@@ -36,5 +36,5 @@ void harness()
 
     sntpStatus = Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, &pollInterval );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ), "The return value is a valid SNTP status." );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpZeroPollInterval ), "The return value is not a valid SNTP status." );
 }

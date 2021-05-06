@@ -8,6 +8,8 @@ HARNESS_FILE = Sntp_CalculatePollInterval_harness
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
 PROOF_UID = Sntp_CalculatePollInterval
 
+# Bound for loop unwinding for loop in Sntp_CalculatePollInterval function. Unwinding
+# the loop 33 times will be enough as the unsigned 32 integer can take value upto 2^32.
 MAX_BOUND_FOR_LOOP=33
 
 DEFINES +=
