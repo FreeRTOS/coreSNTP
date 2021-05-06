@@ -189,7 +189,7 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * SNTP request packet over the network; otherwise #SntpErrorNetworkFailure
  * to indicate failure.
  */
-static SntpStatus_t sendSntpPacket( UdpTransportInterface_t * pNetworkIntf,
+static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf,
                                     uint32_t timeServer,
                                     uint16_t serverPort,
                                     SntpGetTime_t getTimeFunc,
