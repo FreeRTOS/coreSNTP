@@ -527,6 +527,19 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                    uint32_t randomNumber );
 /* @[define_sntp_sendtimerequest] */
 
-
+/**
+ * @brief Converts @ref SntpStatus_t to its equivalent
+ * string.
+ *
+ * @note The returned string MUST NOT be modified.
+ *
+ * @param[in] status The status to convert to a string.
+ *
+ * @return The string representation of the status
+ * code.
+ */
+/* @[define_sntp_statustostr] */
+const char * Sntp_StatusToStr( SntpStatus_t status );
+/* @[define_sntp_statustostr] */
 
 #endif /* ifndef CORE_SNTP_CLIENT_H_ */

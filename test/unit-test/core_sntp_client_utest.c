@@ -666,3 +666,26 @@ void test_SendTimeRequest_Nominal( void )
     /* Test when an authentication interface is provided. */
     TEST_SUCCESS_CASE( generateClientAuth, beforeLoopTime, inLoopTime );
 }
+
+/**
+ * @brief Validates the @ref Sntp_StatusToStr function.
+ */
+void test_StatusToStr( void )
+{
+    TEST_ASSERT_EQUAL_STRING( "SntpSuccess", Sntp_StatusToStr( SntpSuccess ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorBadParameter", Sntp_StatusToStr( SntpErrorBadParameter ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseChangeServer", Sntp_StatusToStr( SntpRejectedResponseChangeServer ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseRetryWithBackoff", Sntp_StatusToStr( SntpRejectedResponseRetryWithBackoff ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseOtherCode", Sntp_StatusToStr( SntpRejectedResponseOtherCode ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorBufferTooSmall", Sntp_StatusToStr( SntpErrorBufferTooSmall ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpInvalidResponse", Sntp_StatusToStr( SntpInvalidResponse ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpClockOffsetOverflow", Sntp_StatusToStr( SntpClockOffsetOverflow ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpZeroPollInterval", Sntp_StatusToStr( SntpZeroPollInterval ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorTimeNotSupported", Sntp_StatusToStr( SntpErrorTimeNotSupported ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorChangeServer", Sntp_StatusToStr( SntpErrorChangeServer ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorDnsFailure", Sntp_StatusToStr( SntpErrorDnsFailure ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorNetworkFailure", Sntp_StatusToStr( SntpErrorNetworkFailure ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpServerNotAuthenticated", Sntp_StatusToStr( SntpServerNotAuthenticated ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorAuthFailure", Sntp_StatusToStr( SntpErrorAuthFailure ) );
+    TEST_ASSERT_EQUAL_STRING( "Invalid status code!", Sntp_StatusToStr( 100 ) );
+}

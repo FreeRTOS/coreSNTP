@@ -32,7 +32,6 @@
 /* SNTP client library API include. */
 #include "core_sntp_client.h"
 
-
 SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         const SntpServerInfo_t * pTimeServers,
                         size_t numOfServers,
@@ -299,7 +298,7 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
     if( status != SntpSuccess )
     {
         LogError( ( "Unable to send time request: Client authentication function failed: "
-                    "RetStatus=%u", status ) );
+                    "RetStatus=%s", StatusToStr( status ) ) );
     }
 
     /* Sanity check that the returned authentication data size fits in the remaining space
@@ -413,4 +412,79 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
     }
 
     return status;
+}
+
+const char * Sntp_StatusToStr( SntpStatus_t status )
+{
+    const char * pString = NULL;
+
+    switch( status )
+    {
+        case SntpSuccess:
+            pString = "SntpSuccess";
+            break;
+
+        case SntpErrorBadParameter:
+            pString = "SntpErrorBadParameter";
+            break;
+
+        case SntpRejectedResponseChangeServer:
+            pString = "SntpRejectedResponseChangeServer";
+            break;
+
+        case SntpRejectedResponseRetryWithBackoff:
+            pString = "SntpRejectedResponseRetryWithBackoff";
+            break;
+
+        case SntpRejectedResponseOtherCode:
+            pString = "SntpRejectedResponseOtherCode";
+            break;
+
+        case SntpErrorBufferTooSmall:
+            pString = "SntpErrorBufferTooSmall";
+            break;
+
+        case SntpInvalidResponse:
+            pString = "SntpInvalidResponse";
+            break;
+
+        case SntpClockOffsetOverflow:
+            pString = "SntpClockOffsetOverflow";
+            break;
+
+        case SntpZeroPollInterval:
+            pString = "SntpZeroPollInterval";
+            break;
+
+        case SntpErrorTimeNotSupported:
+            pString = "SntpErrorTimeNotSupported";
+            break;
+
+        case SntpErrorChangeServer:
+            pString = "SntpErrorChangeServer";
+            break;
+
+        case SntpErrorDnsFailure:
+            pString = "SntpErrorDnsFailure";
+            break;
+
+        case SntpErrorNetworkFailure:
+            pString = "SntpErrorNetworkFailure";
+            break;
+
+        case SntpServerNotAuthenticated:
+            pString = "SntpServerNotAuthenticated";
+            break;
+
+        case SntpErrorAuthFailure:
+            pString = "SntpErrorAuthFailure";
+            break;
+
+        default:
+            pString = "Invalid status code!";
+            assert( false );
+            break;
+    }
+
+    return pString;
 }
