@@ -336,48 +336,46 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
         status = SntpErrorBadParameter;
         LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
     }
+
+    /* Check if there is any time server available for requesting time
+     * that has not already rejected a prior request. */
+    else if( pContext->currentServerIndex >= pContext->numOfServers )
+    {
+        LogError( ( "Cannot request time: All servers have rejected time requests: "
+                    "Re-initialize context with new servers" ) );
+        status = SntpErrorChangeServer;
+    }
     else
     {
         const SntpServerInfo_t * pServer = NULL;
 
-        /* Check if there is any time server available for requesting time
-         * that has not already rejected a prior request. */
-        if( pContext->currentServerIndex >= pContext->numOfServers )
+        /* Set local variable for the currently indexed server to use for time
+         * query. */
+        pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
+
+        LogDebug( ( "Using server %.*s for time query", ( int ) pServer->serverNameLen, pServer->pServerName ) );
+
+        /* Perform DNS resolution of the currently indexed server in the list
+         * of configured servers. */
+        if( pContext->resolveDnsFunc( pServer, &pContext->currentServerAddr ) == false )
         {
-            LogError( ( "Cannot request time: All servers have rejected time requests: "
-                        "Re-initialize context with new servers" ) );
-            status = SntpErrorChangeServer;
+            LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
+                        ( int ) pServer->serverNameLen, pServer->pServerName ) );
+
+            status = SntpErrorDnsFailure;
         }
         else
         {
-            /* Set local variable for the currently indexed server to use for time
-             * query. */
-            pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
-
-            LogDebug( ( "Using server %.*s for time query", ( int ) pServer->serverNameLen, pServer->pServerName ) );
-        }
-
-        if( status == SntpSuccess )
-        {
-            /* Perform DNS resolution of the currently indexed server in the list
-             * of configured servers. */
-            if( pContext->resolveDnsFunc( pServer, &pContext->currentServerAddr ) == false )
-            {
-                LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
-                            ( int ) pServer->serverNameLen, pServer->pServerName ) );
-
-                status = SntpErrorDnsFailure;
-            }
-            else
-            {
-                LogDebug( ( "Server DNS resolved: Address=0x%08X", pContext->currentServerAddr ) );
-            }
+            LogDebug( ( "Server DNS resolved: Address=0x%08X", pContext->currentServerAddr ) );
         }
 
         if( status == SntpSuccess )
         {
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
+
+            LogDebug( ( "Obtained current time for SNTP request packet: Seconds=%u, Fractions=%u",
+                        pContext->lastRequestTime.seconds, pContext->lastRequestTime.fractions ) );
 
             /* Generate SNTP request packet with the current system time and
              * the passed random number. */
@@ -400,6 +398,10 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
 
         if( status == SntpSuccess )
         {
+            LogInfo( ( "Sending serialized SNTP request packet to the server: Addr=%u, Port=%u",
+                       pContext->currentServerAddr,
+                       pContext->pTimeServers[ pContext->currentServerIndex ].port ) );
+
             /* Send the request packet over the network to the time server. */
             status = sendSntpPacket( &pContext->networkIntf,
                                      pContext->currentServerAddr,
