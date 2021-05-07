@@ -551,7 +551,7 @@ void test_Sntp_SendTimeRequest_ErrorCases()
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
 
-    /* Rest authentication interface function return code.*/
+    /* Reset authentication interface function return code. */
     generateClientAuthRetCode = SntpSuccess;
 
     /* Test when authentication interface returns an invalid authentication data
