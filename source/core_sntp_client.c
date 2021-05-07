@@ -74,10 +74,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
              ( ( pAuthIntf->generateClientAuth == NULL ) ||
                ( pAuthIntf->validateServerAuth == NULL ) ) )
     {
-        LogError( ( "Invalid parameter: Function members of passed authentication interface "
-                    "cannot be NULL: generateClientAuth=%p, validateServerAuth=%p",
-                    ( void * ) pAuthIntf->generateClientAuth,
-                    ( void * ) pAuthIntf->validateServerAuth ) );
+        LogError( ( "Invalid parameter: Function members of authentication interface cannot be NULL" ) );
         status = SntpErrorBadParameter;
     }
     else if( bufferSize < SNTP_PACKET_BASE_SIZE )
@@ -295,7 +292,7 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
     if( status != SntpSuccess )
     {
         LogError( ( "Unable to send time request: Client authentication function failed: "
-                    "RetStatus=%s", StatusToStr( status ) ) );
+                    "RetStatus=%s", Sntp_StatusToStr( status ) ) );
     }
 
     /* Sanity check that the returned authentication data size fits in the remaining space
@@ -479,7 +476,6 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
 
         default:
             pString = "Invalid status code!";
-            assert( false );
             break;
     }
 
