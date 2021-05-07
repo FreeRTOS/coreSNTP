@@ -29,12 +29,16 @@
 
 void harness()
 {
-    SntpTimestamp_t sntpTime;
-    uint32_t unixTimeSecs;
-    uint32_t unixTimeMicrosecs;
+    SntpTimestamp_t * pSntpTime;
+    uint32_t * pUnixTimeSecs;
+    uint32_t * pUnixTimeMicrosecs;
     SntpStatus_t sntpStatus;
 
-    sntpStatus = Sntp_ConvertToUnixTime( &sntpTime, &unixTimeSecs, &unixTimeMicrosecs );
+    pSntpTime = malloc( sizeof( SntpTimestamp_t ) );
+    pUnixTimeSecs = malloc( sizeof( uint32_t ) );
+    pUnixTimeMicrosecs = malloc( sizeof( uint32_t ) );
+
+    sntpStatus = Sntp_ConvertToUnixTime( pSntpTime, pUnixTimeSecs, pUnixTimeMicrosecs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorTimeNotSupported || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
 }
