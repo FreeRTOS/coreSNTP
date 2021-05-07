@@ -65,10 +65,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
     /* Validate that the members of the UDP transport interface. */
     else if( ( pTransportIntf->recvFrom == NULL ) || ( pTransportIntf->sendTo == NULL ) )
     {
-        LogError( ( "Invalid parameter: Function members of UDP transport interface "
-                    "cannot be NULL: sendTo=%p, recvFrom=%p",
-                    ( void * ) pTransportIntf->recvFrom,
-                    ( void * ) pTransportIntf->sendTo ) );
+        LogError( ( "Invalid parameter: Function members of UDP transport interface cannot be NULL" ) );
         status = SntpErrorBadParameter;
     }
 
@@ -80,8 +77,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
     {
         LogError( ( "Invalid parameter: Function members of passed authentication interface "
                     "cannot be NULL: generateClientAuth=%p, validateServerAuth=%p",
-                    ( void * ) pTransportIntf->recvFrom,
-                    ( void * ) pTransportIntf->sendTo ) );
+                    ( void * ) pAuthIntf->generateClientAuth,
+                    ( void * ) pAuthIntf->validateServerAuth ) );
         status = SntpErrorBadParameter;
     }
     else if( bufferSize < SNTP_PACKET_BASE_SIZE )
