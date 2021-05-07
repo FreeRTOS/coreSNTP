@@ -33,6 +33,7 @@
 
 /* Standard include. */
 #include <stdint.h>
+#include <stddef.h>
 
 /**
  * @brief The base packet size of request and response of the (S)NTP protocol.

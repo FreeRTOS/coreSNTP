@@ -165,9 +165,9 @@ static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
     assert( pWordMemory != NULL );
 
     *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) ( data >> 24 );
-    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( data >> 16 );
-    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( data >> 8 );
-    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) data;
+    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( ( data >> 16 ) & 0x000000FF );
+    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( ( data >> 8 ) & 0x000000FF );
+    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) ( ( data ) & 0x000000FF );
 }
 
 /**
