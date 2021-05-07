@@ -31,10 +31,11 @@ void harness()
 {
     uint16_t clockFreqTolerance;
     uint16_t desiredAccuracy;
-    uint32_t pollInterval;
+    uint32_t * pPollInterval;
     SntpStatus_t sntpStatus;
 
-    sntpStatus = Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, &pollInterval );
+    pPollInterval = malloc( sizeof( uint32_t ) );
+    sntpStatus = Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, pPollInterval );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpZeroPollInterval ), "The return value is not a valid SNTP status." );
 }
