@@ -164,18 +164,18 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * using transport interface's send function.
  *
  * @note For the cases of partial or zero byte data transmissions over the
- * network, this function repeatedly retries send operation by calling the
+ * network, this function repeatedly retries the send operation by calling the
  * transport interface until either:
  * 1. The requested number of bytes @p packetSize have been sent.
  *                    OR
- * 2. No byte cannot be sent over the network for the
+ * 2. Any byte cannot be sent over the network for the
  * #SNTP_SEND_RETRY_TIMEOUT_MS duration.
  *                    OR
  * 3. There is an error in sending data over the network.
  *
  * @param[in] pNetworkIntf The UDP transport interface to use for
  * sending data over the network.
- * @param[in] timeServer The IP address of the server to send the
+ * @param[in] timeServer The IPv4 address of the server to send the
  * SNTP request packet to.
  * @param[in] serverPort The port of the @p timeServer to send the
  * request to.
@@ -258,7 +258,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
             if( timeSinceLastSendMs >= SNTP_SEND_RETRY_TIMEOUT_MS )
             {
                 LogError( ( "Unable to send request packet: Timed out retrying send: "
-                            "SendRetryTimeout=%uMs", SNTP_SEND_RETRY_TIMEOUT_MS ) );
+                            "SendRetryTimeout=%ums", SNTP_SEND_RETRY_TIMEOUT_MS ) );
                 sendError = true;
             }
         }
@@ -274,12 +274,12 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
  * @param[in] pContext The SNTP context.
  *
  * @return Returns one of the following:
- * - #SntpSuccess for success call to the interface function for appending client
+ * - #SntpSuccess if the interface function successfully appends client
  * authentication data.
- * - #SntpErrorAuthError when the interface returns an error OR the interface
- * returns an incorrect size of the client authentication data.
- * - #SntpBufferTooSmall if the interface returns the status for the request packet
- * buffer being too small to add client authentication data.
+ * - #SntpErrorAuthError when the interface returns either an error OR an
+ * incorrect size of the client authentication data.
+ * - #SntpBufferTooSmall if the request packet buffer is too small to add client
+ * authentication data.
  */
 static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 {
@@ -288,6 +288,7 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 
     assert( pContext != NULL );
     assert( pContext->authIntf.generateClientAuth != NULL );
+    assert( pContext->currentServerIndex <= pContext->numOfServers );
 
     status = pContext->authIntf.generateClientAuth( pContext->authIntf.pAuthContext,
                                                     &pContext->pTimeServers[ pContext->currentServerIndex ],
@@ -318,7 +319,7 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 
         LogInfo( ( "Appended client authentication code to SNTP request packet:"
                    " AuthCodeSize=%lu, TotalPacketSize=%lu",
-                   ( unsigned long ) pContext->sntpPacketSize,
+                   ( unsigned long ) authDataSize,
                    ( unsigned long ) pContext->sntpPacketSize ) );
     }
 

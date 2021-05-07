@@ -64,7 +64,7 @@
 #define SNTP_DEFAULT_SERVER_PORT    ( 123U )
 
 /**
- * @brief core_sntp_struct_types
+ * @ingroup core_sntp_struct_types
  * @brief Structure representing information for a time server.
  */
 typedef struct SntpServerInfo
@@ -499,7 +499,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  * @ref SntpAuthenticationInterface_t.
  *
  * @note This function will ONLY send a request if there is a server available
- * in the configured list that had not rejected an earlier request for time.
+ * in the configured list that has not rejected an earlier request for time.
  * This adheres to the Best Practice functionality specified in [Section 10 Point 8
  * of SNTPv4 specification](https://tools.ietf.org/html/rfc4330#section-10).
  *

@@ -54,8 +54,7 @@
 
 /**
  * @brief The maximum duration between non-empty network reads while
- * receiving an SNTP packet via the #MQTT_ProcessLoop or #MQTT_ReceiveLoop
- * API functions.
+ * receiving an SNTP packet via the #Sntp_ReceiveTimeResponse API function.
  *
  * When an incoming SNTP packet is detected, the transport receive function
  * may be called multiple times until all of the expected number of bytes of the
@@ -75,8 +74,7 @@
 
 /**
  * @brief The maximum duration between non-empty network transmissions while
- * sending an SNTP packet via the #MQTT_ProcessLoop or #MQTT_ReceiveLoop
- * API functions.
+ * sending an SNTP packet via the #Sntp_SendTimeRequest API function.
  *
  * When sending an SNTP packet, the transport send function may be called multiple
  * times until all of the required number of bytes are sent.
