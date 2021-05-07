@@ -19,7 +19,7 @@ endif()
 get_filename_component(__MODULE_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set( MODULE_ROOT_DIR ${__MODULE_ROOT_DIR} CACHE INTERNAL "coreSNTP source root." )
 set( UNIT_TEST_DIR ${MODULE_ROOT_DIR}/test/unit-test CACHE INTERNAL "coreSNTP unit test directory." )
-set( UNITY_DIR ${UNIT_TEST_DIR}/Unity CACHE INTERNAL "Unity library source directory." )
+set( CMOCK_DIR ${UNIT_TEST_DIR}/CMock CACHE INTERNAL "Unity library source directory." )
 
 # Configure options to always show in CMake GUI.
 option( BUILD_CLONE_SUBMODULES
@@ -45,19 +45,22 @@ target_include_directories( coverity_analysis
                             PUBLIC
                              ${CORE_SNTP_INCLUDE_PUBLIC_DIRS} )
 
+# Build SNTP library target without custom config dependency.
+target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
+
 #  ==================================== Unit Test Configuration ====================================
 
-# Include Unity build configuration.
-include( unit-test/unity_build.cmake )
+# Include CMock build configuration.
+include( unit-test/cmock_build.cmake )
 
-# Check if the Unity source directory exists, and if not present, clone the submodule
+# Check if the CMock source directory exists, and if not present, clone the submodule
 # if BUILD_CLONE_SUBMODULES configuration is enabled.
-if( NOT EXISTS ${UNITY_DIR}/src )
-    # Attempt to clone Unity.
+if( NOT EXISTS ${CMOCK_DIR}/src )
+    # Attempt to clone CMock.
     if( ${BUILD_CLONE_SUBMODULES} )
-        clone_unity()
+        clone_cmock()
     else()
-        message( FATAL_ERROR "The required submodule Unity does not exist. Either clone it manually, or set BUILD_CLONE_SUBMODULES to 1 to automatically clone it during build." )
+        message( FATAL_ERROR "The required submodule CMock does not exist. Either clone it manually, or set BUILD_CLONE_SUBMODULES to 1 to automatically clone it during build." )
     endif()
 endif()
 
@@ -67,11 +70,11 @@ endif()
 # defining test targets with add_test()
 enable_testing()
 
-# Add build targets for Unity and Unit, required for unit testing.
-add_unity_targets()
+# Add build targets for CMock, required for unit testing.
+add_cmock_targets()
 
-# Add function to enable Unity based tests and coverage.
-include( ${MODULE_ROOT_DIR}/tools/unity/create_test.cmake )
+# Add function to enable CMock/Unity based tests and coverage.
+include( ${MODULE_ROOT_DIR}/tools/cmock/create_test.cmake )
 
 # Include build configuration for unit tests.
 add_subdirectory( unit-test )
@@ -80,8 +83,8 @@ add_subdirectory( unit-test )
 
 # Add a target for running coverage on tests.
 add_custom_target( coverage
-    COMMAND ${CMAKE_COMMAND} -DUNITY_DIR=${UNITY_DIR}
-    -P ${MODULE_ROOT_DIR}/tools/unity/coverage.cmake
-    DEPENDS unity core_sntp_client_utest core_sntp_serializer_utest
+    COMMAND ${CMAKE_COMMAND} -DCMOCK_DIR=${CMOCK_DIR}
+    -P ${MODULE_ROOT_DIR}/tools/cmock/coverage.cmake
+    DEPENDS cmock core_sntp_client_utest core_sntp_serializer_utest
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
