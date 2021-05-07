@@ -21,21 +21,24 @@
  */
 
 /**
- * @file Sntp_CalculatePollInterval_harness.c
- * @brief Implements the proof harness for Sntp_CalculatePollInterval function.
+ * @file Sntp_ConvertToUnixTime_harness.c
+ * @brief Implements the proof harness for Sntp_ConvertToUnixTime function.
  */
 
 #include "core_sntp_serializer.h"
 
 void harness()
 {
-    uint16_t clockFreqTolerance;
-    uint16_t desiredAccuracy;
-    uint32_t * pPollInterval;
+    SntpTimestamp_t * pSntpTime;
+    uint32_t * pUnixTimeSecs;
+    uint32_t * pUnixTimeMicrosecs;
     SntpStatus_t sntpStatus;
 
-    pPollInterval = malloc( sizeof( uint32_t ) );
-    sntpStatus = Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, pPollInterval );
+    pSntpTime = malloc( sizeof( SntpTimestamp_t ) );
+    pUnixTimeSecs = malloc( sizeof( uint32_t ) );
+    pUnixTimeMicrosecs = malloc( sizeof( uint32_t ) );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpZeroPollInterval ), "The return value is not a valid SNTP status." );
+    sntpStatus = Sntp_ConvertToUnixTime( pSntpTime, pUnixTimeSecs, pUnixTimeMicrosecs );
+
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorTimeNotSupported || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
 }
