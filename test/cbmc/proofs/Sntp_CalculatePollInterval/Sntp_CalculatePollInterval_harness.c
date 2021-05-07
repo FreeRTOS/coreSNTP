@@ -21,28 +21,20 @@
  */
 
 /**
- * @file Sntp_SerializeRequest_harness.c
- * @brief Implements the proof harness for Sntp_SerializeRequest function.
+ * @file Sntp_CalculatePollInterval_harness.c
+ * @brief Implements the proof harness for Sntp_CalculatePollInterval function.
  */
 
-#include <stdint.h>
 #include "core_sntp_serializer.h"
 
 void harness()
 {
-    SntpTimestamp_t * pRequestTime;
-    uint32_t randomNumber;
-    void * pBuffer;
-    size_t bufferSize;
+    uint16_t clockFreqTolerance;
+    uint16_t desiredAccuracy;
+    uint32_t pollInterval;
     SntpStatus_t sntpStatus;
 
-    pRequestTime = malloc( sizeof( SntpTimestamp_t ) );
+    sntpStatus = Sntp_CalculatePollInterval( clockFreqTolerance, desiredAccuracy, &pollInterval );
 
-    __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
-
-    pBuffer = malloc( bufferSize );
-
-    sntpStatus = Sntp_SerializeRequest( pRequestTime, randomNumber, pBuffer, bufferSize );
-
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpZeroPollInterval ), "The return value is not a valid SNTP status." );
 }
