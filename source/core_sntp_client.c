@@ -35,6 +35,7 @@
 SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         const SntpServerInfo_t * pTimeServers,
                         size_t numOfServers,
+                        uint32_t serverResponseTimeoutMs,
                         uint8_t * pNetworkBuffer,
                         size_t bufferSize,
                         SntpResolveDns_t resolveDnsFunc,
@@ -91,6 +92,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
         /* Set the members of the context with passed parameters. */
         pContext->pTimeServers = pTimeServers;
         pContext->numOfServers = numOfServers;
+
+        pContext->responseTimeoutMs = serverResponseTimeoutMs;
 
         pContext->pNetworkBuffer = pNetworkBuffer;
         pContext->bufferSize = bufferSize;
@@ -403,6 +406,61 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                      pContext->pNetworkBuffer,
                                      pContext->sntpPacketSize );
         }
+    }
+
+    return status;
+}
+
+static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransportIntf,
+                                         uint32_t timeServer,
+                                         uint16_t serverPort,
+                                         const uint8_t * pBuffer,
+                                         size_t responseSize,
+                                         const SntpTimestamp_t * pRequestTime,
+                                         uint32_t responseTimeoutMs,
+                                         SntpGetTime_t getTimeFunc )
+{
+    SntpStatus_t status = SntpSuccess;
+
+    SntpTimestamp_t startTime;
+
+    getTimeFunc( &startTime );
+
+    /* Check whether a response timeout has occurred. */
+    while( calculateElapsedTimeMs( &startTime, pRequestTime ) >= responseTimeoutMs )
+    {
+        status = SntpErrorResponseTimeout;
+        LogError( ( "Unable to receive response: Server response has timed out: "
+                    "RequestTime=%us %ums, TimeoutDuration=%u",
+                    pRequestTime->seconds,
+                    pRequestTime->fractions / ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000 ),
+                    responseTimeoutMs ) );
+    }
+
+    return status;
+}
+
+SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
+                                       uint32_t blockTimeMs )
+{
+    SntpStatus_t status = SntpSuccess;
+
+    if( pContext == NULL )
+    {
+        status = SntpErrorBadParameter;
+        LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
+    }
+    else
+    {
+        SntpTimestamp_t startTime, loopIterTime;
+        bool responseReceived = false;
+
+        pContext->getTimeFunc( &startTime );
+
+        do
+        {
+        } while( ( responseReceived == false ) &&
+                 ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
     }
 
     return status;

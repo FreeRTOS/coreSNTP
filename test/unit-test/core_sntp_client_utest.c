@@ -41,7 +41,9 @@
 #include "mock_core_sntp_serializer.h"
 
 /* Test IPv4 address for time server. */
-#define TEST_SERVER_ADDR    ( 0xAABBCCDD )
+#define TEST_SERVER_ADDR         ( 0xAABBCCDD )
+
+#define TEST_RESPONSE_TIMEOUT    ( 1000 )
 
 /* Utility to convert milliseconds to fractions value in
  * SNTP timestamp. */
@@ -86,7 +88,6 @@ static bool dnsResolveRetCode = true;
 static uint32_t dnsResolveAddr = TEST_SERVER_ADDR;
 static SntpTimestamp_t currentTimeList[ 4 ];
 static uint8_t currentTimeIndex;
-static bool setTimeRetCode = true;
 static size_t expectedBytesToSend = SNTP_PACKET_BASE_SIZE;
 static int32_t udpSendRetCodes[ 2 ];
 static uint8_t currentUdpSendCodeIndex;
@@ -125,15 +126,13 @@ void getTime( SntpTimestamp_t * pCurrentTime )
 }
 
 /* Test definition of the @ref SntpSetTime_t interface. */
-bool setTime( const SntpServerInfo_t * pTimeServer,
+void setTime( const SntpServerInfo_t * pTimeServer,
               const SntpTimestamp_t * pServerTime,
               int32_t clockOffsetSec )
 {
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pServerTime );
     ( void ) clockOffsetSec;
-
-    return setTimeRetCode;
 }
 
 /* Test definition of the @ref UdpTransportSendTo_t interface. */
@@ -206,7 +205,7 @@ SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
     return generateClientAuthRetCode;
 }
 
-/* Test definition for @ref SntpValidateAuthCode_t interface. */
+/* Test definition for @ref SntpValidateServerAuth_t interface. */
 SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
                                  const SntpServerInfo_t * pTimeServer,
                                  const void * pResponseData,
@@ -228,7 +227,6 @@ void setUp()
     /* Reset the global variables. */
     dnsResolveRetCode = true;
     dnsResolveAddr = TEST_SERVER_ADDR;
-    setTimeRetCode = true;
     udpRecvCode = 0;
     generateClientAuthRetCode = SntpSuccess;
     validateServerAuthRetCode = SntpSuccess;
@@ -261,6 +259,7 @@ void setUp()
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -293,6 +292,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( NULL,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -306,6 +306,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   NULL,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -317,6 +318,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   0,
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -330,6 +332,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   NULL,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -341,6 +344,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   SNTP_PACKET_BASE_SIZE / 2,
                                   dnsResolve,
@@ -354,6 +358,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   NULL,
@@ -365,6 +370,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -376,6 +382,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -387,6 +394,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -401,6 +409,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -414,6 +423,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -431,6 +441,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -444,6 +455,7 @@ void test_Init_InvalidParams( void )
                        Sntp_Init( &context,
                                   testServers,
                                   sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
                                   testBuffer,
                                   sizeof( testBuffer ),
                                   dnsResolve,
@@ -465,6 +477,7 @@ void test_Init_Nominal( void )
                            Sntp_Init( &context,                                                                \
                                       testServers,                                                             \
                                       sizeof( testServers ) / sizeof( SntpServerInfo_t ),                      \
+                                      TEST_RESPONSE_TIMEOUT,                                                   \
                                       testBuffer,                                                              \
                                       sizeof( testBuffer ),                                                    \
                                       dnsResolve,                                                              \

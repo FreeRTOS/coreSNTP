@@ -154,6 +154,12 @@ typedef enum SntpStatus
     SntpErrorBadParameter,
 
     /**
+     * @brief Server sent a Kiss-o'-Death message to reject the request for time.
+     * This status can be returned by the @ref Sntp_ReceiveTimeResponse API.
+     */
+    SntpRejectedResponse,
+
+    /**
      * @brief Server sent a Kiss-o'-Death message with non-retryable code (i.e. DENY or RSTR).
      */
     SntpRejectedResponseChangeServer,
@@ -227,7 +233,7 @@ typedef enum SntpStatus
     /**
      * @brief Time server is not authenticated from the authentication data in its response.
      * This status can be returned by the user-supplied definition of the
-     * @ref SntpValidateAuthCode_t authentication interface.
+     * @ref SntpValidateServerAuth_t authentication interface.
      */
     SntpServerNotAuthenticated,
 
@@ -236,7 +242,13 @@ typedef enum SntpStatus
      * in either generating authentication data for SNTP request OR validating the authentication
      * data in SNTP response from server.
      */
-    SntpErrorAuthFailure
+    SntpErrorAuthFailure,
+
+    /**
+     * @brief A timeout has occurred in receiving server response with the @ref Sntp_ReceiveTimeResponse
+     * API.
+     */
+    SntpErrorResponseTimeout
 } SntpStatus_t;
 
 /**
