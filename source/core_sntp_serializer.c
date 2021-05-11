@@ -32,6 +32,8 @@
 
 /* Include API header. */
 #include "core_sntp_serializer.h"
+#pragma CPROVER check disable "unsigned-overflow"
+#pragma CPROVER check disable "conversion"
 
 /**
  * @brief The version of SNTP supported by the coreSNTP library by complying
@@ -267,6 +269,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClientRxTime != NULL );
     assert( pClockOffset != NULL );
 
+    #pragma CPROVER check push
+
     /* Calculate a sample first order difference value between the
      * server and system timestamps. */
     firstOrderDiff = pClientRxTime->seconds - pServerTxTime->seconds;
@@ -312,6 +316,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
         status = SntpClockOffsetOverflow;
     }
 
+    #pragma CPROVER check pop
     return status;
 }
 
