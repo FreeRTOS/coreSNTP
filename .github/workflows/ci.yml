@@ -17,6 +17,7 @@ jobs:
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_CLONE_SUBMODULES=ON \
+          -Wno-error=unknown-pragmas \
           -DCMAKE_C_FLAGS='-Wall -Wextra -Werror'
           make -C build/ coverity_analysis -j8
       - name: Build Library in Release mode
