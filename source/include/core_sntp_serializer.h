@@ -248,7 +248,13 @@ typedef enum SntpStatus
      * @brief A timeout has occurred in receiving server response with the @ref Sntp_ReceiveTimeResponse
      * API.
      */
-    SntpErrorResponseTimeout
+    SntpErrorResponseTimeout,
+
+    /**
+     * @brief No SNTP packet for server response is received from the network by the
+     * @ref Sntp_ReceiveTimeResponse API.
+     */
+    SntpNoResponseReceived
 } SntpStatus_t;
 
 /**
@@ -400,8 +406,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @note If the server has positively responded with its clock time, then this API
  * function will calculate the clock-offset ONLY if the system clock is within
  * 34 years of the server time mentioned in the response packet; otherwise the
- * seconds part of the clock offset in @p pParsedResponse parameter will be set to
- * #SNTP_CLOCK_OFFSET_OVERFLOW, and the function will return #SntpClockOffsetOverflow.
+ * the clock offset in @p pParsedResponse parameter will be set to #SNTP_CLOCK_OFFSET_OVERFLOW,
+ * and the function will return #SntpClockOffsetOverflow.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the

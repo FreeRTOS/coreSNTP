@@ -118,6 +118,12 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
  * @param[in] clockOffSetSec The calculated clock offset of the system relative
  * to the server time.
+ * @param[in] leapSecondInfo Information about whether there is about an upcoming
+ * leap second adjustment of insertion or deletion in the last minute before midnight
+ * on the last day of the current month. For more information on leap seconds, refer
+ * to https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs. Depending
+ * on the accuracy requirements of the system clock, the user can choose to account
+ * for the leap second or ignore it in their system clock update logic.
  *
  * @note The user can use either a "step" or "slew" clock discipline methodology
  * depending on the application needs.
@@ -132,7 +138,8 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  */
 typedef void ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   const SntpTimestamp_t * pServerTime,
-                                  int32_t clockOffsetSec );
+                                  int32_t clockOffsetSec,
+                                  SntpLeapSecondInfo_t leapSecondInfo );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -546,6 +553,13 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * (through @ref Sntp_Init), the server response is authenticated by calling the
  * @ref SntpValidateServerAuth_t function of the @ref SntpAuthenticationInterface_t interface.
  *
+ * @note On receiving a successful server response containing server time,
+ * this API calculates the clock offset value of the system clock relative to the
+ * server before calling the user-defined @ref SntpSetTime_t function for updating
+ * the system time. To calculate the clock offset, the system clock SHOULD BE
+ * within 34 years of the server time; otherwise, this function passes
+ * #SNTP_CLOCK_OFFSET_OVERFLOW value as the clock offset to the @ref SntpSetTime_t function.
+ *
  * @note This API will rotate the server of use in the library for the next time request
  * (through the @ref Sntp_SendTimeRequest) if either of following events occur:
  *  - The server has responded with a rejection for the time request.
@@ -570,6 +584,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * receive interface in receiving server response from the network.
  *  - #SntpServerNotAuthenticated when the server could not be authenticated from
  * its response with the user-defined authentication interface.
+ * - #SntpInvalidResponse if the server response fails sanity checks expected in an
+ * SNTP response packet.
  * - #SntpErrorResponseTimeout if a timeout has occurred in receiving response from
  * the server.
  * - #SntpRejectedResponse if the server responded with a rejection for the time

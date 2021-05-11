@@ -128,11 +128,14 @@ void getTime( SntpTimestamp_t * pCurrentTime )
 /* Test definition of the @ref SntpSetTime_t interface. */
 void setTime( const SntpServerInfo_t * pTimeServer,
               const SntpTimestamp_t * pServerTime,
-              int32_t clockOffsetSec )
+              int32_t clockOffsetSec,
+              SntpLeapSecondInfo_t leapSecondInfo )
 {
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pServerTime );
+
     ( void ) clockOffsetSec;
+    ( void ) leapSecondInfo;
 }
 
 /* Test definition of the @ref UdpTransportSendTo_t interface. */
@@ -490,6 +493,7 @@ void test_Init_Nominal( void )
         TEST_ASSERT_EQUAL( testServers, context.pTimeServers );                                                \
         TEST_ASSERT_EQUAL( sizeof( testServers ) / sizeof( SntpServerInfo_t ), context.numOfServers );         \
         TEST_ASSERT_EQUAL_PTR( testBuffer, context.pNetworkBuffer );                                           \
+        TEST_ASSERT_EQUAL( TEST_RESPONSE_TIMEOUT, context.responseTimeoutMs );                                 \
         TEST_ASSERT_EQUAL( sizeof( testBuffer ), context.bufferSize );                                         \
         TEST_ASSERT_EQUAL_PTR( dnsResolve, context.resolveDnsFunc );                                           \
         TEST_ASSERT_EQUAL_PTR( getTime, context.getTimeFunc );                                                 \
