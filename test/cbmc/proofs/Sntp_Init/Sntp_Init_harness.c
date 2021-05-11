@@ -44,7 +44,10 @@ void harness()
 
     pContext = malloc( sizeof( SntpContext_t ) );
     pTimeServers = malloc( sizeof( SntpServerInfo_t ) );
-    pNetworkBuffer = malloc( sizeof( uint8_t ) );
+
+    __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
+
+    pNetworkBuffer = malloc( bufferSize );
     pTransportIntf = malloc( sizeof( UdpTransportInterface_t ) );
     pAuthIntf = malloc( sizeof( SntpAuthenticationInterface_t ) );
 
@@ -52,5 +55,5 @@ void harness()
                             bufferSize, resolveDnsFunc, getSystemTimeFunc, setSystemTimeFunc,
                             pTransportIntf, pAuthIntf );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpErrorBufferTooSmall ), "The return value is not a valid SNTP Status" );
 }
