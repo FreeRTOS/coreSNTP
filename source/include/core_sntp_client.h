@@ -578,6 +578,9 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * @return This API functions returns one of the following:
  *  - #SntpSuccess if a successful server response is received.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
+ *  - #SntpErrorChangeServer if all servers configured in the context have already
+ * rejected time requests in previous attempts, and application SHOULD change server(s)
+ * for future time requests with the @ref Sntp_Init API.
  *  - #SntpErrorNetworkFailure if there is a failure in the user-defined transport
  *  - #SntpErrorAuthFailure if an internal error occurs in the user-defined
  * authentication interface when validating the server response.

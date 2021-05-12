@@ -453,10 +453,8 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
                                          SntpGetTime_t getTimeFunc )
 {
     SntpStatus_t status = SntpSuccess;
-    SntpTimestamp_t startTime;
     int32_t bytesRead = 0;
 
-    getTimeFunc( &startTime );
 
     /* Check whether there is any data available on the network to read by attempting to read
      * a single byte. */
@@ -466,9 +464,14 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
                                           pBuffer,
                                           1U );
 
-    if( bytesRead == 1 )
+    if( bytesRead > 0 )
     {
         size_t bytesRemaining = responseSize - 1U;
+        SntpTimestamp_t startTime;
+
+        assert( bytesRead == 1 );
+
+        getTimeFunc( &startTime );
 
         while( ( bytesRemaining > 0U ) && ( status == SntpSuccess ) )
         {
@@ -507,6 +510,10 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
     {
         LogDebug( ( "No data available on the network to read." ) );
         status = SntpNoResponseReceived;
+    }
+    else
+    {
+        /* Empty else marker. */
     }
 
     if( bytesRead < 0 )
@@ -579,7 +586,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         status = Sntp_DeserializeResponse( &pContext->lastRequestTime,
                                            pResponseRxTime,
                                            pContext->pNetworkBuffer,
-                                           pContext->bufferSize,
+                                           pContext->sntpPacketSize,
                                            &parsedResponse );
 
         if( ( status == SntpRejectedResponseChangeServer ) ||
@@ -635,9 +642,20 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
         status = SntpErrorBadParameter;
         LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
     }
+
+    /* Check whether there is any remaining server to in the list of configured
+     * servers that it is reasonable to expect a response from. */
+    else if( pContext->currentServerIndex >= pContext->numOfServers )
+    {
+        status = SntpErrorChangeServer;
+        LogError( ( "Invalid API call: All servers have already rejected time requests: "
+                    "Re-initialize context to change configured servers." ) );
+    }
     else
     {
         SntpTimestamp_t startTime, loopIterTime;
+        uint32_t timeSinceTimeRequest = 0;
+
         pContext->getTimeFunc( &startTime );
 
         do
@@ -646,7 +664,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
                                           pContext->currentServerAddr,
                                           pContext->pTimeServers[ pContext->currentServerIndex ].port,
                                           pContext->pNetworkBuffer,
-                                          pContext->bufferSize,
+                                          pContext->sntpPacketSize,
                                           pContext->getTimeFunc );
 
             /* Get current time to either de-serialize the SNTP packet if a server response has been
@@ -664,14 +682,18 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
-            else if( calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime )
+            else if( ( timeSinceTimeRequest = calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) )
                      >= pContext->responseTimeoutMs )
             {
                 status = SntpErrorResponseTimeout;
                 LogError( ( "Unable to receive response: Server response has timed out: "
-                            "RequestTime=%us %ums, TimeoutDuration=%u", pContext->lastRequestTime.seconds,
+                            "RequestTime=%us %ums, TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
                             FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ),
-                            pContext->responseTimeoutMs ) );
+                            timeSinceTimeRequest ) );
+            }
+            else
+            {
+                /* Empty else marker. */
             }
         } while( ( status == SntpNoResponseReceived ) &&
                  ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
