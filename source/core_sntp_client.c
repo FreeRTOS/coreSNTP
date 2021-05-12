@@ -571,7 +571,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         }
         else
         {
-            LogDebug( ( "Server response has been validated: Server=%.s",
+            LogDebug( ( "Server response has been validated: Server=%.*s",
                         ( int ) pServer->serverNameLen, pServer->pServerName ) );
         }
     }
@@ -598,7 +598,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
             pContext->currentServerIndex++;
 
             LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
-                        ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, parsedResponse.rejectedResponseCode ) );
+                        ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
             status = SntpRejectedResponse;
         }
         else if( status == SntpInvalidResponse )
