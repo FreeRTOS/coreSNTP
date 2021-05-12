@@ -492,15 +492,11 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
             else if( bytesRead == 0 )
             {
                 SntpTimestamp_t currentTime;
-                uint32_t timeSinceLastRecv = 0;
-
                 getTimeFunc( &currentTime );
 
-                timeSinceLastRecv = calculateElapsedTimeMs( &currentTime, &startTime );
-
-                if( timeSinceLastRecv >= SNTP_RECV_POLLING_TIMEOUT_MS )
+                if( calculateElapsedTimeMs( &currentTime, &startTime ) >= SNTP_RECV_POLLING_TIMEOUT_MS )
                 {
-                    LogError( ( "Unable to receive server response: Timed out retrying reads: Timeout=%ums", SNTP_RECV_POLLING_TIMEOUT_MS ) );
+                    LogError( ( "Unable to receive server response: Timed out retrying reads" ) );
                     status = SntpErrorNetworkFailure;
                 }
             }
@@ -550,7 +546,7 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
  * - #SntpInvalidResponse if the server response failed sanity checks.
  */
 static SntpStatus_t processServerResponse( SntpContext_t * pContext,
-                                           SntpTimestamp_t * pResponseRxTime )
+                                           const SntpTimestamp_t * pResponseRxTime )
 {
     SntpStatus_t status = SntpSuccess;
     const SntpServerInfo_t * pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
@@ -658,7 +654,6 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     else
     {
         SntpTimestamp_t startTime, loopIterTime;
-        uint32_t timeSinceTimeRequest = 0;
 
         pContext->getTimeFunc( &startTime );
 
@@ -686,14 +681,13 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
-            else if( ( timeSinceTimeRequest = calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) )
-                     >= pContext->responseTimeoutMs )
+            else if( calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) >= pContext->responseTimeoutMs )
             {
                 status = SntpErrorResponseTimeout;
-                LogError( ( "Unable to receive response: Server response has timed out: "
-                            "RequestTime=%us %ums, TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
+                LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
+                            "TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
                             FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ),
-                            timeSinceTimeRequest ) );
+                            calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) ) );
             }
             else
             {
