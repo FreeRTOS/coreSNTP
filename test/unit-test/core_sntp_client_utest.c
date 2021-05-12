@@ -814,13 +814,38 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
 
 void test_ReceiveTimeResponse_Deserialization_Failures()
 {
+    /*============ Test de-serialization failures from the authentication interface ========*/
+
+    /* Update size of SNTP packet to receive from network to include authentication data. */
+    context.sntpPacketSize = SNTP_PACKET_BASE_SIZE + 10;
+    expectedBytesToRecvAfterFirstByte = context.sntpPacketSize - 1;
+
+    /* Set up the test to receive all the server response data. */
+    udpRecvRetCodes[ 0 ] = 1;
+    udpRecvRetCodes[ 1 ] = expectedBytesToRecvAfterFirstByte;
+
+    validateServerAuthRetCode = SntpErrorAuthFailure;
+    TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
+                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
+    /* Reset the indices of lists that control behavior of interface functions. */
+    currentTimeIndex = 0;
+    currentUdpRecvCodeIndex = 0;
+
+    validateServerAuthRetCode = SntpServerNotAuthenticated;
+    TEST_ASSERT_EQUAL( SntpServerNotAuthenticated,
+                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
     /*================ Test de-serialization failures from Sntp_DeserializeResponse API========*/
+
+    /* Reset the authentication interface and SNTP packet size variables. */
+    validateServerAuthRetCode = SntpSuccess;
+    context.sntpPacketSize = SNTP_PACKET_BASE_SIZE;
 
     /* Reset the indices of lists that control behavior of interface functions. */
     memset( currentTimeList, 0, sizeof( currentTimeList ) );
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
-
 
     /* Test when the Sntp_DeserializeResponse API returns server rejected status codes.
      * The Sntp_ReceiveTimeResponse API is expected to convert all kiss-o'-death specific
@@ -867,31 +892,23 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     TEST_ASSERT_EQUAL( SntpInvalidResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
-
-    /*============ Test de-serialization failures from the authentication interface ========*/
-
-    /* Reset the indices of lists that control behavior of interface functions. */
-    currentTimeIndex = 0;
-    currentUdpRecvCodeIndex = 0;
-
-    /* Update size of SNTP packet to receive from network to include authentication data. */
-    context.sntpPacketSize = SNTP_PACKET_BASE_SIZE + 10;
-    expectedBytesToRecvAfterFirstByte = context.sntpPacketSize - 1;
-
-    /* Set up the test to receive all the server response data. */
-    udpRecvRetCodes[ 0 ] = 1;
-    udpRecvRetCodes[ 1 ] = expectedBytesToRecvAfterFirstByte;
-
-    validateServerAuthRetCode = SntpErrorAuthFailure;
-    TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
-                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /*================ Test clock offset overflow status Sntp_DeserializeResponse API========*/
 
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
+    /* Reset the current server index in the context. */
+    context.currentServerIndex = 0;
 
-    validateServerAuthRetCode = SntpServerNotAuthenticated;
-    TEST_ASSERT_EQUAL( SntpServerNotAuthenticated,
+    /* Test when the Sntp_DeserializeResponse API returns #SntpClockOffsetOverflow status code.
+     * The Sntp_ReceiveTimeResponse API is expected to treat that code as success and pass the
+     * information to the SntpSetTime_t interface for user-defined handling.*/
+    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpClockOffsetOverflow );
+    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
+    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
+    Sntp_DeserializeResponse_ReturnThruPtr_pParsedResponse( &mockResponseData );
+
+    TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 }
 

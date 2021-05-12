@@ -571,8 +571,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         }
         else
         {
-            LogDebug( ( "Server response has been validated: Server=%.*s",
-                        ( int ) pServer->serverNameLen, pServer->pServerName ) );
+            LogDebug( ( "Server response has been validated: Server=%.*s", ( int ) pServer->serverNameLen, pServer->pServerName ) );
         }
     }
 
