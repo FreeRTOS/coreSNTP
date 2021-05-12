@@ -17,17 +17,47 @@ jobs:
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror'
+          -DCMAKE_C_FLAGS='-O0 -Wall -Wextra -Werror -Wformat -Wformat-security -Warray-bounds'
           make -C build/ coverity_analysis -j8
       - name: Build Library in Release mode
         run: |
           rm -rf ./build
+          # Build with logging enabled.
           cmake -S test -B build/ -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG'
+          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG -Wno-error=pedantic -Wno-variadic-macros -DLOGGING_LEVEL_DEBUG=1 -Wformat -Wformat-security -Warray-bounds'
           make -C build/ coverity_analysis -j8
-  unittest-and-coverage:
+  unittest-with-sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone This Repo
+        uses: actions/checkout@v2
+      - name: Build Library and Unit Tests with Sanitizer
+        run: |
+          CFLAGS="-O0 -Wall -Wexta -Werror"
+          CFLAGS+=" -D_FORTIFY_SOURCE=2"
+          CFLAGS+=" -Wformat"
+          CLFAGS+=" -Wformat-security"
+          CFLAGS+=" -Warray-bounds"
+          CFLAGS+=" -fsanitize=address,undefined"
+          CFLAGS+=" -fsanitize=pointer-compare -fsanitize=pointer-subtract"
+          CFLAGS+=" -fsanitize-recover=undefined"
+          CFLAGS+=" -fsanitize-address-use-after-scope"
+          CFLAGS+=" -fsanitize-undefined-trap-on-error"
+          CFLAGS=" -fstack-protector-all -DLOGGING_LEVEL_DEBUG=1"
+          cmake -S test -B build/ \
+          -G "Unix Makefiles" \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_CLONE_SUBMODULES=ON \
+          -DCMAKE_C_FLAGS="${CFLAGS}"
+          make -C build all -j8
+      - name: Run unit tests with sanitizer
+        run: |
+          cd build
+          ctest -E system --output-on-failure
+          cd ..
+  unittest-for-coverage:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
