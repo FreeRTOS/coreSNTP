@@ -22,11 +22,10 @@ jobs:
       - name: Build Library in Release mode
         run: |
           rm -rf ./build
-          # Build with logging enabled.
           cmake -S test -B build/ -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG -Wno-error=pedantic -Wno-variadic-macros -DLOGGING_LEVEL_DEBUG=1 -Wformat -Wformat-security -Warray-bounds'
+          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG -Wformat -Wformat-security -Warray-bounds -D_FORTIFY_SOURCE=1'
           make -C build/ coverity_analysis -j8
   unittest-with-sanitizer:
     runs-on: ubuntu-latest
@@ -65,6 +64,7 @@ jobs:
       - name: Build
         run: |
           sudo apt-get install -y lcov sed
+          # Build with logging enabled.
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
