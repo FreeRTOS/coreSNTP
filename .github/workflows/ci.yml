@@ -25,7 +25,7 @@ jobs:
           cmake -S test -B build/ -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG'
+          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -Wno-error=unknown-pragmas -DNDEBUG'
           make -C build/ coverity_analysis -j8
   unittest-and-coverage:
     runs-on: ubuntu-latest
