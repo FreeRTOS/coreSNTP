@@ -43,6 +43,7 @@
 /* Test IPv4 address for time server. */
 #define TEST_SERVER_ADDR         ( 0xAABBCCDD )
 
+/* Test server response timeout (in ms). */
 #define TEST_RESPONSE_TIMEOUT    ( 500 )
 
 /* Utility to convert milliseconds to fractions value in
@@ -98,6 +99,19 @@ static SntpStatus_t generateClientAuthRetCode = SntpSuccess;
 static size_t authCodeSize;
 static SntpStatus_t validateServerAuthRetCode = SntpSuccess;
 
+/* Output parameter for mock of Sntp_DeserializeResponse API. */
+static SntpResponseData_t mockResponseData =
+{
+    .clockOffsetSec       = 1000,
+    .leapSecondType       = NoLeapSecond,
+    .rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_NONE,
+    .serverTime           =
+    {
+        .seconds          = 0xAABBCCDD,
+        .fractions        = 0x11223344
+    }
+};
+
 /* ========================= Helper Functions ============================ */
 
 /* Test definition of the @ref SntpResolveDns_t interface. */
@@ -135,9 +149,9 @@ void setTime( const SntpServerInfo_t * pTimeServer,
 {
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pServerTime );
-
-    ( void ) clockOffsetSec;
-    ( void ) leapSecondInfo;
+    TEST_ASSERT_EQUAL( mockResponseData.clockOffsetSec, clockOffsetSec );
+    TEST_ASSERT_EQUAL( mockResponseData.leapSecondType, leapSecondInfo );
+    TEST_ASSERT_EQUAL_MEMORY( &mockResponseData.serverTime, pServerTime, sizeof( SntpTimestamp_t ) );
 }
 
 /* Test definition of the @ref UdpTransportSendTo_t interface. */
@@ -152,9 +166,6 @@ int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
     TEST_ASSERT_EQUAL( dnsResolveAddr, serverAddr );
     TEST_ASSERT_EQUAL( SNTP_DEFAULT_SERVER_PORT, serverPort );
     TEST_ASSERT_EQUAL( expectedBytesToSend, bytesToSend );
-
-    ( void ) serverAddr;
-    ( void ) serverPort;
 
     int32_t retCode = udpSendRetCodes[ currentUdpSendCodeIndex ];
 
@@ -189,9 +200,6 @@ int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
     {
         TEST_ASSERT_EQUAL( expectedBytesToRecvAfterFirstByte, bytesToRecv );
     }
-
-    ( void ) serverAddr;
-    ( void ) serverPort;
 
     int32_t retCode = udpRecvRetCodes[ currentUdpRecvCodeIndex ];
 
@@ -757,7 +765,8 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
      * sent for #SNTP_RECV_POLLING_TIMEOUT_MS duration. */
     udpRecvRetCodes[ 0 ] = 1;                                                                 /* 1st call to check data availability.*/
     udpRecvRetCodes[ 1 ] = 0;                                                                 /* No data in 2nd call to receive more remaining packet.*/
-    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS ); /* 1st SntpGetTime_t call in recv retry loop. */
+    currentTimeList[ 1 ].fractions = 0;                                                       /* 1st SntpGetTime_t call in recv retry loop. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS ); /* 2nd SntpGetTime_t call with no data read. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
@@ -771,7 +780,8 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE / 2;                                             /* Partial data in 2nd call to receive more remaining packet.*/
     udpRecvRetCodes[ 2 ] = 0;                                                                     /* No data in 3rd call to receive more remaining packet.*/
     currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS / 2 ); /* 1st SntpGetTime_t call in recv retry loop. */
-    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS );     /* 2nd SntpGetTime_t call in recv retry loop. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS );     /* SntpGetTime_t call after partial data read. */
+    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS * 2 ); /* SntpGetTime_t call after no data read in retry loop. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
@@ -811,12 +821,14 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
 
-    /* Test when the Sntp_DeserializeResponse API returns server rejected status codes. */
+
+    /* Test when the Sntp_DeserializeResponse API returns server rejected status codes.
+     * The Sntp_ReceiveTimeResponse API is expected to convert all kiss-o'-death specific
+     * status codes to the #SntpRejectedResponse return code. */
+
     udpRecvRetCodes[ 0 ] = 1;
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1;
 
-    /* The Sntp_ReceiveTimeResponse API is expected to convert all kiss-o'-death specific
-     * status codes to #SntpRejectedResponse code. */
     Sntp_DeserializeResponse_IgnoreAndReturn( SntpRejectedResponseChangeServer );
     TEST_ASSERT_EQUAL( SntpRejectedResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
@@ -841,6 +853,20 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     Sntp_DeserializeResponse_IgnoreAndReturn( SntpRejectedResponseOtherCode );
     TEST_ASSERT_EQUAL( SntpRejectedResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
+    /* Test when the Sntp_DeserializeResponse API returns #SntpInvalidResponse status code.
+     * The Sntp_ReceiveTimeResponse API is expected to return the same code back to the caller.*/
+
+    /* Reset the indices of lists that control behavior of interface functions. */
+    currentTimeIndex = 0;
+    currentUdpRecvCodeIndex = 0;
+    /* Reset the current server index in the context. */
+
+    context.currentServerIndex = 0;
+    Sntp_DeserializeResponse_IgnoreAndReturn( SntpInvalidResponse );
+    TEST_ASSERT_EQUAL( SntpInvalidResponse,
+                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
 
     /*============ Test de-serialization failures from the authentication interface ========*/
 
@@ -871,21 +897,6 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
 
 void test_ReceiveTimeResponse_Nominal()
 {
-    /* Set the behavior of the deserializer function dependency to always return
-     * success. */
-    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpSuccess );
-    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpSuccess );
-    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpSuccess );
-    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpSuccess );
-    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
-    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
-    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
-    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
-    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
-    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
-    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
-    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
-
     /* Test when no response is received from the server for the entire block time. */
     udpRecvRetCodes[ 0 ] = 0;                                                              /* 1st attempt to check data availability. No data received.*/
     udpRecvRetCodes[ 1 ] = 0;                                                              /* 2nd attempt to check data availability. No data received. */
@@ -896,12 +907,24 @@ void test_ReceiveTimeResponse_Nominal()
     TEST_ASSERT_EQUAL( SntpNoResponseReceived,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
 
-    /* Reset the indices of lists that control behavior of interface functions. */
-    currentTimeIndex = 0;
-    currentUdpRecvCodeIndex = 0;
-    context.currentServerIndex = 0;
+#define COMMON_TEST_SETUP() \
+    do {                    \
+        /* Set the behavior of the deserializer function dependency to always return \
+         * success. */                                                                                                                                 \
+        Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpSuccess ); \
+        Sntp_DeserializeResponse_ReturnThruPtr_pParsedResponse( &mockResponseData );                                                                   \
+        Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();                                                                                          \
+        Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();                                                                                          \
+                                                                                                                                                       \
+        /* Reset the indices of lists that control behavior of interface functions. */                                                                 \
+        currentTimeIndex = 0;                                                                                                                          \
+        currentUdpRecvCodeIndex = 0;                                                                                                                   \
+        context.currentServerIndex = 0;                                                                                                                \
+    } while( 0 )                                                                                                                                       \
 
     /* Test when server response is received successfully in 1st read attempt. */
+    COMMON_TEST_SETUP();
+
     udpRecvRetCodes[ 0 ] = 1;                                                              /* 1st attempt to check data availability. No data received.*/
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1;                                      /* 2nd attempt to check data availability. No data received. */
     currentTimeList[ 0 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 8 ); /* 1st GetTime_t call. */
@@ -909,26 +932,26 @@ void test_ReceiveTimeResponse_Nominal()
     TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
 
+
+    /* Test when server response is received successfully over multiple read attempts. */
+
+    COMMON_TEST_SETUP();
+
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
     context.currentServerIndex = 0;
 
-    /* Test when server response is received successfully over multiple data read attempts. */
-    udpRecvRetCodes[ 0 ] = 1;                                                               /* 1st attempt to check data availability. No data received.*/
-    udpRecvRetCodes[ 1 ] = 10;                                                              /* Partial data read over 2nd read attempt for remaining packet. */
-    udpRecvRetCodes[ 2 ] = SNTP_PACKET_BASE_SIZE - 10 - 1;                                  /* Partial data read for complete packet in 3rd read attempt. */
-    currentTimeList[ 0 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 16 ); /* 1st GetTime_t call before read attempt. */
-    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 8 );  /* GetTime_t call before 2nd read attempt. */
-    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 4 );  /* GetTime_t call after 2nd read attempt. */
-    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 2 );  /* GetTime_t call after 3rd read attempt. */
+    udpRecvRetCodes[ 0 ] = 1;                                                                     /* 1st attempt to check data availability. No data received.*/
+    udpRecvRetCodes[ 1 ] = 0;                                                                     /* Zero data read over 2nd read attempt for remaining packet. */
+    udpRecvRetCodes[ 2 ] = SNTP_PACKET_BASE_SIZE - 1;                                             /* Data read for complete remaining packet in 3rd read attempt. */
+    currentTimeList[ 1 ].fractions = 0;                                                           /* 1st GetTime_t call in retry loop. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS / 2 ); /* GetTime_t call after zero data read in retry loop. */
     TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
 
-    /* Reset the indices of lists that control behavior of interface functions. */
-    currentTimeIndex = 0;
-    currentUdpRecvCodeIndex = 0;
-    context.currentServerIndex = 0;
+    /* Test when server response is received without server validation. */
+    COMMON_TEST_SETUP();
 
     /* Test when server response is received without server validation. */
     context.authIntf.validateServerAuth = NULL;       /* Remove the authentication interface from the context. */

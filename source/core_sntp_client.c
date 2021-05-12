@@ -492,7 +492,11 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
             else if( bytesRead == 0 )
             {
                 SntpTimestamp_t currentTime;
-                uint32_t timeSinceLastRecv = calculateElapsedTimeMs( &currentTime, &startTime );
+                uint32_t timeSinceLastRecv = 0;
+
+                getTimeFunc( &currentTime );
+
+                timeSinceLastRecv = calculateElapsedTimeMs( &currentTime, &startTime );
 
                 if( timeSinceLastRecv >= SNTP_RECV_POLLING_TIMEOUT_MS )
                 {
