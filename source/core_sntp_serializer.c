@@ -122,6 +122,18 @@
 #define CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK    ( 0xC0000000U )
 
 /**
+ * @brief The bit mask for the most-significant bit in an unsigned 32 bit integer.
+ * This value is used in the intermediate conversion of unsigned integer to signed
+ * integer for the first order difference values during clock-offset calculation.
+ *
+ * @note The conversion from unsigned to signed integer of first order difference
+ * values uses this macro to check whether assignment of the unsigned value to signed
+ * integer will overflow, and accordingly, change the unsigned value to safely perform
+ * the conversion.
+ */
+#define UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK                ( 0x80000000U )
+
+/**
  * @brief Structure representing an SNTP packet header.
  * For more information on SNTP packet format, refer to
  * [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4).
@@ -192,6 +204,25 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
 }
 
 /**
+ * @brief Utility to determine whether the passed first order difference value
+ * between server and client timestamps represents that the server and client
+ * are within 34 years of each other to be able to calculate the clock-offset
+ * value according to the NTPv4 specification's on-wire protocol.
+ *
+ * @param[in] firstOrderDiff A first-order difference value between the client
+ * and server.
+ *
+ * @note As the SNTP timestamp value wraps around after ~136 years (exactly at
+ * 7 Feb 2036 6h 28m 16s), the utility logic checks the first order difference
+ * in both polarities (i.e. as (Server - Client) and (Client - Server) time values )
+ * to support the edge case when the two timestamps are in different SNTP eras (for
+ * example, server time is in 2037 and client time is in 2035 ).
+ */
+#define IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiff )                                  \
+    ( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) || \
+      ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) )
+
+/**
  * @brief Utility to calculate clock offset of system relative to the
  * server using the on-wire protocol specified in the NTPv4 specification.
  * For more information on on-wire protocol, refer to
@@ -259,7 +290,9 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     SntpStatus_t status = SntpSuccess;
 
     /* Variable for storing the first-order difference between timestamps. */
-    uint32_t firstOrderDiff = 0;
+    uint32_t firstOrderDiffSend = 0;
+    uint32_t firstOrderDiffRecv = 0;
+    bool sendPolarity, recvPolarity;
 
     assert( pClientTxTime != NULL );
     assert( pServerRxTime != NULL );
@@ -267,42 +300,86 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClientRxTime != NULL );
     assert( pClockOffset != NULL );
 
-    /* Calculate a sample first order difference value between the
-     * server and system timestamps. */
-    firstOrderDiff = pClientRxTime->seconds - pServerTxTime->seconds;
+    /* On-wire protocol formula's polarity for first order difference in the send network
+     * path is T2 (Server Rx) - T1 (Client TX) .*/
+    recvPolarity = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ? true : false;
 
-    /* Determine from the first order difference if the system time is within
+    /* On-wire protocol formula's polarity for first order difference in the receive network
+     * path is T3 (Server TX) - T4 (Client RX) .*/
+    sendPolarity = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ? true : false;
+
+    /* Calculate first order difference values between the server and system timestamps
+     * to determine whether they are within 34 years of each other. */
+
+    /* To avoid overflow issue, we will store only the positive first order difference
+     * values in the unsigned integer now, and later store the values with correct polarity
+     * (according to the formula) later. */
+    firstOrderDiffSend = sendPolarity ? ( pServerRxTime->seconds - pClientTxTime->seconds ) :
+                         ( pClientTxTime->seconds - pServerRxTime->seconds );
+    firstOrderDiffRecv = recvPolarity ? ( pServerTxTime->seconds - pClientRxTime->seconds ) :
+                         ( pClientRxTime->seconds - pServerTxTime->seconds );
+
+    /* Determine from the first order differences if the system time is within
      * 34 years of server time to be able to calculate clock offset.
-     *
-     * Note: As the SNTP timestamp value wraps around after ~136 years (exactly at
-     * 7 Feb 2036 6h 28m 16s), the conditional logic checks first order difference
-     * in both polarities (i.e. as (Server - Client) and (Client - Server) time values )
-     * to support the edge case when the two timestamps are in different SNTP eras (for
-     * example, server time is in 2037 and client time is in 2035 ).
      */
-    if( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
-          == 0U ) ||
-        ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK )
-          == 0U ) )
+    if( IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiffSend ) &&
+        IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiffRecv ) )
     {
-        /* Calculate the clock-offset as system time is within 34 years window
-         * of server time. */
-        uint32_t firstOrderDiffSend;
-        uint32_t firstOrderDiffRecv;
-        uint32_t sumOfFirstOrderDiffs;
+        /* Now that we have validated that system and server times are within 34 years
+         * of each other, we will prepare for the clock-offset calculation. To calculate
+         * clock-offset, the first order difference values need to be stored as signed integers
+         * in the correct polarity of differences according to the formula. */
+        int32_t signedFirstOrderDiffSend = 0;
+        int32_t signedFirstOrderDiffRecv = 0;
 
-        /* Perform ( T2 - T1 ) offset calculation of SNTP Request packet path. */
-        firstOrderDiffSend = pServerRxTime->seconds - pClientTxTime->seconds;
+        /* To avoid overflow issues in assigning the unsigned values of first order differences
+         * to signed integers, we will inverse the values if they represent a large value that cannot be
+         * represented in a signed integer. */
+        if( ( firstOrderDiffSend & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) 
+        == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
 
-        /* Perform ( T3 - T4 ) offset calculation of SNTP Response packet path. */
-        firstOrderDiffRecv = 0U - firstOrderDiff;
+        {
+            firstOrderDiffSend = 0U - firstOrderDiffSend;
+            sendPolarity = !sendPolarity;
+        }
 
-        /* Perform second order calculation of using average of the above offsets. */
-        sumOfFirstOrderDiffs = firstOrderDiffSend + firstOrderDiffRecv;
+        if( ( firstOrderDiffRecv & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) 
+        == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+
+        {
+            firstOrderDiffRecv = 0U - firstOrderDiffRecv;
+            recvPolarity = !recvPolarity;
+        }
+
+        /* Now we can safely store the first order differences as signed integer values. */
+        signedFirstOrderDiffSend = firstOrderDiffSend;
+        signedFirstOrderDiffRecv = firstOrderDiffRecv;
+
+        /* To calculate the clock-offset value, we will correct the signed first order difference
+        * values to match the subtraction polarity direction of "Server Time" - "Client Time". */
+        if( sendPolarity == false )
+        {
+            signedFirstOrderDiffSend = 0 - signedFirstOrderDiffSend;
+        }
+
+        if( recvPolarity == false )
+        {
+            signedFirstOrderDiffRecv = 0 - signedFirstOrderDiffRecv;
+        }
+
+        /* We are now sure that each of the first order differences represents the values in
+         * the correct direction of polarities, i.e.
+         * signedFirstOrderDiffSend represents (T2 - T1)
+         *                AND
+         *  signedFirstOrderDiffRecv represents (T3 - T4)
+         *
+         * We are now safe to complete the calculation of the clock-offset as the average
+         * of the signed first order difference values.
+         */
 
         /* Use division instead of a bit shift to guarantee sign extension
          * regardless of compiler implementation. */
-        *pClockOffset = ( ( int32_t ) sumOfFirstOrderDiffs / 2 );
+        *pClockOffset = ( ( signedFirstOrderDiffSend + signedFirstOrderDiffRecv ) / 2 );
     }
     else
     {

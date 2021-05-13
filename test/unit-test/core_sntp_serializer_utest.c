@@ -441,7 +441,7 @@ void test_DeserializeResponse_KoD_packets( void )
  * SNTP server response, and determine that the clock offset cannot be calculated
  * when the client clock is beyond 34 years from server.
  */
-void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
+void test_DeserializeResponse_AcceptedResponse_Overflow_Cases( void )
 {
     SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
@@ -463,6 +463,22 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
     serverTime.seconds = clientTime.seconds + YEARS_40_IN_SECONDS;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
+
+    /* Now test the contrived case when only the send network path
+     * represents timestamps that overflow but the receive network path
+     * has timestamps that do not overflow. */
+    testClockOffsetCalculation( &clientTime, &serverTime, /* Send Path times are 40 years apart */
+                                &serverTime, &serverTime, /* Receive path times are the same. */
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
+
+    /* Now test the contrived case when only the receive network path
+     * represents timestamps that overflow but the send network path
+     * has timestamps that do not overflow. */
+    testClockOffsetCalculation( &clientTime, &clientTime, /* Send Path times are the same, i.e. don't overflow */
+                                &serverTime, &clientTime, /* Receive path times are 40 years apart. */
                                 SntpClockOffsetOverflow,
                                 SNTP_CLOCK_OFFSET_OVERFLOW );
 }
