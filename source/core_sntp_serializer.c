@@ -220,12 +220,13 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  */
 static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 {
-    /* Note: The (~firstOrderDiff + 1U) expression represents 2's complement or negation of value.
+    /* Note: The (UINT32_MAX  - firstOrderDiff + 1U) expression represents
+     * 2's complement or negation of value.
      * This is done to be compliant with both CBMC and MISRA Rule 10.1.
      * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
      * MISRA rule forbids use of unary minus operator on unsigned integers. */
     return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
-            ( ( ( ~firstOrderDiff + 1U ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
+            ( ( ( UINT32_MAX - firstOrderDiff + 1U ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
 }
 
 /**
@@ -338,33 +339,6 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
         int32_t signedFirstOrderDiffSend = 0;
         int32_t signedFirstOrderDiffRecv = 0;
 
-        /* To avoid overflow issues in assigning the unsigned values of first order differences
-         * to signed integers, we will inverse the values if they represent a large value that cannot be
-         * represented in a signed integer. */
-        if( ( firstOrderDiffSend & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
-            == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
-
-        {
-            /* Negate the unsigned integer by performing 2's complement operation.
-             * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
-             * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
-             * MISRA rule forbids use of unary minus operator on unsigned integers. */
-            firstOrderDiffSend = ~firstOrderDiffSend + 1U;
-            sendPolarity = !sendPolarity;
-        }
-
-        if( ( firstOrderDiffRecv & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
-            == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
-
-        {
-            /* Negate the unsigned integer by performing 2's complement operation.
-             * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
-             * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
-             * MISRA rule forbids use of unary minus operator on unsigned integers. */
-            firstOrderDiffRecv = ~firstOrderDiffRecv + 1U;
-            recvPolarity = !recvPolarity;
-        }
-
         /* Now we can safely store the first order differences as signed integer values. */
         signedFirstOrderDiffSend = ( int32_t ) firstOrderDiffSend;
         signedFirstOrderDiffRecv = ( int32_t ) firstOrderDiffRecv;
@@ -385,7 +359,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
          * the correct direction of polarities, i.e.
          * signedFirstOrderDiffSend represents (T2 - T1)
          *                AND
-         *  signedFirstOrderDiffRecv represents (T3 - T4)
+         * signedFirstOrderDiffRecv represents (T3 - T4)
          *
          * We are now safe to complete the calculation of the clock-offset as the average
          * of the signed first order difference values.
