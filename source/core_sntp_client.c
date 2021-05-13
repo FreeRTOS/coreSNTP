@@ -642,7 +642,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
         LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
     }
 
-    /* Check whether there is any remaining server to in the list of configured
+    /* Check whether there is any remaining server in the list of configured
      * servers that it is reasonable to expect a response from. */
     else if( pContext->currentServerIndex >= pContext->numOfServers )
     {
