@@ -218,7 +218,7 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  * to support the edge case when the two timestamps are in different SNTP eras (for
  * example, server time is in 2037 and client time is in 2035 ).
  */
-static bool isEligibileForClockOffsetCalculation( uint32_t firstOrderDiff )
+static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 {
     return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
             ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
@@ -324,8 +324,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     /* Determine from the first order differences if the system time is within
      * 34 years of server time to be able to calculate clock offset.
      */
-    if( isEligibileForClockOffsetCalculation( firstOrderDiffSend ) &&
-        isEligibileForClockOffsetCalculation( firstOrderDiffRecv ) )
+    if( isEligibleForClockOffsetCalculation( firstOrderDiffSend ) &&
+        isEligibleForClockOffsetCalculation( firstOrderDiffRecv ) )
     {
         /* Now that we have validated that system and server times are within 34 years
          * of each other, we will prepare for the clock-offset calculation. To calculate
