@@ -220,12 +220,12 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  */
 static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 {
-    /* Note: The (1U + ~firstOrderDiff) expression represents 2's complement or negation of value.
+    /* Note: The (~firstOrderDiff + 1U) expression represents 2's complement or negation of value.
      * This is done to be compliant with both CBMC and MISRA Rule 10.1.
      * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
      * MISRA rule forbids use of unary minus operator on unsigned integers. */
     return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
-            ( ( ( 1U + ~firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
+            ( ( ( ~firstOrderDiff + 1U ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
 }
 
 /**
@@ -307,12 +307,12 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClockOffset != NULL );
 
     /* On-wire protocol formula's polarity for first order difference in the send network
-     * path is T2 (Server Rx) - T1 (Client TX) .*/
-    recvPolarity = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ? true : false;
+     * path is T2 (Server Rx) - T1 (Client Tx) .*/
+    sendPolarity = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ? true : false;
 
     /* On-wire protocol formula's polarity for first order difference in the receive network
-     * path is T3 (Server TX) - T4 (Client RX) .*/
-    sendPolarity = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ? true : false;
+     * path is T3 (Server Tx) - T4 (Client Rx) .*/
+    recvPolarity = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ? true : false;
 
     /* Calculate first order difference values between the server and system timestamps
      * to determine whether they are within 34 years of each other. */
@@ -349,7 +349,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
              * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
              * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
              * MISRA rule forbids use of unary minus operator on unsigned integers. */
-            firstOrderDiffSend = 1U + ~firstOrderDiffSend;
+            firstOrderDiffSend = ~firstOrderDiffSend + 1U;
             sendPolarity = !sendPolarity;
         }
 
@@ -361,7 +361,7 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
              * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
              * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
              * MISRA rule forbids use of unary minus operator on unsigned integers. */
-            firstOrderDiffRecv = 1U + ~firstOrderDiffRecv;
+            firstOrderDiffRecv = ~firstOrderDiffRecv + 1U;
             recvPolarity = !recvPolarity;
         }
 
