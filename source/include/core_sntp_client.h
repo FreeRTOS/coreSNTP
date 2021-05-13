@@ -118,6 +118,12 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
  * @param[in] clockOffSetSec The calculated clock offset of the system relative
  * to the server time.
+ * @param[in] leapSecondInfo Information about whether there is about an upcoming
+ * leap second adjustment of insertion or deletion in the last minute before midnight
+ * on the last day of the current month. For more information on leap seconds, refer
+ * to https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs. Depending
+ * on the accuracy requirements of the system clock, the user can choose to account
+ * for the leap second or ignore it in their system clock update logic.
  *
  * @note The user can use either a "step" or "slew" clock discipline methodology
  * depending on the application needs.
@@ -129,13 +135,11 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * the "step" discipline methodology can be used to directly update the system
  * clock with the current server time, @p pServerTime, every time the coreSNTP
  * library calls the interface.
- *
- * @return `true` if setting system time is successful; otherwise `false` to
- * represent failure.
  */
-typedef bool ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
+typedef void ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   const SntpTimestamp_t * pServerTime,
-                                  int32_t clockOffsetSec );
+                                  int32_t clockOffsetSec,
+                                  SntpLeapSecondInfo_t leapSecondInfo );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -306,10 +310,10 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
  * - #SntpErrorAuthFailure for failure to authenticate server due to internal
  * error.
  */
-typedef SntpStatus_t (* SntpValidateAuthCode_t )( SntpAuthContext_t * pContext,
-                                                  const SntpServerInfo_t * pTimeServer,
-                                                  const void * pResponseData,
-                                                  size_t responseSize );
+typedef SntpStatus_t (* SntpValidateServerAuth_t )( SntpAuthContext_t * pContext,
+                                                    const SntpServerInfo_t * pTimeServer,
+                                                    const void * pResponseData,
+                                                    size_t responseSize );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -338,7 +342,7 @@ typedef struct SntpAuthenticationIntf
      * @brief The user-defined function to authenticating server from its SNTP
      * response.
      */
-    SntpValidateAuthCode_t validateServerAuth;
+    SntpValidateServerAuth_t validateServerAuth;
 } SntpAuthenticationInterface_t;
 
 /**
@@ -435,6 +439,13 @@ typedef struct SntpContext
      * from the server.
      */
     size_t sntpPacketSize;
+
+    /**
+     * @brief The timeout duration (in milliseconds) for receiving a response, through
+     * @ref Sntp_ReceiveTimeResponse API, from a server after the request for time is
+     * sent to it through @ref Sntp_SendTimeRequest API.
+     */
+    uint32_t responseTimeoutMs;
 } SntpContext_t;
 
 /**
@@ -447,6 +458,9 @@ typedef struct SntpContext
  * servers that should be used by the SNTP client. This list MUST stay in
  * scope for all the time of use of the context.
  * @param[in] numOfServers The number of servers in the list, @p pTimeServers.
+ * @param[in] serverResponseTimeoutMs The timeout duration (in milliseconds) for
+ * receiving server response for time requests. The same timeout value is used for
+ * each server in the @p pTimeServers list.
  * @param[in] pNetworkBuffer The user-supplied memory that will be used for
  * storing network data for SNTP client-server communication. The buffer
  * MUST stay in scope for all the time of use of the context.
@@ -480,6 +494,7 @@ typedef struct SntpContext
 SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         const SntpServerInfo_t * pTimeServers,
                         size_t numOfServers,
+                        uint32_t serverResponseTimeoutMs,
                         uint8_t * pNetworkBuffer,
                         size_t bufferSize,
                         SntpResolveDns_t resolveDnsFunc,
@@ -512,7 +527,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  * @return The API function returns one of the following:
  *  - #SntpSuccess if a time request is successfully sent to the currently configured
  * time server in the context.
- *  - #SntpErrorBadParameter if any invalid parameter is passed to the function.
+ *  - #SntpErrorBadParameter if an invalid context is passed to the function.
  *  - #SntpErrorChangeServer if there is no server remaining in the list of configured
  * servers that has not rejected a prior time request.
  *  - #SntpErrorDnsFailure if there is failure in the user-defined function for
@@ -526,6 +541,63 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
 SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                    uint32_t randomNumber );
 /* @[define_sntp_sendtimerequest] */
+
+
+/**
+ * @brief Receives a time response from the server that has been requested for time with
+ * the @ref Sntp_SendTimeRequest API function.
+ * Once an accepted response containing time from server is received, this function calls
+ * the user-defined @ref SntpSetTime_t function to update the system time.
+ *
+ * @note If the user has provided an authentication interface to the client
+ * (through @ref Sntp_Init), the server response is authenticated by calling the
+ * @ref SntpValidateServerAuth_t function of the @ref SntpAuthenticationInterface_t interface.
+ *
+ * @note On receiving a successful server response containing server time,
+ * this API calculates the clock offset value of the system clock relative to the
+ * server before calling the user-defined @ref SntpSetTime_t function for updating
+ * the system time. To calculate the clock offset, the system clock SHOULD BE
+ * within 34 years of the server time; otherwise, this function passes
+ * #SNTP_CLOCK_OFFSET_OVERFLOW value as the clock offset to the @ref SntpSetTime_t function.
+ *
+ * @note This API will rotate the server of use in the library for the next time request
+ * (through the @ref Sntp_SendTimeRequest) if either of following events occur:
+ *  - The server has responded with a rejection for the time request.
+ *                         OR
+ *  - The server response wait has timed out.
+ *
+ * @param[in] pContext The context representing an SNTPv4 client.
+ * @param[in] blockTimeMs The maximum duration of time the function will block on
+ * receiving a response from the server unless either the response is received
+ * OR a response timeout occurs.
+ *
+ * @note This function can be called multiple times with zero or small blocking times
+ * to poll whether server response is received until either the response response is
+ * received from the server OR a response timeout has occurred.
+ *
+ * @return This API functions returns one of the following:
+ *  - #SntpSuccess if a successful server response is received.
+ *  - #SntpErrorBadParameter if an invalid context is passed to the function.
+ *  - #SntpErrorChangeServer if all servers configured in the context have already
+ * rejected time requests in previous attempts, and application SHOULD change server(s)
+ * for future time requests with the @ref Sntp_Init API.
+ *  - #SntpErrorNetworkFailure if there is a failure in the user-defined transport
+ *  - #SntpErrorAuthFailure if an internal error occurs in the user-defined
+ * authentication interface when validating the server response.
+ * receive interface in receiving server response from the network.
+ *  - #SntpServerNotAuthenticated when the server could not be authenticated from
+ * its response with the user-defined authentication interface.
+ * - #SntpInvalidResponse if the server response fails sanity checks expected in an
+ * SNTP response packet.
+ * - #SntpErrorResponseTimeout if a timeout has occurred in receiving response from
+ * the server.
+ * - #SntpRejectedResponse if the server responded with a rejection for the time
+ * request.
+ */
+/* @[define_sntp_receivetimeresponse] */
+SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
+                                       uint32_t blockTimeMs );
+/* @[define_sntp_receivetimeresponse] */
 
 /**
  * @brief Converts @ref SntpStatus_t to its equivalent
