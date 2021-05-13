@@ -230,6 +230,61 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 }
 
 /**
+ * @brief Utility to perform a safe subtraction operation of unsigned integers and
+ * return the value as a signed integer. This function returns the effective subtraction
+ * value as ( @p minuend - @p subtrahend ).
+ *
+ * @note This utility provides safe subtraction result that involve the following 2 operations::
+ *  * Safe subtraction between unsigned integers
+ *                    AND
+ *  * Safe conversion of unsigned integer to signed integer
+ *
+ * @param[in] minuend
+ * @param[in] subtrahend
+ *
+ * @return The calculated signed subtraction value between the unsigned integers.
+ */
+static int32_t safeSubtraction( uint32_t minuend,
+                                uint32_t subtrahend )
+{
+    int32_t calculatedValue = 0;
+
+    /* The correct polarity of subtraction is "minuend - subtrahend",
+    * but to avoid overflow in subtraction of unsigned integers, we perform
+    * subtraction in the polarity that generates a positive value. */
+    bool polarity = ( minuend > subtrahend ) ? true : false;
+    uint32_t positiveDiff = ( polarity == true ) ? minuend - subtrahend :
+                            subtrahend - minuend;
+
+    /* Check whether the difference value has the most significant bit set.
+     * An unsigned integer with the most significant bit set cannot be safely assigned
+     * to a signed integer.*/
+    if( ( positiveDiff & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+    {
+        /* Perform 2's complement inversion of the value so that the most significant bit
+         * is not set.
+         * Note: This expression is used to  compliant with both CBMC and MISRA Rule 10.1.
+         * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
+         * MISRA rule forbids use of unary minus operator on unsigned integers.  */
+        positiveDiff = UINT32_MAX - positiveDiff + 1U;
+
+        /* Reverse the state of the polarity as we performed the 2's complement. */
+        polarity = !polarity;
+    }
+
+    /* Now safely, store the unsigned value as a signed integer. */
+    calculatedValue = positiveDiff;
+
+    /* Restore the difference value to represent subtraction in the polarity of "minuend  - sutrahend". */
+    if( polarity == false )
+    {
+        calculatedValue = 0 - calculatedValue;
+    }
+
+    return calculatedValue;
+}
+
+/**
  * @brief Utility to calculate clock offset of system relative to the
  * server using the on-wire protocol specified in the NTPv4 specification.
  * For more information on on-wire protocol, refer to
@@ -339,21 +394,10 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
         int32_t signedFirstOrderDiffSend = 0;
         int32_t signedFirstOrderDiffRecv = 0;
 
-        /* Now we can safely store the first order differences as signed integer values. */
-        signedFirstOrderDiffSend = ( int32_t ) firstOrderDiffSend;
-        signedFirstOrderDiffRecv = ( int32_t ) firstOrderDiffRecv;
-
-        /* To calculate the clock-offset value, we will correct the signed first order difference
-        * values to match the subtraction polarity direction of "Server Time" - "Client Time". */
-        if( sendPolarity == false )
-        {
-            signedFirstOrderDiffSend = 0 - signedFirstOrderDiffSend;
-        }
-
-        if( recvPolarity == false )
-        {
-            signedFirstOrderDiffRecv = 0 - signedFirstOrderDiffRecv;
-        }
+        /* Calculate the first order differences in the correct subtraction direction as
+         * "Server Time - Client Time" on both SNTP request and SNTP response network paths. */
+        signedFirstOrderDiffSend = safeSubtraction( pServerRxTime->seconds, pClientTxTime->seconds );
+        signedFirstOrderDiffRecv = safeSubtraction( pServerTxTime->seconds, pClientRxTime->seconds );
 
         /* We are now sure that each of the first order differences represents the values in
          * the correct direction of polarities, i.e.
