@@ -232,8 +232,8 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
  *
  * @return The calculated signed subtraction value between the unsigned integers.
  */
-static int32_t safeSubtraction( uint32_t minuend,
-                                uint32_t subtrahend )
+static int32_t safeSignedSubtraction( uint32_t minuend,
+                                      uint32_t subtrahend )
 {
     int32_t calculatedValue = 0;
 
@@ -378,8 +378,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 
         /* Calculate the first order differences in the correct subtraction direction as
          * "Server Time - Client Time" on both SNTP request and SNTP response network paths. */
-        signedFirstOrderDiffSend = safeSubtraction( pServerRxTime->seconds, pClientTxTime->seconds );
-        signedFirstOrderDiffRecv = safeSubtraction( pServerTxTime->seconds, pClientRxTime->seconds );
+        signedFirstOrderDiffSend = safeSignedSubtraction( pServerRxTime->seconds, pClientTxTime->seconds );
+        signedFirstOrderDiffRecv = safeSignedSubtraction( pServerTxTime->seconds, pClientRxTime->seconds );
 
         /* We are now sure that each of the first order differences represents the values in
          * the correct direction of polarities, i.e.
