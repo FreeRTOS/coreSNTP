@@ -218,9 +218,11 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  * to support the edge case when the two timestamps are in different SNTP eras (for
  * example, server time is in 2037 and client time is in 2035 ).
  */
-#define IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiff )                                  \
-    ( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) || \
-      ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) )
+static bool isEligibileForClockOffsetCalculation( uint32_t firstOrderDiff )
+{
+    return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
+            ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
+}
 
 /**
  * @brief Utility to calculate clock offset of system relative to the
@@ -322,8 +324,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     /* Determine from the first order differences if the system time is within
      * 34 years of server time to be able to calculate clock offset.
      */
-    if( IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiffSend ) &&
-        IS_ELIGIBILE_FOR_CLOCK_OFFSET( firstOrderDiffRecv ) )
+    if( isEligibileForClockOffsetCalculation( firstOrderDiffSend ) &&
+        isEligibileForClockOffsetCalculation( firstOrderDiffRecv ) )
     {
         /* Now that we have validated that system and server times are within 34 years
          * of each other, we will prepare for the clock-offset calculation. To calculate
@@ -352,8 +354,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
         }
 
         /* Now we can safely store the first order differences as signed integer values. */
-        signedFirstOrderDiffSend = firstOrderDiffSend;
-        signedFirstOrderDiffRecv = firstOrderDiffRecv;
+        signedFirstOrderDiffSend = ( int32_t ) firstOrderDiffSend;
+        signedFirstOrderDiffRecv = ( int32_t ) firstOrderDiffRecv;
 
         /* To calculate the clock-offset value, we will correct the signed first order difference
         * values to match the subtraction polarity direction of "Server Time" - "Client Time". */
