@@ -5,9 +5,11 @@ apis
 ascii
 auth
 authcodesize
+authintf
 aws
 backoff
 beforelooptime
+blocktimems
 br
 buffersize
 bytesremaining
@@ -31,6 +33,8 @@ currenttimelist
 de
 deamon
 december
+deserialize
+deserializer
 deserializeresponse
 desiredaccuracy
 dns
@@ -69,6 +73,7 @@ jan
 january
 june
 kod
+leapsecondinfo
 leapversionmode
 lsb
 misra
@@ -122,6 +127,7 @@ psntptime
 ptimeserver
 ptimeservers
 ptr
+ptransportintf
 pudptransportintf
 punixtimemicrosecs
 punixtimesecs
@@ -153,6 +159,7 @@ serializerequest
 serveraddr
 servernamelen
 serverport
+serverresponsetimeoutms
 servertime
 setsystemtimefunc
 signedfirstorderdiffrecv
@@ -168,8 +175,11 @@ sntperrorbuffertoosmall
 sntperrorchangeserver
 sntperrordnsfailure
 sntperrornetworkfailure
+sntperrorresponsetimeout
 sntperrortimenotsupported
 sntpinvalidresponse
+sntpnoresponse
+sntprejectedresponse
 sntprejectedresponsechangeserver
 sntprejectedresponseothercode
 sntprejectedresponseretrywithbackoff
@@ -190,10 +200,12 @@ transmittime
 trng
 tx
 udp
+udprecvretcodes
 udpsendretcodes
 uint
 unix
 utc
+validateserverauth
 wordmemory
 wordval
 www

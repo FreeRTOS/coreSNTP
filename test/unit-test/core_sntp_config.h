@@ -32,13 +32,10 @@
 
 /************* Define Logging Macros using printf function ***********/
 
-#define PrintfError( ... )    printf( "Error: "__VA_ARGS__ );  printf( "\n" )
-#define PrintfWarn( ... )     printf( "Warn: "__VA_ARGS__ );  printf( "\n" )
-#define PrintfInfo( ... )     printf( "Info: " __VA_ARGS__ ); printf( "\n" )
-#define PrintfDebug( ... )    printf( "Debug: " __VA_ARGS__ ); printf( "\n" )
-
-/* Build with Debug level. */
-/*#define LOGGING_LEVEL_DEBUG    1 */
+#define PrintfError( ... )         printf( "Error: "__VA_ARGS__ );  printf( "\n" )
+#define PrintfWarn( ... )          printf( "Warn: "__VA_ARGS__ );  printf( "\n" )
+#define PrintfInfo( ... )          printf( "Info: " __VA_ARGS__ ); printf( "\n" )
+#define PrintfDebug( ... )         printf( "Debug: " __VA_ARGS__ ); printf( "\n" )
 
 #ifdef LOGGING_LEVEL_ERROR
     #define LogError( message )    PrintfError message

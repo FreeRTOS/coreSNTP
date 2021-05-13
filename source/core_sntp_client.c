@@ -32,9 +32,18 @@
 /* SNTP client library API include. */
 #include "core_sntp_client.h"
 
+/**
+ * @brief Utility to convert fractions part of SNTP timestamp to milliseconds.
+ *
+ * @param[in] fractions The fractions value in an SNTP timestamp.
+ */
+#define FRACTIONS_TO_MS( fractions ) \
+    ( fractions / ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U ) )
+
 SntpStatus_t Sntp_Init( SntpContext_t * pContext,
                         const SntpServerInfo_t * pTimeServers,
                         size_t numOfServers,
+                        uint32_t serverResponseTimeoutMs,
                         uint8_t * pNetworkBuffer,
                         size_t bufferSize,
                         SntpResolveDns_t resolveDnsFunc,
@@ -91,6 +100,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
         /* Set the members of the context with passed parameters. */
         pContext->pTimeServers = pTimeServers;
         pContext->numOfServers = numOfServers;
+
+        pContext->responseTimeoutMs = serverResponseTimeoutMs;
 
         pContext->pNetworkBuffer = pNetworkBuffer;
         pContext->bufferSize = bufferSize;
@@ -191,7 +202,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
 {
     const uint8_t * pIndex = pPacket;
     size_t bytesRemaining = packetSize;
-    int32_t totalBytesSent = 0, bytesSent = 0;
+    int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
     uint32_t timeSinceLastSendMs;
     bool sendError = false;
@@ -218,7 +229,6 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         {
             LogError( ( "Unable to send request packet: Transport send failed. "
                         "ErrorCode=%ld.", ( long int ) bytesSent ) );
-            totalBytesSent = bytesSent;
             sendError = true;
         }
         else if( bytesSent > 0 )
@@ -233,7 +243,6 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
             assert( ( size_t ) bytesSent <= bytesRemaining );
 
             bytesRemaining -= ( size_t ) bytesSent;
-            totalBytesSent += bytesSent;
             pIndex += bytesSent;
             LogDebug( ( "BytesSent=%d, BytesRemaining=%lu", bytesSent, bytesRemaining ) );
         }
@@ -367,8 +376,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
 
-            LogDebug( ( "Obtained current time for SNTP request packet: Seconds=%u, Fractions=%u",
-                        pContext->lastRequestTime.seconds, pContext->lastRequestTime.fractions ) );
+            LogDebug( ( "Obtained current time for SNTP request packet: Time=%us %ums",
+                        pContext->lastRequestTime.seconds, FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ) ) );
 
             /* Generate SNTP request packet with the current system time and
              * the passed random number. */
@@ -403,6 +412,288 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                      pContext->pNetworkBuffer,
                                      pContext->sntpPacketSize );
         }
+    }
+
+    return status;
+}
+
+/**
+ * @brief This function attempts to receive the SNTP response packet from a server
+ * if the time window for server response has not timed out.
+ *
+ * @note This function does not block on receiving the response packet from the network.
+ * Instead, it determines whether the response packet is already available on the network
+ * by first reading ONLY a single byte of data first.
+ * If the single byte is available from the network, then rest of the SNTP response packet is
+ * read from the network with retries for zero or partial reads until either:
+ * - All the remaining bytes of server response are received
+ *                     OR
+ * - A timeout of #SNTP_RECV_POLLING_TIMEOUT_MS occurs of receiving no data over the network.
+ *
+ * @param[in] pTransportIntf The UDP transport interface to use for receiving data from
+ * the network.
+ * @param[in] timeServer The server to read the response from the network.
+ * @param[in] serverPort The port of the server to read the response from.
+ * @param[in, out] pBuffer This will be filled with the server response read from the
+ * network.
+ * @param[in] responseSize The size of server response to read from the network.
+ * @param[in] getTimeFunc The interface for obtaining system time.
+ *
+ * @return It returns one of the following:
+ * - #SntpSuccess if an SNTP response packet is received from the network.
+ * - #SntpNoResponse if a server response is not received from the network.
+ * - #SntpErrorNetworkFailure if there is an internal failure in reading from the network
+ * in the user-defined transport interface.
+ */
+static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransportIntf,
+                                         uint32_t timeServer,
+                                         uint16_t serverPort,
+                                         uint8_t * pBuffer,
+                                         size_t responseSize,
+                                         SntpGetTime_t getTimeFunc )
+{
+    SntpStatus_t status = SntpSuccess;
+    int32_t bytesRead = 0;
+
+
+    /* Check whether there is any data available on the network to read by attempting to read
+     * a single byte. */
+    bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
+                                          timeServer,
+                                          serverPort,
+                                          pBuffer,
+                                          1U );
+
+    if( bytesRead > 0 )
+    {
+        size_t bytesRemaining = responseSize - 1U;
+        SntpTimestamp_t startTime;
+
+        assert( bytesRead == 1 );
+
+        getTimeFunc( &startTime );
+
+        while( ( bytesRemaining > 0U ) && ( status == SntpSuccess ) )
+        {
+            bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
+                                                  timeServer,
+                                                  serverPort,
+                                                  pBuffer,
+                                                  1U );
+
+            if( bytesRead > 0 )
+            {
+                bytesRemaining -= ( size_t ) bytesRead;
+
+                /* Read the current system time to set it as the new base line
+                 * for evaluating the receive retry timeout, #SNTP_RECV_POLLING_TIMEOUT_MS.*/
+                getTimeFunc( &startTime );
+            }
+            else if( bytesRead == 0 )
+            {
+                SntpTimestamp_t currentTime;
+                getTimeFunc( &currentTime );
+
+                if( calculateElapsedTimeMs( &currentTime, &startTime ) >= SNTP_RECV_POLLING_TIMEOUT_MS )
+                {
+                    LogError( ( "Unable to receive server response: Timed out retrying reads" ) );
+                    status = SntpErrorNetworkFailure;
+                }
+            }
+            else
+            {
+                status = SntpErrorNetworkFailure;
+            }
+        }
+    }
+    else if( bytesRead == 0 )
+    {
+        LogDebug( ( "No data available on the network to read." ) );
+        status = SntpNoResponseReceived;
+    }
+    else
+    {
+        /* Empty else marker. */
+    }
+
+    if( bytesRead < 0 )
+    {
+        status = SntpErrorNetworkFailure;
+        LogError( ( "Unable to receive server response: Transport receive failed: Code=%ld",
+                    ( long int ) bytesRead ) );
+    }
+
+    return status;
+}
+
+/**
+ * @brief Processes the response from a server by de-serializing the SNTP packet to
+ * validate the server (if an authentication interface has been configured), determine
+ * whether server has accepted or rejected the time request, and update the system clock
+ * if the server responded positively with time.
+ *
+ * @param[in] pContext The SNTP context representing the SNTP client.
+ * @param[in] pResponseRxTime The time of receiving the server response from the network.
+ *
+ * @return It returns one of the following:
+ * - #SntpSuccess if the server response is successfully de-serialized and system clock
+ * updated.
+ * - #SntpErrorAuthFailure if there is internal failure in user-defined authentication
+ * interface when validating server from the response.
+ * - #SntpServerNotAuthenticated if the server failed authenticated check in the user-defined
+ * interface.
+ * - #SntpRejectedResponse if the server has rejected the time request in its response.
+ * - #SntpInvalidResponse if the server response failed sanity checks.
+ */
+static SntpStatus_t processServerResponse( SntpContext_t * pContext,
+                                           const SntpTimestamp_t * pResponseRxTime )
+{
+    SntpStatus_t status = SntpSuccess;
+    const SntpServerInfo_t * pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
+
+    assert( pContext != NULL );
+    assert( pResponseRxTime != NULL );
+
+    if( pContext->authIntf.validateServerAuth != NULL )
+    {
+        /* Verify the server from the authentication data in the SNTP response packet. */
+        status = pContext->authIntf.validateServerAuth( pContext->authIntf.pAuthContext,
+                                                        pServer,
+                                                        pContext->pNetworkBuffer,
+                                                        pContext->bufferSize );
+        assert( ( status == SntpSuccess ) || ( status == SntpErrorAuthFailure ) ||
+                ( status == SntpServerNotAuthenticated ) );
+
+        if( status != SntpSuccess )
+        {
+            LogError( ( "Unable to use server response: Server authentication function failed: "
+                        "ReturnStatus=%s", Sntp_StatusToStr( status ) ) );
+        }
+        else
+        {
+            LogDebug( ( "Server response has been validated: Server=%.*s", ( int ) pServer->serverNameLen, pServer->pServerName ) );
+        }
+    }
+
+    if( status == SntpSuccess )
+    {
+        SntpResponseData_t parsedResponse;
+
+        /* De-serialize response packet to determine whether the server accepted or rejected
+         * the request for time. Also, calculate the system clock offset if the server responded
+         * with time. */
+        status = Sntp_DeserializeResponse( &pContext->lastRequestTime,
+                                           pResponseRxTime,
+                                           pContext->pNetworkBuffer,
+                                           pContext->sntpPacketSize,
+                                           &parsedResponse );
+
+        if( ( status == SntpRejectedResponseChangeServer ) ||
+            ( status == SntpRejectedResponseRetryWithBackoff ) ||
+            ( status == SntpRejectedResponseOtherCode ) )
+        {
+            /* Server has rejected the time request. Thus, we will rotate to the next time server
+            * in the list, if we have not exhausted time requests with all configured servers. */
+            pContext->currentServerIndex++;
+
+            LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
+                        ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
+            status = SntpRejectedResponse;
+        }
+        else if( status == SntpInvalidResponse )
+        {
+            LogError( ( "Unable to use server response: Server response failed sanity checks." ) );
+        }
+        else
+        {
+            /* If the system clock is not within 34 years of server time, clock offset value cannot be
+             * calculated. This case is only treated as a warning instead of an error because one the system
+             * clock is updated with the time from server, the issue will be resolved for time queries. */
+            if( status == SntpClockOffsetOverflow )
+            {
+                LogWarn( ( "Failed to calculate clock offset: System time SHOULD be within 34 years of server time." ) );
+            }
+
+            /* Server has responded successfully with time, and we have calculated the clock offset
+             * of system clock relative to the server.*/
+            LogDebug( ( "Updating system time: ServerTime=%u %ums ClockOffset=%us",
+                        parsedResponse.serverTime.seconds, FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                        parsedResponse.clockOffsetSec ) );
+
+            /* Update the system clock with the calculated offset. */
+            pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
+                                   parsedResponse.clockOffsetSec, parsedResponse.leapSecondType );
+
+            status = SntpSuccess;
+        }
+    }
+
+    return status;
+}
+
+SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
+                                       uint32_t blockTimeMs )
+{
+    SntpStatus_t status = SntpNoResponseReceived;
+
+    if( pContext == NULL )
+    {
+        status = SntpErrorBadParameter;
+        LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
+    }
+
+    /* Check whether there is any remaining server in the list of configured
+     * servers that it is reasonable to expect a response from. */
+    else if( pContext->currentServerIndex >= pContext->numOfServers )
+    {
+        status = SntpErrorChangeServer;
+        LogError( ( "Invalid API call: All servers have already rejected time requests: "
+                    "Re-initialize context to change configured servers." ) );
+    }
+    else
+    {
+        SntpTimestamp_t startTime, loopIterTime;
+
+        pContext->getTimeFunc( &startTime );
+
+        do
+        {
+            status = receiveSntpResponse( &pContext->networkIntf,
+                                          pContext->currentServerAddr,
+                                          pContext->pTimeServers[ pContext->currentServerIndex ].port,
+                                          pContext->pNetworkBuffer,
+                                          pContext->sntpPacketSize,
+                                          pContext->getTimeFunc );
+
+            /* Get current time to either de-serialize the SNTP packet if a server response has been
+             * received OR utilize for determining whether another attempt for reading the packet can
+             * be made. */
+            pContext->getTimeFunc( &loopIterTime );
+
+            /* If the server response is received, deserialize it, validate the server
+             * (if authentication interface is provided), and update system time with
+             * the calculated clock offset. */
+            if( status == SntpSuccess )
+            {
+                status = processServerResponse( pContext, &loopIterTime );
+            }
+
+            /* Check whether a response timeout has occurred before re-trying the
+             * read in the next iteration. */
+            else if( calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) >= pContext->responseTimeoutMs )
+            {
+                status = SntpErrorResponseTimeout;
+                LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
+                            "TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
+                            FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ),
+                            calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) ) );
+            }
+            else
+            {
+                /* Empty else marker. */
+            }
+        } while( ( status == SntpNoResponseReceived ) &&
+                 ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
     }
 
     return status;

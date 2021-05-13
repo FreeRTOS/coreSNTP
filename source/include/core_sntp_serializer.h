@@ -154,6 +154,12 @@ typedef enum SntpStatus
     SntpErrorBadParameter,
 
     /**
+     * @brief Server sent a Kiss-o'-Death message to reject the request for time.
+     * This status can be returned by the @ref Sntp_ReceiveTimeResponse API.
+     */
+    SntpRejectedResponse,
+
+    /**
      * @brief Server sent a Kiss-o'-Death message with non-retryable code (i.e. DENY or RSTR).
      */
     SntpRejectedResponseChangeServer,
@@ -227,7 +233,7 @@ typedef enum SntpStatus
     /**
      * @brief Time server is not authenticated from the authentication data in its response.
      * This status can be returned by the user-supplied definition of the
-     * @ref SntpValidateAuthCode_t authentication interface.
+     * @ref SntpValidateServerAuth_t authentication interface.
      */
     SntpServerNotAuthenticated,
 
@@ -236,7 +242,19 @@ typedef enum SntpStatus
      * in either generating authentication data for SNTP request OR validating the authentication
      * data in SNTP response from server.
      */
-    SntpErrorAuthFailure
+    SntpErrorAuthFailure,
+
+    /**
+     * @brief A timeout has occurred in receiving server response with the @ref Sntp_ReceiveTimeResponse
+     * API.
+     */
+    SntpErrorResponseTimeout,
+
+    /**
+     * @brief No SNTP packet for server response is received from the network by the
+     * @ref Sntp_ReceiveTimeResponse API.
+     */
+    SntpNoResponseReceived
 } SntpStatus_t;
 
 /**
@@ -388,8 +406,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @note If the server has positively responded with its clock time, then this API
  * function will calculate the clock-offset ONLY if the system clock is within
  * 34 years of the server time mentioned in the response packet; otherwise the
- * seconds part of the clock offset in @p pParsedResponse parameter will be set to
- * #SNTP_CLOCK_OFFSET_OVERFLOW, and the function will return #SntpClockOffsetOverflow.
+ * the clock offset in @p pParsedResponse parameter will be set to #SNTP_CLOCK_OFFSET_OVERFLOW,
+ * and the function will return #SntpClockOffsetOverflow.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
