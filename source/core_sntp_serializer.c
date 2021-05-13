@@ -122,18 +122,6 @@
 #define CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK    ( 0xC0000000U )
 
 /**
- * @brief The bit mask for the most-significant bit in an unsigned 32 bit integer.
- * This value is used in the intermediate conversion of unsigned integer to signed
- * integer for the first order difference values during clock-offset calculation.
- *
- * @note The conversion from unsigned to signed integer of first order difference
- * values uses this macro to check whether assignment of the unsigned value to signed
- * integer will overflow, and accordingly, change the unsigned value to safely perform
- * the conversion.
- */
-#define UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK                ( 0x80000000U )
-
-/**
  * @brief Structure representing an SNTP packet header.
  * For more information on SNTP packet format, refer to
  * [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4).
@@ -239,8 +227,8 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
  *                    AND
  *  * Safe conversion of unsigned integer to signed integer
  *
- * @param[in] minuend
- * @param[in] subtrahend
+ * @param[in] minuend The value to subtract from.
+ * @param[in] subtrahend The amount of value to subtract from @p minuend.
  *
  * @return The calculated signed subtraction value between the unsigned integers.
  */
@@ -256,14 +244,15 @@ static int32_t safeSubtraction( uint32_t minuend,
     uint32_t positiveDiff = ( polarity == true ) ? minuend - subtrahend :
                             subtrahend - minuend;
 
-    /* Check whether the difference value has the most significant bit set.
-     * An unsigned integer with the most significant bit set cannot be safely assigned
-     * to a signed integer.*/
-    if( ( positiveDiff & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+    /* Check whether the difference value cannot be represented as a signed
+     * integer without some modification. An unsigned integer with the most significant
+     * bit set cannot be safely assigned to a signed integer.*/
+    if( positiveDiff > INT32_MAX )
     {
-        /* Perform 2's complement inversion of the value so that the most significant bit
-         * is not set.
-         * Note: This expression is used to  compliant with both CBMC and MISRA Rule 10.1.
+        /* Perform 2's complement inversion of the value to convert it to a value less
+         * than INT32_MAX.
+         * Note: The following expression is used for 2's complement operation to be
+         * compliant with both CBMC and MISRA Rule 10.1.
          * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
          * MISRA rule forbids use of unary minus operator on unsigned integers.  */
         positiveDiff = UINT32_MAX - positiveDiff + 1U;
@@ -275,7 +264,7 @@ static int32_t safeSubtraction( uint32_t minuend,
     /* Now safely, store the unsigned value as a signed integer. */
     calculatedValue = positiveDiff;
 
-    /* Restore the difference value to represent subtraction in the polarity of "minuend  - sutrahend". */
+    /* Restore the difference value to represent subtraction in the polarity of "minuend  - subtrahend". */
     if( polarity == false )
     {
         calculatedValue = 0 - calculatedValue;
@@ -354,7 +343,6 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     /* Variable for storing the first-order difference between timestamps. */
     uint32_t firstOrderDiffSend = 0;
     uint32_t firstOrderDiffRecv = 0;
-    bool sendPolarity, recvPolarity;
 
     assert( pClientTxTime != NULL );
     assert( pServerRxTime != NULL );
@@ -362,23 +350,17 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClientRxTime != NULL );
     assert( pClockOffset != NULL );
 
-    /* On-wire protocol formula's polarity for first order difference in the send network
-     * path is T2 (Server Rx) - T1 (Client Tx) .*/
-    sendPolarity = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ? true : false;
-
-    /* On-wire protocol formula's polarity for first order difference in the receive network
-     * path is T3 (Server Tx) - T4 (Client Rx) .*/
-    recvPolarity = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ? true : false;
-
     /* Calculate first order difference values between the server and system timestamps
      * to determine whether they are within 34 years of each other. */
 
-    /* To avoid overflow issue, we will store only the positive first order difference
-     * values in the unsigned integer now, and later store the values with correct polarity
-     * (according to the formula) later. */
-    firstOrderDiffSend = sendPolarity ? ( pServerRxTime->seconds - pClientTxTime->seconds ) :
+    /* To avoid overflow issue, we will store only the positive first order differences of
+     * the timestamps in the unsigned integer now, and later store the values with correct
+     * subtraction polarity (i.e. "Server Time - Client Time") later. */
+    firstOrderDiffSend = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ?
+                         ( pServerRxTime->seconds - pClientTxTime->seconds ) :
                          ( pClientTxTime->seconds - pServerRxTime->seconds );
-    firstOrderDiffRecv = recvPolarity ? ( pServerTxTime->seconds - pClientRxTime->seconds ) :
+    firstOrderDiffRecv = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ?
+                         ( pServerTxTime->seconds - pClientRxTime->seconds ) :
                          ( pClientRxTime->seconds - pServerTxTime->seconds );
 
     /* Determine from the first order differences if the system time is within
