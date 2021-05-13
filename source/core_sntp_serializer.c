@@ -220,8 +220,12 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  */
 static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 {
+    /* Note: The (1U + ~firstOrderDiff) expression represents 2's complement or negation of value.
+     * This is done to be compliant with both CBMC and MISRA Rule 10.1.
+     * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
+     * MISRA rule forbids use of unary minus operator on unsigned integers. */
     return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
-            ( ( ( 0U - firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
+            ( ( ( 1U + ~firstOrderDiff ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
 }
 
 /**
@@ -341,7 +345,11 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
             == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
 
         {
-            firstOrderDiffSend = 0U - firstOrderDiffSend;
+            /* Negate the unsigned integer by performing 2's complement operation.
+             * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
+             * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
+             * MISRA rule forbids use of unary minus operator on unsigned integers. */
+            firstOrderDiffSend = 1U + ~firstOrderDiffSend;
             sendPolarity = !sendPolarity;
         }
 
@@ -349,7 +357,11 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
             == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
 
         {
-            firstOrderDiffRecv = 0U - firstOrderDiffRecv;
+            /* Negate the unsigned integer by performing 2's complement operation.
+             * Note: This is done to be compliant with both CBMC and MISRA Rule 10.1.
+             * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
+             * MISRA rule forbids use of unary minus operator on unsigned integers. */
+            firstOrderDiffRecv = 1U + ~firstOrderDiffRecv;
             recvPolarity = !recvPolarity;
         }
 
