@@ -42,7 +42,7 @@ expectedinterval
 expectedtxtime
 faqs
 feb
-firstorderdiff 
+firstorderdiff
 fracs
 fracsinnetorder
 fracsinnetorder
@@ -153,7 +153,8 @@ servernamelen
 serverport
 servertime
 setsystemtimefunc
-signedfirstorderdiffrecv 
+signedfirstorderdiffrecv
+signedfirstorderdiffsend
 sizeof
 sntp
 sntpbuffertoosmall
