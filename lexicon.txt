@@ -16,6 +16,7 @@ bytestorecv
 bytestorecv
 bytestosend
 bytestosend
+cbmc
 clienttime
 clienttxtime
 clockfreqtolerance
@@ -60,6 +61,7 @@ ifndef
 inc
 ingroup
 inlooptime
+int
 iot
 ip
 iso
