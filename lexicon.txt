@@ -16,6 +16,7 @@ bytestorecv
 bytestorecv
 bytestosend
 bytestosend
+clienttime
 clienttxtime
 clockfreqtolerance
 clockoffsetsec
@@ -41,6 +42,7 @@ expectedinterval
 expectedtxtime
 faqs
 feb
+firstorderdiff 
 fracs
 fracsinnetorder
 fracsinnetorder
@@ -149,7 +151,9 @@ serializerequest
 serveraddr
 servernamelen
 serverport
+servertime
 setsystemtimefunc
+signedfirstorderdiffrecv 
 sizeof
 sntp
 sntpbuffertoosmall
@@ -176,6 +180,7 @@ startingpos
 struct
 sublicense
 testbuffer
+testclockoffsetcalculation
 timebeforeloop
 timeserver
 transmittime

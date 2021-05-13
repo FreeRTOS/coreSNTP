@@ -335,16 +335,16 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
         /* To avoid overflow issues in assigning the unsigned values of first order differences
          * to signed integers, we will inverse the values if they represent a large value that cannot be
          * represented in a signed integer. */
-        if( ( firstOrderDiffSend & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) 
-        == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+        if( ( firstOrderDiffSend & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+            == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
 
         {
             firstOrderDiffSend = 0U - firstOrderDiffSend;
             sendPolarity = !sendPolarity;
         }
 
-        if( ( firstOrderDiffRecv & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK ) 
-        == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+        if( ( firstOrderDiffRecv & UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
+            == UINT32_MOST_SIGNIFICANT_BIT_BIT_MASK )
 
         {
             firstOrderDiffRecv = 0U - firstOrderDiffRecv;
