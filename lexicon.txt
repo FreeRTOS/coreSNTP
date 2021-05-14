@@ -20,6 +20,7 @@ bytestorecv
 bytestosend
 bytestosend
 cbmc
+clienttime
 clienttxtime
 clockfreqtolerance
 clockoffsetsec
