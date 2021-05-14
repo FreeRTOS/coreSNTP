@@ -78,6 +78,7 @@ leapversionmode
 lsb
 misra
 networkinterfacereceivestub
+networkinterfacesendstub
 nist
 noleapsecond
 noninfringement
