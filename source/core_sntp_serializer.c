@@ -237,16 +237,15 @@ static int32_t safeSignedSubtraction( uint32_t minuend,
 {
     int32_t calculatedValue = 0;
 
-    /* The correct polarity of subtraction is "minuend - subtrahend",
-    * but to avoid overflow in subtraction of unsigned integers, we perform
-    * subtraction in the polarity that generates a positive value. */
+    /* The correct polarity of subtraction is "minuend - subtrahend"
+     * but to avoid overflow in subtraction of unsigned integers, we perform
+     * subtraction in the polarity that generates a positive value. */
     bool polarity = ( minuend > subtrahend ) ? true : false;
     uint32_t positiveDiff = ( polarity == true ) ? minuend - subtrahend :
                             subtrahend - minuend;
 
     /* Check whether the difference value cannot be represented as a signed
-     * integer without some modification. An unsigned integer with the most significant
-     * bit set cannot be safely assigned to a signed integer.*/
+     * integer without some modification.*/
     if( positiveDiff > INT32_MAX )
     {
         /* Perform 2's complement inversion of the value to convert it to a value less
