@@ -10,12 +10,14 @@ backoff
 beforelooptime
 br
 buffersize
+bytesorerror
 bytesremaining
 bytessent
 bytestorecv
 bytestorecv
 bytestosend
 bytestosend
+cbmc
 clienttxtime
 clockfreqtolerance
 clockoffsetsec
@@ -68,6 +70,7 @@ kod
 leapversionmode
 lsb
 misra
+networkinterfacereceivestub
 nist
 noleapsecond
 noninfringement
