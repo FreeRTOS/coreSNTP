@@ -40,6 +40,7 @@ void harness()
     SntpSetTime_t setSystemTimeFunc;
     UdpTransportInterface_t * pTransportIntf;
     SntpAuthenticationInterface_t * pAuthIntf;
+    uint32_t serverResponseTimeoutMs;
     SntpStatus_t sntpStatus;
 
     pContext = malloc( sizeof( SntpContext_t ) );
@@ -51,7 +52,7 @@ void harness()
     pTransportIntf = malloc( sizeof( UdpTransportInterface_t ) );
     pAuthIntf = malloc( sizeof( SntpAuthenticationInterface_t ) );
 
-    sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, pNetworkBuffer,
+    sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
                             bufferSize, resolveDnsFunc, getSystemTimeFunc, setSystemTimeFunc,
                             pTransportIntf, pAuthIntf );
 
