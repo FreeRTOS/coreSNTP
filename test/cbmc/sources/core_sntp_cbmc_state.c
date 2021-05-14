@@ -35,6 +35,7 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
     SntpServerInfo_t * pTimeServers;
     size_t currentServerIndex;
     size_t numOfServers;
+    uint32_t serverResponseTimeoutMs;
     uint8_t * pNetworkBuffer;
     size_t bufferSize;
     SntpResolveDns_t resolveDnsFunc;
@@ -50,6 +51,7 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
     }
 
     __CPROVER_assume( numOfServers < CBMC_MAX_OBJECT_SIZE );
+    __CPROVER_assume( serverResponseTimeoutMs < CBMC_MAX_OBJECT_SIZE );
     __CPROVER_assume( currentServerIndex < CBMC_MAX_OBJECT_SIZE );
 
     if( numOfServers == 0 )
@@ -96,7 +98,7 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
         getTimeFunc = GetTimeFuncStub;
         setTimeFunc = SetTimeFuncStub;
         pContext->currentServerIndex = currentServerIndex;
-        sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, pNetworkBuffer,
+        sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
                                 bufferSize, resolveDnsFunc, getTimeFunc, setTimeFunc,
                                 pNetworkIntf, pAuthIntf );
     }
