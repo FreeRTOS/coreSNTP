@@ -208,13 +208,38 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
  */
 static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 {
+    /* Thee are 2 cases to cover when checking that the first order difference
+     * represents server and client systems within 34 years of each other.
+     *
+     * 1. When both server and client times are in the same NTP era - This means that
+     *    the passed value of first order difference can be directly used as an NTP timestamp's
+     *    "seconds" representation to determine whether it is more than 34 years in value.
+     *    This can be done by simply checking whether the 2 most significant bits are set.
+     *
+     * 2. When server and client times are in different NTP eras - This means that one
+     *    of the system times has overflown in the NTP value (i.e. represents time after
+     *    7 Feb 2036) while the other system time has not undergone the NTP time overflow.
+     *    For example, when the server time is 0x0000000A and the client time is UINT32_MAX,
+     *    then the passed first order difference value is (UINT32_MAX - 0x0000000A = 0xFFFFFFF5).
+     *    In this example, the actual first order difference is 11 seconds, which is obtained by
+     *    performing a 2's complement inversion on the passed first order difference value i.e.
+     *                Negation of 0xFFFFFFF5 in 32 bits = -0xFFFFFFF5
+     *                                                  = ~0xFFFFFFF5 + 1U
+     *                                                  = UINT32_MAX - 0xFFFFFFF5 + 1U
+     *                                                  = 0x000000F5
+     */
+    bool sameNtpEraCheck = ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ?
+                           true : false;
+
     /* Note: The (UINT32_MAX  - firstOrderDiff + 1U) expression represents
      * 2's complement or negation of value.
      * This is done to be compliant with both CBMC and MISRA Rule 10.1.
      * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
      * MISRA rule forbids use of unary minus operator on unsigned integers. */
-    return( ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ||
-            ( ( ( UINT32_MAX - firstOrderDiff + 1U ) & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) );
+    bool diffNtpEraCheck = ( ( ( UINT32_MAX - firstOrderDiff + 1U )
+                               & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ? true : false;
+
+    return( sameNtpEraCheck || diffNtpEraCheck );
 }
 
 /**
