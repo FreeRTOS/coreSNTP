@@ -229,16 +229,27 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
      *                                                  = 0x0000000B
      *                                                  = 11 seconds
      */
-    bool sameNtpEraCheck = ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ?
-                           true : false;
+    bool sameNtpEraCheck = false;
+    bool diffNtpEraCheck = false;
 
-    /* Note: The (UINT32_MAX  - firstOrderDiff + 1U) expression represents
-     * 2's complement or negation of value.
-     * This is done to be compliant with both CBMC and MISRA Rule 10.1.
-     * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
-     * MISRA rule forbids use of unary minus operator on unsigned integers. */
-    bool diffNtpEraCheck = ( ( ( UINT32_MAX - firstOrderDiff + 1U )
-                               & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ? true : false;
+    /* Check if the server and client times are within 34 years of each other, if we assume that they are
+     * in the same NTP era. */
+    sameNtpEraCheck = ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ?
+                      true : false;
+
+    /* If the same era check does not satisfy the 34 years condition, check
+     * whether the condition is satisfied when assuming the that the systems are in
+     * different NTP eras. */
+    if( sameNtpEraCheck == false )
+    {
+        /* Note: The (UINT32_MAX  - firstOrderDiff + 1U) expression represents
+         * 2's complement or negation of value.
+         * This is done to be compliant with both CBMC and MISRA Rule 10.1.
+         * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
+         * MISRA rule forbids use of unary minus operator on unsigned integers. */
+        diffNtpEraCheck = ( ( ( UINT32_MAX - firstOrderDiff + 1U )
+                              & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ? true : false;
+    }
 
     return( sameNtpEraCheck || diffNtpEraCheck );
 }
