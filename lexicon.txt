@@ -1,3 +1,4 @@
+actualabsdiff
 aes
 alarmservernotsynchronized
 api
@@ -37,6 +38,7 @@ deserialize
 deserializer
 deserializeresponse
 desiredaccuracy
+diff
 dns
 doxygen
 endian
@@ -163,6 +165,7 @@ servernamelen
 serverport
 serverresponsetimeoutms
 servertime
+servertxtime
 setsystemtimefunc
 signedfirstorderdiffrecv
 signedfirstorderdiffsend

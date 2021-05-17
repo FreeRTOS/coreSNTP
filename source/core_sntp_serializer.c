@@ -267,42 +267,55 @@ static int32_t safeTimeDiff( uint32_t serverTime,
 {
     int32_t calculatedTimeDiff = 0;
 
-    /* The correct polarity of subtraction is "Server Time - Client Time"
-     * but to avoid overflow in subtraction of unsigned integers, we perform
-     * subtraction in the polarity that generates a positive value. */
-    bool polarity = ( serverTime > clientTime ) ? true : false;
-    uint32_t positiveDiff = ( polarity == true ) ? serverTime - clientTime :
-                            clientTime - serverTime;
+    /* First calculate the difference in 64 bit-width to store any overflow values
+     * from subtraction on 32 bit integer values.*/
+    int64_t diffIn64Bits = ( int64_t ) serverTime - ( int64_t ) clientTime;
 
-    /* Check whether the difference value cannot be stored as a signed 32 bit integer
-     * as-is due to overflow. If there is overflow, the value will have to be modified
-     * to be represented as signed 32-bit integer.
+    /* Check whether the difference value has overflow for a signed 32 bit integer
+     * If there is overflow, the value will have to be modified before storing it as signed
+     * 32-bit integer.
      * Note: As we know that the server and client timestamps are within 34 years of
-     * each other, an overflown time difference represents the case when server and client timestamps
-     * are in different NTP eras. Thus, a time difference that overflows is an acceptable
-     * value for this utility.
+     * each other, an overflown time difference represents the case when server and
+     * client timestamps are in different NTP eras. Thus, a time difference that overflows is
+     * an acceptable value for this utility.
      */
-    if( positiveDiff > INT32_MAX )
-    {
-        /* Perform 2's complement inversion of the value to convert it to a value less
-         * than INT32_MAX.
-         * Note: The following expression (UINT32_MAX - positiveDiff + 1U) is used for
-         * 2's complement negation operation to be compliant with both CBMC and MISRA Rule 10.1.
-         * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
-         * MISRA rule forbids use of unary minus operator on unsigned integers.  */
-        positiveDiff = UINT32_MAX - positiveDiff + 1U;
 
-        /* Reverse the state of the polarity as we performed the 2's complement. */
-        polarity = !polarity;
+    /* Check whether an overflow occurs when the server time is ahead of the client time.
+     * Note: This means that the server time is in NTP era 1 (i.e. after 7 Feb 2036) whereas
+     * client time is in NTP era 0.
+     */
+    if( diffIn64Bits < INT32_MIN )
+    {
+        /* Calculate the actual difference in time between the server and client keeping
+         * the different eras in consideration. */
+        uint32_t diff = ( UINT32_MAX - clientTime ) /* Time from client time to end of NTP era 0.*/
+                        + 1U                        /* Time at epoch of NTP era 1, i.e. & Feb 2036 6h:28m:16s UTC */
+                        + serverTime;               /* Time period after NTP era 1. */
+
+        /* Perform 2's complement negation of the absolute difference value to represent
+         * the true time difference between server and client timestamps that are in
+         * different eras. */
+        calculatedTimeDiff = ( int32_t ) diff;
     }
 
-    /* Now safely, store the unsigned value as a signed integer. */
-    calculatedTimeDiff = positiveDiff;
-
-    /* Restore the difference value to represent subtraction in the polarity of "Server Time - Client Time". */
-    if( polarity == false )
+    /* Check whether overflow occurs when the client time is ahead of the server time.
+     * Note: In this case, the client time would have overflown in NTP era 1 while
+     */
+    else if( diffIn64Bits > INT32_MAX )
     {
-        calculatedTimeDiff = 0 - calculatedTimeDiff;
+        /* Calculate the actual difference in time between the server and client keeping
+         * the different eras in consideration. */
+        uint32_t actualAbsDiff = ( UINT32_MAX - serverTime ) /* Time from sever time to end of NTP era 0.*/
+                                 + 1U                        /* Time at epoch of NTP era 1, i.e. & Feb 2036 6h:28m:16s UTC */
+                                 + clientTime;               /* Time period after NTP era 1. */
+
+        calculatedTimeDiff = 0 - ( int32_t ) actualAbsDiff;
+    }
+    else
+    {
+        /* We are confident that the time difference value can be represented as a signed
+         * 32 bit integer. */
+        calculatedTimeDiff = ( int32_t ) diffIn64Bits;
     }
 
     return calculatedTimeDiff;
