@@ -226,7 +226,8 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
      *                Negation of 0xFFFFFFF5 in 32 bits = -0xFFFFFFF5
      *                                                  = ~0xFFFFFFF5 + 1U
      *                                                  = UINT32_MAX - 0xFFFFFFF5 + 1U
-     *                                                  = 0x000000F5
+     *                                                  = 0x0000000B
+     *                                                  = 11 seconds
      */
     bool sameNtpEraCheck = ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ?
                            true : false;
@@ -243,40 +244,50 @@ static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
 }
 
 /**
- * @brief Utility to perform a safe subtraction operation of unsigned integers and
- * return the value as a signed integer. This function returns the effective subtraction
- * value as ( @p minuend - @p subtrahend ).
+ * @brief Utility to safely calculate difference between server and client timestamps of
+ * unsigned integer type and return the value as a signed integer. The calculated value
+ * represents the effective subtraction as ( @p serverTime - @p clientTime ).
  *
- * @note This utility provides safe subtraction result that involve the following 2 operations::
- *  * Safe subtraction between unsigned integers
+ * @note This utility ASSUMES that the timestamps are within 34 years of each other.
+ *
+ * @note This utility provides safe subtraction between unsigned integers that involve the
+ * following 2 operations::
+ *  * Safe subtraction between unsigned integers (to avoid overflow of storing negative value
+ *    in unsigned integer)
  *                    AND
  *  * Safe conversion of unsigned integer to signed integer
  *
- * @param[in] minuend The value to subtract from.
- * @param[in] subtrahend The amount of value to subtract from @p minuend.
+ * @param[in] serverTime The "seconds" part of the server timestamp.
+ * @param[in] clientTime The "seconds" part of the client timestamp.
  *
- * @return The calculated signed subtraction value between the unsigned integers.
+ * @return The calculated difference value between the server and client timestamps.
  */
-static int32_t safeSignedSubtraction( uint32_t minuend,
-                                      uint32_t subtrahend )
+static int32_t safeTimeDiff( uint32_t serverTime,
+                             uint32_t clientTime )
 {
-    int32_t calculatedValue = 0;
+    int32_t calculatedTimeDiff = 0;
 
-    /* The correct polarity of subtraction is "minuend - subtrahend"
+    /* The correct polarity of subtraction is "Server Time - Client Time"
      * but to avoid overflow in subtraction of unsigned integers, we perform
      * subtraction in the polarity that generates a positive value. */
-    bool polarity = ( minuend > subtrahend ) ? true : false;
-    uint32_t positiveDiff = ( polarity == true ) ? minuend - subtrahend :
-                            subtrahend - minuend;
+    bool polarity = ( serverTime > clientTime ) ? true : false;
+    uint32_t positiveDiff = ( polarity == true ) ? serverTime - clientTime :
+                            clientTime - serverTime;
 
-    /* Check whether the difference value cannot be represented as a signed
-     * integer without some modification.*/
+    /* Check whether the difference value cannot be stored as a signed 32 bit integer
+     * as-is due to overflow. If there is overflow, the value will have to be modified
+     * to be represented as signed 32-bit integer.
+     * Note: As we know that the server and client timestamps are within 34 years of
+     * each other, an overflown time difference represents the case when server and client timestamps
+     * are in different NTP eras. Thus, a time difference that overflows is an acceptable
+     * value for this utility.
+     */
     if( positiveDiff > INT32_MAX )
     {
         /* Perform 2's complement inversion of the value to convert it to a value less
          * than INT32_MAX.
-         * Note: The following expression is used for 2's complement operation to be
-         * compliant with both CBMC and MISRA Rule 10.1.
+         * Note: The following expression (UINT32_MAX - positiveDiff + 1U) is used for
+         * 2's complement negation operation to be compliant with both CBMC and MISRA Rule 10.1.
          * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
          * MISRA rule forbids use of unary minus operator on unsigned integers.  */
         positiveDiff = UINT32_MAX - positiveDiff + 1U;
@@ -286,15 +297,15 @@ static int32_t safeSignedSubtraction( uint32_t minuend,
     }
 
     /* Now safely, store the unsigned value as a signed integer. */
-    calculatedValue = positiveDiff;
+    calculatedTimeDiff = positiveDiff;
 
-    /* Restore the difference value to represent subtraction in the polarity of "minuend  - subtrahend". */
+    /* Restore the difference value to represent subtraction in the polarity of "Server Time - Client Time". */
     if( polarity == false )
     {
-        calculatedValue = 0 - calculatedValue;
+        calculatedTimeDiff = 0 - calculatedTimeDiff;
     }
 
-    return calculatedValue;
+    return calculatedTimeDiff;
 }
 
 /**
@@ -402,8 +413,8 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
 
         /* Calculate the first order differences in the correct subtraction direction as
          * "Server Time - Client Time" on both SNTP request and SNTP response network paths. */
-        signedFirstOrderDiffSend = safeSignedSubtraction( pServerRxTime->seconds, pClientTxTime->seconds );
-        signedFirstOrderDiffRecv = safeSignedSubtraction( pServerTxTime->seconds, pClientRxTime->seconds );
+        signedFirstOrderDiffSend = safeTimeDiff( pServerRxTime->seconds, pClientTxTime->seconds );
+        signedFirstOrderDiffRecv = safeTimeDiff( pServerTxTime->seconds, pClientRxTime->seconds );
 
         /* We are now sure that each of the first order differences represents the values in
          * the correct direction of polarities, i.e.
