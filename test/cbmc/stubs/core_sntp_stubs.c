@@ -103,7 +103,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
     __CPROVER_assume( bytesOrError <= ( int32_t ) bytesToSend );
 
     /* If the maximum tries are reached, then return a timeout. In the SNTP library
-     * this stub is wrapped in a loop that will does not end until the bytesOrError
+     * this stub is wrapped in a loop that will not end until the bytesOrError
      * returned is negative. This means we could loop possibly INT32_MAX
      * iterations. Looping for INT32_MAX times adds no value to the proof.
      * What matters is that the SNTP library can handle all the possible values
