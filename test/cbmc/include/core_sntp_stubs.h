@@ -112,11 +112,8 @@ bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
  *
  * @param[out] pCurrentTime This should be filled with the current system time
  * in SNTP timestamp format.
- *
- * @return `true` if obtaining system time is successful; otherwise `false` to
- * represent failure.
  */
-bool GetTimeFuncStub( SntpTimestamp_t * pCurrentTime );
+void GetTimeFuncStub( SntpTimestamp_t * pCurrentTime );
 
 /**
  * @brief Application defined function to update the system clock time
@@ -126,11 +123,8 @@ bool GetTimeFuncStub( SntpTimestamp_t * pCurrentTime );
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
  * @param[in] clockOffSetSec The calculated clock offset of the system relative
  * to the server time.
- *
- * @return `true` if setting system time is successful; otherwise `false` to
- * represent failure.
  */
-bool SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
+void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
                       int32_t clockOffsetSec );
 

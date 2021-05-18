@@ -38,9 +38,6 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
     uint32_t serverResponseTimeoutMs;
     uint8_t * pNetworkBuffer;
     size_t bufferSize;
-    SntpResolveDns_t resolveDnsFunc;
-    SntpGetTime_t getTimeFunc;
-    SntpSetTime_t setTimeFunc;
     UdpTransportInterface_t * pNetworkIntf;
     SntpAuthenticationInterface_t * pAuthIntf;
     SntpStatus_t sntpStatus = SntpSuccess;
@@ -94,12 +91,9 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
      * before any other function in core_sntp_client.h. */
     if( pContext != NULL )
     {
-        resolveDnsFunc = ResolveDnsFuncStub;
-        getTimeFunc = GetTimeFuncStub;
-        setTimeFunc = SetTimeFuncStub;
         pContext->currentServerIndex = currentServerIndex;
         sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
-                                bufferSize, resolveDnsFunc, getTimeFunc, setTimeFunc,
+                                bufferSize, ResolveDnsFuncStub, GetTimeFuncStub, SetTimeFuncStub,
                                 pNetworkIntf, pAuthIntf );
     }
 

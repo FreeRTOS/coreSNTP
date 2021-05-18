@@ -62,7 +62,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
                       "NetworkInterfaceReceiveStub pBuffer is NULL." );
 
     __CPROVER_assert( __CPROVER_w_ok( pBuffer, bytesToRecv ),
-                      "NetworkInterfaceReceiveStub pBuffer is writable up to bytesToRecv." );
+                      "NetworkInterfaceReceiveStub pBuffer is not writable up to bytesToRecv." );
 
     __CPROVER_havoc_object( pBuffer );
 
@@ -79,6 +79,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     }
     else
     {
+        tries = 0;
         bytesOrError = 0;
     }
 
@@ -92,6 +93,9 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
 {
     __CPROVER_assert( pBuffer != NULL,
                       "NetworkInterfaceSendStub pBuffer is NULL." );
+
+    __CPROVER_assert( __CPROVER_r_ok( pBuffer, bytesToSend ),
+                      "NetworkInterfaceSendStub pBuffer is not readable up to bytesToSend." );
 
     /* The number of tries to send the message before this invocation. */
     static size_t tries = 1;
@@ -149,7 +153,7 @@ bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
     return nondet_bool();
 }
 
-bool GetTimeFuncStub( SntpTimestamp_t * pCurrentTime )
+void GetTimeFuncStub( SntpTimestamp_t * pCurrentTime )
 {
     bool value = nondet_bool();
 
@@ -163,15 +167,12 @@ bool GetTimeFuncStub( SntpTimestamp_t * pCurrentTime )
     }
 
     *pCurrentTime = testTime;
-
-    return value;
 }
 
-bool SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
+void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
                       int32_t clockOffsetSec )
 {
-    return nondet_bool();
 }
 
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
