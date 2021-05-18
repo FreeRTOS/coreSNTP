@@ -22,7 +22,7 @@
 
 /**
  * @file core_sntp_stubs_stubs.h
- * @brief Stubs definitions to generate client authentication codes and validate server authentication.
+ * @brief Stubs definitions of UDP transport interface and authentication interface of coreSNTP API.
  */
 #ifndef CORE_SNTP_STUBS_H_
 #define CORE_SNTP_STUBS_H_
