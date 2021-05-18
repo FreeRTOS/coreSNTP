@@ -69,7 +69,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     int32_t bytesOrError;
     static size_t tries = 0;
 
-    /* It is a bug for the application defined transport send function to return
+    /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
     __CPROVER_assume( bytesOrError <= ( int32_t ) bytesToRecv );
 
