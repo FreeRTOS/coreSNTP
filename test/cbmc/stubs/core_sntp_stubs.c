@@ -64,6 +64,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     __CPROVER_assert( __CPROVER_w_ok( pBuffer, bytesToRecv ),
                       "NetworkInterfaceReceiveStub pBuffer is not writable up to bytesToRecv." );
 
+    /* Clean the buffer so as to make it available to write data into it. */
     __CPROVER_havoc_object( pBuffer );
 
     int32_t bytesOrError;
