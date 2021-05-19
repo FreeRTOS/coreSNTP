@@ -72,7 +72,7 @@
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
 #define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
-#define YEARS_80_IN_SECONDS                        ( ( 80 * 365 + 80 / 4 ) * 24UL * 3600UL )
+#define YEARS_68_IN_SECONDS                        ( ( 68 * 365 + 68 / 4 ) * 24 * 3600 )
 
 /* Macro utility to convert the fixed-size Kiss-o'-Death ASCII code
  * to integer.*/
@@ -441,49 +441,55 @@ void test_DeserializeResponse_KoD_packets( void )
 
 /**
  * @brief Test that @ref Sntp_DeserializeResponse API can process an accepted
- * SNTP server response, and determine that the clock offset cannot be calculated
- * when the client clock is beyond 34 years from server.
+ * SNTP server response, and compute clock-offset when the server and client times
+ * are >= 68 years apart.
  */
-void test_DeserializeResponse_AcceptedResponse_Overflow_Cases( void )
+void test_DeserializeResponse_AcceptedResponse_ClockOffset_Edge_Cases( void )
 {
     SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
     /* Fill buffer with general SNTP response data. */
     fillValidSntpResponseData( testBuffer, &clientTime );
 
-    /* Test when the client is 40 years ahead of server time .*/
+    /* Test when the client is 68 years ahead of server time .*/
     SntpTimestamp_t serverTime =
     {
-        clientTime.seconds - YEARS_80_IN_SECONDS,
+        clientTime.seconds - YEARS_68_IN_SECONDS,
         clientTime.fractions
     };
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+                                SntpSuccess,
+                                -YEARS_68_IN_SECONDS );
 
-    /* Now test when the client is 40 years ahead of server time .*/
-    serverTime.seconds = clientTime.seconds + YEARS_80_IN_SECONDS;
+    /* Now test when the client is 68 years ahead of server time .*/
+    serverTime.seconds = clientTime.seconds + YEARS_68_IN_SECONDS;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+                                SntpSuccess,
+                                YEARS_68_IN_SECONDS );
 
     /* Now test the contrived case when only the send network path
      * represents timestamps that overflow but the receive network path
-     * has timestamps that do not overflow. */
-    testClockOffsetCalculation( &clientTime, &serverTime, /* Send Path times are 40 years apart */
-                                &serverTime, &serverTime, /* Receive path times are the same. */
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+     * has timestamps that do not overflow.
+     * As only the single network path contains time difference of 68 years,
+     * the expected clock-offset, being an average of the network paths, is
+     * 34 years of duration. */
+    testClockOffsetCalculation( &clientTime, &serverTime,  /* Send Path times are 68 years apart */
+                                &serverTime, &serverTime,  /* Receive path times are the same. */
+                                SntpSuccess,
+                                YEARS_68_IN_SECONDS / 2 ); /* Expected offset of 34 years. */
 
     /* Now test the contrived case when only the receive network path
      * represents timestamps that overflow but the send network path
-     * has timestamps that do not overflow. */
-    testClockOffsetCalculation( &clientTime, &clientTime, /* Send Path times are the same, i.e. don't overflow */
-                                &serverTime, &clientTime, /* Receive path times are 40 years apart. */
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+     * has timestamps that do not overflow.
+     * As only the single network path contains time difference of 68 years,
+     * the expected clock-offset, being an average of the network paths, is
+     * 34 years of duration. */
+    testClockOffsetCalculation( &clientTime, &clientTime,  /* Send Path times are the same, i.e. don't overflow */
+                                &serverTime, &clientTime,  /* Receive path times are 68 years apart. */
+                                SntpSuccess,
+                                YEARS_68_IN_SECONDS / 2 ); /* Expected offset of 34 years. */
 }
 
 /**

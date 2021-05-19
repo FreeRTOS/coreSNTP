@@ -117,26 +117,6 @@
 #define SNTP_KISS_OF_DEATH_CODE_NONE                  ( 0U )
 
 /**
- * @brief The value for clock offset that indicates inability to perform
- * arithmetic calculation of system clock offset relative to the server time
- * due to overflow.
- *
- * The application should use this macro against the the clock offset returned
- * through @ref SntpResponseData_t.clockOffsetSec. If the value is set to this
- * this macro, then the clock offset value is unusable.
- *
- * @note A clock offset overflow occurs if the system time is beyond 34 years
- * (in the past or future) of the server time.
- *
- * @note The clock offset is a value with 30 significant bits and 2 sign bits
- * in a 32 bit integer. This macro uses a value that cannot be a valid clock
- * offset value as a valid value will always have the 2 most significant
- * bits set as either zero (i.e. to represent positive offset) or one
- * (i.e. to represent negative offset).
- */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFF )
-
-/**
  * @ingroup core_sntp_enum_types
  * @brief Enumeration of status codes that can be returned
  * by the coreSNTP Library API.
@@ -187,12 +167,6 @@ typedef enum SntpStatus
      * @brief Server response failed validation checks for expected data in SNTP packet.
      */
     SntpInvalidResponse,
-
-    /**
-     * @brief Calculation of system clock offset relative to server
-     * underwent overflow.
-     */
-    SntpClockOffsetOverflow,
 
     /**
      * @brief Poll interval value is under 1 second which cannot be calculated
@@ -328,20 +302,18 @@ typedef struct SntpResponse
 
     /**
      * @brief The offset (in seconds) of the system clock relative to the
-     * server time calculated from client request and server response
-     * times. This information can be used to synchronize the system clock
-     * with a "slew" or "step" correction approach.
+     * server time calculated from timestamps in the client SNTP request and
+     * server SNTP response packets. This information can be used to synchronize
+     * the system clock with a "slew" or "step" correction approach.
      *
      * @note The library calculates the clock-offset value using the On-Wire
      * protocol suggested by the NTPv4 specification. For more information,
      * refer to https://tools.ietf.org/html/rfc5905#section-8.
      *
-     * @note The system clock MUST be within 34 years (in the past or future)
-     * of the server time for this calculation. This is a fundamental limitation
-     * of 64 bit integer arithmetic.
-     * If the system clock is beyond 34 years of server time, then this value
-     * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW, and the @ref Sntp_DeserializeResponse
-     * API will return #SntpClockOffsetOverflow.
+     * @note The library ASSUMES that the server and client systems are within
+     * 68 years of each other clock, whether in the same NTP era or across adjacent
+     * NTP eras. Thus, the client and system times MUST be within 68 years of each
+     * other for correct calculation of clock-offset.
      */
     int32_t clockOffsetSec;
 } SntpResponseData_t;
@@ -404,10 +376,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_NONE.
  *
  * @note If the server has positively responded with its clock time, then this API
- * function will calculate the clock-offset ONLY if the system clock is within
- * 34 years of the server time mentioned in the response packet; otherwise the
- * the clock offset in @p pParsedResponse parameter will be set to #SNTP_CLOCK_OFFSET_OVERFLOW,
- * and the function will return #SntpClockOffsetOverflow.
+ * function will calculate the clock-offset. For the clock-offset to be correctly calculated,
+ * the system clock MUST be within 68 years of the server time mentioned in the response packet.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the

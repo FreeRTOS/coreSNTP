@@ -37,7 +37,7 @@
  * @brief The version of SNTP supported by the coreSNTP library by complying
  * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
  */
-#define SNTP_VERSION                                        ( 4U )
+#define SNTP_VERSION                        ( 4U )
 
 /**
  * @brief The bit mask for the "Mode" information in the first byte of an SNTP packet.
@@ -45,21 +45,21 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_BITS_MASK                                 ( 0x07U )
+#define SNTP_MODE_BITS_MASK                 ( 0x07U )
 
 /**
  * @brief The value indicating a "client" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_CLIENT                                    ( 3U )
+#define SNTP_MODE_CLIENT                    ( 3U )
 
 /**
  * @brief The value indicating a "server" in the "Mode" field of an SNTP packet.
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_MODE_SERVER                                    ( 4U )
+#define SNTP_MODE_SERVER                    ( 4U )
 
 /**
  * @brief The position of the least significant bit of the "Leap Indicator" field
@@ -67,13 +67,13 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_LEAP_INDICATOR_LSB_POSITION                    ( 6 )
+#define SNTP_LEAP_INDICATOR_LSB_POSITION    ( 6 )
 
 /**
  * @brief Value of Stratum field in SNTP packet representing a Kiss-o'-Death message
  * from server.
  */
-#define SNTP_KISS_OF_DEATH_STRATUM                          ( 0U )
+#define SNTP_KISS_OF_DEATH_STRATUM          ( 0U )
 
 /**
  * @brief The position of least significant bit of the "Version" information
@@ -82,7 +82,7 @@
  * @note Refer to the [RFC 4330 Section 4](https://tools.ietf.org/html/rfc4330#section-4)
  * for more information.
  */
-#define SNTP_VERSION_LSB_POSITION                           ( 3 )
+#define SNTP_VERSION_LSB_POSITION           ( 3 )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "DENY", used
@@ -90,7 +90,7 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_DENY_UINT_VALUE                            ( 0x44454e59U )
+#define KOD_CODE_DENY_UINT_VALUE            ( 0x44454e59U )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "RSTR", used
@@ -98,7 +98,7 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_RSTR_UINT_VALUE                            ( 0x52535452U )
+#define KOD_CODE_RSTR_UINT_VALUE            ( 0x52535452U )
 
 /**
  * @brief The integer value of the Kiss-o'-Death ASCII code, "RATE", used
@@ -106,20 +106,16 @@
  * @note Refer to [RFC 4330 Section 8](https://tools.ietf.org/html/rfc4330#section-8)
  * for more information.
  */
-#define KOD_CODE_RATE_UINT_VALUE                            ( 0x52415445U )
+#define KOD_CODE_RATE_UINT_VALUE            ( 0x52415445U )
 
 /**
- * @brief The bit mask for the first order difference between system clock and
- * server second part of timestamps to determine whether calculation for
- * system clock-offset relative to server will overflow.
- * If any of the bits represented by the mask are set in the first order timestamp
- * difference value, it represents that clock offset calculations will overflow.
+ * @brief Macro to represent the total seconds that are represented in an NTP era period.
+ * The macro value represents a duration of ~136 years.
  *
- * @note The bit mask represents the 2 most significant bits of a 32 bit integer
- * as the clock-offset value uses the bits as sign bits, thereby, requiring that
- * the value be representable within 30 bits of the seconds part of timestamp width.
+ * @note As the "seconds" part of an NTP timestamp is represented in unsigned 32 bit width,
+ * the total number of seconds it can represent is 2^32, i.e. (UINT32_MAX + 1).
  */
-#define CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK    ( 0xC0000000U )
+#define TOTAL_SECONDS_IN_NTP_ERA            ( ( int64_t ) ( UINT32_MAX ) + ( int64_t ) 1 )
 
 /**
  * @brief Structure representing an SNTP packet header.
@@ -191,20 +187,37 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
                           ( ( uint32_t ) *( pMemStartByte + 3 ) ) );
 }
 
-#define NTP_ERA_1_EPOCH_SINCE_1900_SEC    ( ( int64_t ) ( UINT32_MAX ) +1 )
-
+/**
+ * @brief Utility to return absolute (or positively signed) value of an signed
+ * 64 bit integer.
+ *
+ * @param[in] value The integer to return the absolute value of.
+ *
+ * @return The absolute value of @p value.
+ */
 static int64_t absoluteOf( int64_t value )
 {
-    int64_t absValue = value;
-
-    if( absValue < 0 )
-    {
-        absValue = 0 - absValue;
-    }
-
-    return absValue;
+    return ( value >= ( int64_t ) 0 ) ?
+           value : ( ( int64_t ) 0 - value );
 }
 
+/**
+ * @brief Utility to safely calculate difference between server and client timestamps of
+ * unsigned integer type and return the value as a signed 64 bit integer. The calculated value
+ * represents the effective subtraction as ( @p serverTimeSec - @p clientTimeSec ).
+ *
+ * @note This utility SUPPORTS the cases of server and client timestamps being in different NTP eras,
+ * and ASSUMES that the server and client systems are within 68 years of each other.
+ * To handle the case of different NTP eras, this function calculates difference values for all
+ * possible combinations of NTP eras of server and client times (i.e. 1. both timestamps in same era,
+ * 2. server timestamp one era ahead, and 3. client timestamp being one era ahead), and determines
+ * the NTP era configuration by choosing the difference value of the smallest absolute value.
+ *
+ * @param[in] serverTimeSec The "seconds" part of the server timestamp.
+ * @param[in] clientTimeSec The "seconds" part of the client timestamp.
+ *
+ * @return The calculated difference between server and client times as a signed 64 bit integer.
+ */
 static int64_t safeTimeDifference( uint32_t serverTimeSec,
                                    uint32_t clientTimeSec )
 {
@@ -218,32 +231,32 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
     /* Determine if server time belongs to an NTP era different than the server, and accordingly
      * update the 64 bit representation to account for the era. */
     int64_t diffWithNoEraAdjustment = serverTime - clientTime;
-    int64_t diffWithServerEraAdjustment = serverTime + NTP_ERA_1_EPOCH_SINCE_1900_SEC -
-                                          clientTime;                                      /* This helps determine whether server is an
-                                                                                            * era ahead of client time. */
+    int64_t diffWithServerEraAdjustment = serverTime + TOTAL_SECONDS_IN_NTP_ERA -
+                                          clientTime;                                /* This helps determine whether server is an
+                                                                                      * era ahead of client time. */
     int64_t diffWithClientEraAdjustment = serverTime -
-                                          ( NTP_ERA_1_EPOCH_SINCE_1900_SEC + clientTime ); /* This helps determine whether server is an
-                                                                                            * era ahead of client time. */
+                                          ( TOTAL_SECONDS_IN_NTP_ERA + clientTime ); /* This helps determine whether server is an
+                                                                                      * era ahead of client time. */
 
     /* Determine the correct relative era of client and server times by
      *  checking with difference value represents the least difference. */
 
-    if( ( absoluteOf( diffWithNoEraAdjustment ) < absoluteOf( diffWithServerEraAdjustment ) ) &&
-        ( absoluteOf( diffWithNoEraAdjustment ) < absoluteOf( diffWithClientEraAdjustment ) ) )
+    if( ( absoluteOf( diffWithNoEraAdjustment ) <= absoluteOf( diffWithServerEraAdjustment ) ) &&
+        ( absoluteOf( diffWithNoEraAdjustment ) <= absoluteOf( diffWithClientEraAdjustment ) ) )
     {
         /* Both server and client times are in the same era. */
         eraAdjustedDiff = diffWithNoEraAdjustment;
     }
-    else if( ( absoluteOf( diffWithServerEraAdjustment ) < absoluteOf( diffWithNoEraAdjustment ) ) &&
-             ( absoluteOf( diffWithServerEraAdjustment ) < absoluteOf( diffWithClientEraAdjustment ) ) )
+    /* Check if server time is an NTP era ahead of client time. */
+    else if( absoluteOf( diffWithServerEraAdjustment ) <= absoluteOf( diffWithNoEraAdjustment ) )
     {
         /* Server time is in NTP era 1 while client time is in NTP era 0. */
         eraAdjustedDiff = diffWithServerEraAdjustment;
     }
-    else if( ( absoluteOf( diffWithClientEraAdjustment ) < absoluteOf( diffWithNoEraAdjustment ) ) &&
-             ( absoluteOf( diffWithClientEraAdjustment ) < absoluteOf( diffWithServerEraAdjustment ) ) )
+    /* Now, we know that the client time is an era ahead of server time. */
+    else
     {
-        /* Client time is in NTP era 0 while client time is in NTP era 1. */
+        /* Server time is in NTP era 0 while client time is in NTP era 1. */
         eraAdjustedDiff = diffWithClientEraAdjustment;
     }
 
@@ -328,17 +341,23 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClientRxTime != NULL );
     assert( pClockOffset != NULL );
 
-    /* Perform first order difference of timestamps on the network send path i.e. T2 - T1 .*/
+    /* Perform first order difference of timestamps on the network send path i.e. T2 - T1.
+     * Note: The calculated difference value will always represent years in the range of
+     *[-68 years, +68 years] i.e. a value in the range of [INT32_MIN, INT32_MAX]. */
     firstOrderDiffSend = safeTimeDifference( pServerRxTime->seconds, pClientTxTime->seconds );
 
-    /* Perform first order difference of timestamps on the network receive path i.e. T3 - T4 .*/
+    /* Perform first order difference of timestamps on the network receive path i.e. T3 - T4 .
+     * Note: The calculated difference value will always represent years in the range of
+     *[-68 years, +68 years] i.e. a value in the range of [INT32_MIN, INT32_MAX]. */
     firstOrderDiffRecv = safeTimeDifference( pServerTxTime->seconds, pClientRxTime->seconds );
 
     /* Now calculate the system clock-offset relative to server time as the average of the
-     * first order difference of timestamps in both directions of network path. */
+     * first order difference of timestamps in both directions of network path.
+     * Note: This will ALWAYS represent offset in the range of [-68 years, +68 years]. */
     clockOffSet = ( firstOrderDiffSend + firstOrderDiffRecv ) / 2;
 
-    /* We can represent the calculated clock-offset in signed 32 integer. */
+    /* We can represent the calculated clock-offset as signed 32 integer as the calculated
+     * clock offset will ALWAYS be in the signed 32 integer range. */
     *pClockOffset = ( int32_t ) clockOffSet;
 
     return status;
