@@ -211,8 +211,7 @@ static int64_t absoluteOf( int64_t value )
  * To handle the case of different NTP eras, this function calculates difference values for all
  * possible combinations of NTP eras of server and client times (i.e. 1. both timestamps in same era,
  * 2. server timestamp one era ahead, and 3. client timestamp being one era ahead), and determines
- * the NTP era configuration by choosing the difference value that represents an absolute offset <= 68
- * years.
+ * the NTP era configuration by choosing the difference value of the smallest absolute value.
  *
  * @param[in] serverTimeSec The "seconds" part of the server timestamp.
  * @param[in] clientTimeSec The "seconds" part of the client timestamp.
@@ -242,16 +241,16 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
     /* Determine the correct relative era of client and server times by
      *  checking with difference value represents the least difference. */
 
-    /* Check whether the difference value within the same NTP era represents
-     * <= 68 years of offset. */
-
-    if( absoluteOf( diffWithNoEraAdjustment ) <= INT32_MAX )
+    if( ( diffWithNoEraAdjustment <= INT32_MAX ) &&
+        ( absoluteOf( diffWithNoEraAdjustment ) <= absoluteOf( diffWithServerEraAdjustment ) ) &&
+        ( absoluteOf( diffWithNoEraAdjustment ) <= absoluteOf( diffWithClientEraAdjustment ) ) )
     {
         /* Both server and client times are in the same era. */
         eraAdjustedDiff = diffWithNoEraAdjustment;
     }
     /* Check if server time is an NTP era ahead of client time. */
-    else if( absoluteOf( diffWithServerEraAdjustment ) <= INT32_MAX )
+    else if( ( diffWithServerEraAdjustment <= INT32_MAX ) &&
+             ( absoluteOf( diffWithServerEraAdjustment ) <= absoluteOf( diffWithNoEraAdjustment ) ) )
     {
         /* Server time is in NTP era 1 while client time is in NTP era 0. */
         eraAdjustedDiff = diffWithServerEraAdjustment;
@@ -259,8 +258,6 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
     /* Now, we know that the client time is an era ahead of server time. */
     else
     {
-        assert( absoluteOf( diffWithClientEraAdjustment ) <= INT32_MAX );
-
         /* Server time is in NTP era 0 while client time is in NTP era 1. */
         eraAdjustedDiff = diffWithClientEraAdjustment;
     }

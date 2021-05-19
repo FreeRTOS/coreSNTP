@@ -469,6 +469,38 @@ void test_DeserializeResponse_AcceptedResponse_ClockOffset_Edge_Cases( void )
                                 SntpSuccess,
                                 YEARS_68_IN_SECONDS );
 
+    /* Now test cases when the server and client times are  (INT32_MAX + 1) =
+     * 2^31 apart seconds apart. The library will ALWAYS think that server
+     * is behind the client as the maximum signed 32 integer value is INT32_MAX.
+     */
+    serverTime.seconds = clientTime.seconds - INT32_MAX - 1;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                INT32_MIN );
+    serverTime.seconds = clientTime.seconds + INT32_MAX + 1;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                INT32_MIN );
+
+    /* Now test cases when the server and client times are exactly
+     * INT32_MAX seconds apart. */
+    serverTime.seconds = clientTime.seconds - INT32_MAX;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                -INT32_MAX );
+    serverTime.seconds = clientTime.seconds + INT32_MAX;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                INT32_MAX );
+
+    /* Reset client and server times to be 68 years apart. */
+    clientTime.seconds = UINT32_MAX;
+    serverTime.seconds = UINT32_MAX + YEARS_68_IN_SECONDS;
+
     /* Now test the contrived case when only the send network path
      * represents timestamps that overflow but the receive network path
      * has timestamps that do not overflow.
