@@ -72,7 +72,7 @@
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
 #define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
-#define YEARS_40_IN_SECONDS                        ( ( 40 * 365 + 40 / 4 ) * 24 * 3600 )
+#define YEARS_80_IN_SECONDS                        ( ( 80 * 365 + 80 / 4 ) * 24UL * 3600UL )
 
 /* Macro utility to convert the fixed-size Kiss-o'-Death ASCII code
  * to integer.*/
@@ -454,7 +454,7 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Cases( void )
     /* Test when the client is 40 years ahead of server time .*/
     SntpTimestamp_t serverTime =
     {
-        clientTime.seconds - YEARS_40_IN_SECONDS,
+        clientTime.seconds - YEARS_80_IN_SECONDS,
         clientTime.fractions
     };
     testClockOffsetCalculation( &clientTime, &serverTime,
@@ -463,7 +463,7 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Cases( void )
                                 SNTP_CLOCK_OFFSET_OVERFLOW );
 
     /* Now test when the client is 40 years ahead of server time .*/
-    serverTime.seconds = clientTime.seconds + YEARS_40_IN_SECONDS;
+    serverTime.seconds = clientTime.seconds + YEARS_80_IN_SECONDS;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
                                 SntpClockOffsetOverflow,

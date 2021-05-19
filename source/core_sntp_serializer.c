@@ -191,145 +191,63 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
                           ( ( uint32_t ) *( pMemStartByte + 3 ) ) );
 }
 
-/**
- * @brief Utility to determine whether the passed first order difference value
- * between server and client timestamps represents that the server and client
- * are within 34 years of each other to be able to calculate the clock-offset
- * value according to the NTPv4 specification's on-wire protocol.
- *
- * @param[in] firstOrderDiff A first-order difference value between the client
- * and server.
- *
- * @note As the SNTP timestamp value wraps around after ~136 years (exactly at
- * 7 Feb 2036 6h 28m 16s), the utility logic checks the first order difference
- * in both polarities (i.e. as (Server - Client) and (Client - Server) time values )
- * to support the edge case when the two timestamps are in different SNTP eras (for
- * example, server time is in 2037 and client time is in 2035 ).
- */
-static bool isEligibleForClockOffsetCalculation( uint32_t firstOrderDiff )
+#define NTP_ERA_1_EPOCH_SINCE_1900_SEC    ( ( int64_t ) ( UINT32_MAX ) +1 )
+
+static int64_t absoluteOf( int64_t value )
 {
-    /* Thee are 2 cases to cover when checking that the first order difference
-     * represents server and client systems within 34 years of each other.
-     *
-     * 1. When both server and client times are in the same NTP era - This means that
-     *    the passed value of first order difference can be directly used as an NTP timestamp's
-     *    "seconds" representation to determine whether it is more than 34 years in value.
-     *    This can be done by simply checking whether the 2 most significant bits are set.
-     *
-     * 2. When server and client times are in different NTP eras - This means that one
-     *    of the system times has overflown in the NTP value (i.e. represents time after
-     *    7 Feb 2036) while the other system time has not undergone the NTP time overflow.
-     *    For example, when the server time is 0x0000000A and the client time is UINT32_MAX,
-     *    then the passed first order difference value is (UINT32_MAX - 0x0000000A = 0xFFFFFFF5).
-     *    In this example, the actual first order difference is 11 seconds, which is obtained by
-     *    performing a 2's complement inversion on the passed first order difference value i.e.
-     *                Negation of 0xFFFFFFF5 in 32 bits = -0xFFFFFFF5
-     *                                                  = ~0xFFFFFFF5 + 1U
-     *                                                  = UINT32_MAX - 0xFFFFFFF5 + 1U
-     *                                                  = 0x0000000B
-     *                                                  = 11 seconds
-     */
-    bool sameNtpEraCheck = false;
-    bool diffNtpEraCheck = false;
+    int64_t absValue = value;
 
-    /* Check if the server and client times are within 34 years of each other, if we assume that they are
-     * in the same NTP era. */
-    sameNtpEraCheck = ( ( firstOrderDiff & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ?
-                      true : false;
-
-    /* If the same era check does not satisfy the 34 years condition, check
-     * whether the condition is satisfied when assuming the that the systems are in
-     * different NTP eras. */
-    if( sameNtpEraCheck == false )
+    if( absValue < 0 )
     {
-        /* Note: The (UINT32_MAX  - firstOrderDiff + 1U) expression represents
-         * 2's complement or negation of value.
-         * This is done to be compliant with both CBMC and MISRA Rule 10.1.
-         * CBMC flags overflow for (unsigned int = 0U - positive value) whereas
-         * MISRA rule forbids use of unary minus operator on unsigned integers. */
-        diffNtpEraCheck = ( ( ( UINT32_MAX - firstOrderDiff + 1U )
-                              & CLOCK_OFFSET_FIRST_ORDER_DIFF_OVERFLOW_BITS_MASK ) == 0U ) ? true : false;
+        absValue = 0 - absValue;
     }
 
-    return( sameNtpEraCheck || diffNtpEraCheck );
+    return absValue;
 }
 
-/**
- * @brief Utility to safely calculate difference between server and client timestamps of
- * unsigned integer type and return the value as a signed integer. The calculated value
- * represents the effective subtraction as ( @p serverTime - @p clientTime ).
- *
- * @note This utility ASSUMES that the timestamps are within 34 years of each other.
- *
- * @note This utility provides safe subtraction between unsigned integers that involve the
- * following 2 operations::
- *  * Safe subtraction between unsigned integers (to avoid overflow of storing negative value
- *    in unsigned integer)
- *                    AND
- *  * Safe conversion of unsigned integer to signed integer
- *
- * @param[in] serverTime The "seconds" part of the server timestamp.
- * @param[in] clientTime The "seconds" part of the client timestamp.
- *
- * @return The calculated difference value between the server and client timestamps.
- */
-static int32_t safeTimeDiff( uint32_t serverTime,
-                             uint32_t clientTime )
+static int64_t safeTimeDifference( uint32_t serverTimeSec,
+                                   uint32_t clientTimeSec )
 {
-    int32_t calculatedTimeDiff = 0;
+    int64_t eraAdjustedDiff = 0;
 
-    /* First calculate the difference in 64 bit-width to store any overflow values
-     * from subtraction on 32 bit integer values.*/
-    int64_t diffIn64Bits = ( int64_t ) serverTime - ( int64_t ) clientTime;
+    /* Convert the "seconds" part of timestamps to signed 64 bit integer along with determining
+     * relative NTP era presence of server time relative to client time. */
+    int64_t serverTime = ( int64_t ) serverTimeSec;
+    int64_t clientTime = ( int64_t ) clientTimeSec;
 
-    /* Check whether the difference value has overflow for a signed 32 bit integer
-     * If there is overflow, the value will have to be modified before storing it as signed
-     * 32-bit integer.
-     * Note: As we know that the server and client timestamps are within 34 years of
-     * each other, an overflown time difference represents the case when server and
-     * client timestamps are in different NTP eras. Thus, a time difference that overflows is
-     * an acceptable value for this utility.
-     */
+    /* Determine if server time belongs to an NTP era different than the server, and accordingly
+     * update the 64 bit representation to account for the era. */
+    int64_t diffWithNoEraAdjustment = serverTime - clientTime;
+    int64_t diffWithServerEraAdjustment = serverTime + NTP_ERA_1_EPOCH_SINCE_1900_SEC -
+                                          clientTime;                                      /* This helps determine whether server is an
+                                                                                            * era ahead of client time. */
+    int64_t diffWithClientEraAdjustment = serverTime -
+                                          ( NTP_ERA_1_EPOCH_SINCE_1900_SEC + clientTime ); /* This helps determine whether server is an
+                                                                                            * era ahead of client time. */
 
-    /* Check whether an overflow occurs when the server time is ahead of the client time.
-     * Note: This means that the server time is in NTP era 1 (i.e. after 7 Feb 2036) whereas
-     * client time is in NTP era 0.
-     */
-    if( diffIn64Bits < INT32_MIN )
+    /* Determine the correct relative era of client and server times by
+     *  checking with difference value represents the least difference. */
+
+    if( ( absoluteOf( diffWithNoEraAdjustment ) < absoluteOf( diffWithServerEraAdjustment ) ) &&
+        ( absoluteOf( diffWithNoEraAdjustment ) < absoluteOf( diffWithClientEraAdjustment ) ) )
     {
-        /* Calculate the actual difference in time between the server and client keeping
-         * the different eras in consideration. */
-        uint32_t diff = ( UINT32_MAX - clientTime ) /* Time from client time to end of NTP era 0.*/
-                        + 1U                        /* Time at epoch of NTP era 1, i.e. & Feb 2036 6h:28m:16s UTC */
-                        + serverTime;               /* Time period after NTP era 1. */
-
-        /* Perform 2's complement negation of the absolute difference value to represent
-         * the true time difference between server and client timestamps that are in
-         * different eras. */
-        calculatedTimeDiff = ( int32_t ) diff;
+        /* Both server and client times are in the same era. */
+        eraAdjustedDiff = diffWithNoEraAdjustment;
+    }
+    else if( ( absoluteOf( diffWithServerEraAdjustment ) < absoluteOf( diffWithNoEraAdjustment ) ) &&
+             ( absoluteOf( diffWithServerEraAdjustment ) < absoluteOf( diffWithClientEraAdjustment ) ) )
+    {
+        /* Server time is in NTP era 1 while client time is in NTP era 0. */
+        eraAdjustedDiff = diffWithServerEraAdjustment;
+    }
+    else if( ( absoluteOf( diffWithClientEraAdjustment ) < absoluteOf( diffWithNoEraAdjustment ) ) &&
+             ( absoluteOf( diffWithClientEraAdjustment ) < absoluteOf( diffWithServerEraAdjustment ) ) )
+    {
+        /* Client time is in NTP era 0 while client time is in NTP era 1. */
+        eraAdjustedDiff = diffWithClientEraAdjustment;
     }
 
-    /* Check whether overflow occurs when the client time is ahead of the server time.
-     * Note: In this case, the client time would have overflown in NTP era 1 while
-     */
-    else if( diffIn64Bits > INT32_MAX )
-    {
-        /* Calculate the actual difference in time between the server and client keeping
-         * the different eras in consideration. */
-        uint32_t actualAbsDiff = ( UINT32_MAX - serverTime ) /* Time from sever time to end of NTP era 0.*/
-                                 + 1U                        /* Time at epoch of NTP era 1, i.e. & Feb 2036 6h:28m:16s UTC */
-                                 + clientTime;               /* Time period after NTP era 1. */
-
-        calculatedTimeDiff = 0 - ( int32_t ) actualAbsDiff;
-    }
-    else
-    {
-        /* We are confident that the time difference value can be represented as a signed
-         * 32 bit integer. */
-        calculatedTimeDiff = ( int32_t ) diffIn64Bits;
-    }
-
-    return calculatedTimeDiff;
+    return eraAdjustedDiff;
 }
 
 /**
@@ -400,8 +318,9 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     SntpStatus_t status = SntpSuccess;
 
     /* Variable for storing the first-order difference between timestamps. */
-    uint32_t firstOrderDiffSend = 0;
-    uint32_t firstOrderDiffRecv = 0;
+    int64_t firstOrderDiffSend = 0;
+    int64_t firstOrderDiffRecv = 0;
+    int64_t clockOffSet = 0;
 
     assert( pClientTxTime != NULL );
     assert( pServerRxTime != NULL );
@@ -409,58 +328,18 @@ static SntpStatus_t calculateClockOffset( const SntpTimestamp_t * pClientTxTime,
     assert( pClientRxTime != NULL );
     assert( pClockOffset != NULL );
 
-    /* Calculate first order difference values between the server and system timestamps
-     * to determine whether they are within 34 years of each other. */
+    /* Perform first order difference of timestamps on the network send path i.e. T2 - T1 .*/
+    firstOrderDiffSend = safeTimeDifference( pServerRxTime->seconds, pClientTxTime->seconds );
 
-    /* To avoid overflow issue, we will store only the positive first order differences of
-     * the timestamps in the unsigned integer now, and later store the values with correct
-     * subtraction polarity (i.e. "Server Time - Client Time") later. */
-    firstOrderDiffSend = ( pServerRxTime->seconds >= pClientTxTime->seconds ) ?
-                         ( pServerRxTime->seconds - pClientTxTime->seconds ) :
-                         ( pClientTxTime->seconds - pServerRxTime->seconds );
-    firstOrderDiffRecv = ( pServerTxTime->seconds >= pClientRxTime->seconds ) ?
-                         ( pServerTxTime->seconds - pClientRxTime->seconds ) :
-                         ( pClientRxTime->seconds - pServerTxTime->seconds );
+    /* Perform first order difference of timestamps on the network receive path i.e. T3 - T4 .*/
+    firstOrderDiffRecv = safeTimeDifference( pServerTxTime->seconds, pClientRxTime->seconds );
 
-    /* Determine from the first order differences if the system time is within
-     * 34 years of server time to be able to calculate clock offset.
-     */
-    if( isEligibleForClockOffsetCalculation( firstOrderDiffSend ) &&
-        isEligibleForClockOffsetCalculation( firstOrderDiffRecv ) )
-    {
-        /* Now that we have validated that system and server times are within 34 years
-         * of each other, we will prepare for the clock-offset calculation. To calculate
-         * clock-offset, the first order difference values need to be stored as signed integers
-         * in the correct polarity of differences according to the formula. */
-        int32_t signedFirstOrderDiffSend = 0;
-        int32_t signedFirstOrderDiffRecv = 0;
+    /* Now calculate the system clock-offset relative to server time as the average of the
+     * first order difference of timestamps in both directions of network path. */
+    clockOffSet = ( firstOrderDiffSend + firstOrderDiffRecv ) / 2;
 
-        /* Calculate the first order differences in the correct subtraction direction as
-         * "Server Time - Client Time" on both SNTP request and SNTP response network paths. */
-        signedFirstOrderDiffSend = safeTimeDiff( pServerRxTime->seconds, pClientTxTime->seconds );
-        signedFirstOrderDiffRecv = safeTimeDiff( pServerTxTime->seconds, pClientRxTime->seconds );
-
-        /* We are now sure that each of the first order differences represents the values in
-         * the correct direction of polarities, i.e.
-         * signedFirstOrderDiffSend represents (T2 - T1)
-         *                AND
-         * signedFirstOrderDiffRecv represents (T3 - T4)
-         *
-         * We are now safe to complete the calculation of the clock-offset as the average
-         * of the signed first order difference values.
-         */
-
-        /* Use division instead of a bit shift to guarantee sign extension
-         * regardless of compiler implementation. */
-        *pClockOffset = ( ( signedFirstOrderDiffSend + signedFirstOrderDiffRecv ) / 2 );
-    }
-    else
-    {
-        /* System clock-offset cannot be calculated as arithmetic operation will overflow. */
-        *pClockOffset = SNTP_CLOCK_OFFSET_OVERFLOW;
-
-        status = SntpClockOffsetOverflow;
-    }
+    /* We can represent the calculated clock-offset in signed 32 integer. */
+    *pClockOffset = ( int32_t ) clockOffSet;
 
     return status;
 }
