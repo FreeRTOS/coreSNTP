@@ -1,3 +1,4 @@
+actualabsdiff
 aes
 alarmservernotsynchronized
 api
@@ -20,6 +21,7 @@ bytestorecv
 bytestosend
 bytestosend
 cbmc
+clienttime
 clienttxtime
 clockfreqtolerance
 clockoffsetsec
@@ -37,6 +39,7 @@ deserialize
 deserializer
 deserializeresponse
 desiredaccuracy
+diff
 dns
 doxygen
 endian
@@ -47,6 +50,7 @@ expectedinterval
 expectedtxtime
 faqs
 feb
+firstorderdiff
 fracs
 fracsinnetorder
 fracsinnetorder
@@ -64,6 +68,7 @@ ifndef
 inc
 ingroup
 inlooptime
+int
 iot
 ip
 iso
@@ -86,6 +91,7 @@ numofservers
 oldertime
 org
 origintime
+overflown
 packetsize
 param
 pauthcodesize
@@ -105,6 +111,7 @@ pnetworkcontext
 pnetworkcontext
 pnetworkintf
 poldertime
+positivediff
 posix
 ppacket
 pparsedresponse
@@ -160,7 +167,11 @@ serveraddr
 servernamelen
 serverport
 serverresponsetimeoutms
+servertime
+servertxtime
 setsystemtimefunc
+signedfirstorderdiffrecv
+signedfirstorderdiffsend
 sizeof
 sntp
 sntpbuffertoosmall
@@ -190,6 +201,7 @@ startingpos
 struct
 sublicense
 testbuffer
+testclockoffsetcalculation
 timebeforeloop
 timeserver
 transmittime

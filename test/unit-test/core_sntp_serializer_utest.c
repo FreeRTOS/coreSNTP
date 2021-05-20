@@ -137,6 +137,9 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
                                         int32_t expectedClockOffset )
 {
     /* Update the response packet with the server time. */
+    addTimestampToResponseBuffer( clientTxTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
     addTimestampToResponseBuffer( serverRxTime,
                                   testBuffer,
                                   SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
@@ -441,7 +444,7 @@ void test_DeserializeResponse_KoD_packets( void )
  * SNTP server response, and determine that the clock offset cannot be calculated
  * when the client clock is beyond 34 years from server.
  */
-void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
+void test_DeserializeResponse_AcceptedResponse_Overflow_Cases( void )
 {
     SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
@@ -465,6 +468,22 @@ void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
                                 &serverTime, &clientTime,
                                 SntpClockOffsetOverflow,
                                 SNTP_CLOCK_OFFSET_OVERFLOW );
+
+    /* Now test the contrived case when only the send network path
+     * represents timestamps that overflow but the receive network path
+     * has timestamps that do not overflow. */
+    testClockOffsetCalculation( &clientTime, &serverTime, /* Send Path times are 40 years apart */
+                                &serverTime, &serverTime, /* Receive path times are the same. */
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
+
+    /* Now test the contrived case when only the receive network path
+     * represents timestamps that overflow but the send network path
+     * has timestamps that do not overflow. */
+    testClockOffsetCalculation( &clientTime, &clientTime, /* Send Path times are the same, i.e. don't overflow */
+                                &serverTime, &clientTime, /* Receive path times are 40 years apart. */
+                                SntpClockOffsetOverflow,
+                                SNTP_CLOCK_OFFSET_OVERFLOW );
 }
 
 /**
@@ -482,6 +501,8 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
     /* Use the the same values for Rx and Tx times for server and client in the first couple
      * of tests for simplicity. */
 
+    /* ==================Test when client and server are in same NTP era.================ */
+
     /* Test when the client is 20 years ahead of server time to generate a negative offset
      * result.*/
     SntpTimestamp_t serverTxTime =
@@ -497,8 +518,29 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
 
     /* Now test for the client being 20 years behind server time to generate a positive
      * offset result.*/
-    serverTxTime.seconds = clientTxTime.seconds + YEARS_20_IN_SECONDS;
+    serverTxTime.seconds = UINT32_MAX;
+    clientTxTime.seconds = UINT32_MAX - YEARS_20_IN_SECONDS;
     expectedOffset = YEARS_20_IN_SECONDS;
+
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, expectedOffset );
+
+    /* ==================Test when client and server are in different NTP eras.================ */
+
+    /* Test when the server is ahead of client to generate a positive clock offset result.*/
+    clientTxTime.seconds = UINT32_MAX;                       /* Client is in NTP era 0. */
+    serverTxTime.seconds = UINT32_MAX + YEARS_20_IN_SECONDS; /* Server is in NTP era 1. */
+    expectedOffset = YEARS_20_IN_SECONDS;
+
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, expectedOffset );
+
+    /* Test when the client is ahead of server to generate a negative clock offset result.*/
+    clientTxTime.seconds = UINT32_MAX + YEARS_20_IN_SECONDS; /* Client is in NTP era 1. */
+    serverTxTime.seconds = UINT32_MAX;                       /* Server is in NTP era 0. */
+    expectedOffset = -YEARS_20_IN_SECONDS;
 
     testClockOffsetCalculation( &clientTxTime, &serverTxTime,
                                 &serverTxTime, &clientTxTime,
@@ -508,6 +550,7 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
      * that are used in the clock-offset calculation.
      * The test case uses 2 seconds as network delay on both Client -> Server and Server -> Client path
      * and 2 seconds for server processing time between receiving SNTP request and sending SNTP response */
+    clientTxTime.seconds = UINT32_MAX;
     SntpTimestamp_t serverRxTime =
     {
         clientTxTime.seconds + YEARS_20_IN_SECONDS + 2,
