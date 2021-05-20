@@ -31,12 +31,13 @@
 #include "core_sntp_stubs.h"
 
 #ifndef MAX_NO_OF_SERVERS
-    #define MAX_NO_OF_SERVERS    2
+    #define MAX_NO_OF_SERVERS    5
 #endif
 
-SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
+SntpContext_t * allocateCoreSntpContext()
 {
     SntpServerInfo_t * pTimeServers;
+    SntpContext_t * pContext;
     size_t currentServerIndex;
     size_t numOfServers;
     uint32_t serverResponseTimeoutMs;
@@ -46,12 +47,9 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
     SntpAuthenticationInterface_t * pAuthIntf;
     SntpStatus_t sntpStatus = SntpSuccess;
 
-    if( pContext == NULL )
-    {
-        pContext = malloc( sizeof( SntpContext_t ) );
-    }
+    pContext = malloc( sizeof( SntpContext_t ) );
 
-    __CPROVER_assume( numOfServers < CBMC_MAX_OBJECT_SIZE );
+    __CPROVER_assume( numOfServers < MAX_NO_OF_SERVERS );
     __CPROVER_assume( serverResponseTimeoutMs < CBMC_MAX_OBJECT_SIZE );
     __CPROVER_assume( currentServerIndex < CBMC_MAX_OBJECT_SIZE );
 
@@ -66,14 +64,7 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
 
     if( pTimeServers != NULL )
     {
-        size_t i;
-
-        if( numOfServers > MAX_NO_OF_SERVERS )
-        {
-            numOfServers = MAX_NO_OF_SERVERS;
-        }
-
-        for( i = 0; i < numOfServers; i++ )
+        for( size_t i = 0; i < numOfServers; i++ )
         {
             __CPROVER_assume( pTimeServers[ i ].serverNameLen < CBMC_MAX_OBJECT_SIZE );
             __CPROVER_assume( pTimeServers[ i ].port < CBMC_MAX_OBJECT_SIZE );

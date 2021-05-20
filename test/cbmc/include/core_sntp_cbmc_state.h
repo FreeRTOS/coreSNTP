@@ -44,10 +44,8 @@ struct SntpAuthContext
 /**
  * @brief Allocate a #SntpContext_t object.
  *
- * @param[in] pContext #SntpContext_t object information.
- *
  * @return NULL or allocated #SntpContext_t memory.
  */
-SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext );
+SntpContext_t * allocateCoreSntpContext();
 
 #endif /* ifndef CORE_SNTP_CBMC_STATE_H_ */

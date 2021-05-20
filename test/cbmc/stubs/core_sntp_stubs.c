@@ -40,7 +40,7 @@
  * invoked before returning a loop terminating value. This is usually defined
  * in the Makefile of the harnessed function. */
 #ifndef MAX_NETWORK_SEND_TRIES
-    #define MAX_NETWORK_SEND_TRIES    3
+    #define MAX_NETWORK_SEND_TRIES    2
 #endif
 
 /* An exclusive bound on the times that the NetworkInterfaceReceiveStub will
@@ -99,7 +99,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
                       "NetworkInterfaceSendStub pBuffer is not readable up to bytesToSend." );
 
     /* The number of tries to send the message before this invocation. */
-    static size_t tries = 1;
+    static size_t tries = 0;
 
     int32_t bytesOrError;
 
@@ -119,7 +119,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
     }
     else
     {
-        tries = 1;
+        tries = 0;
         bytesOrError = bytesToSend;
     }
 

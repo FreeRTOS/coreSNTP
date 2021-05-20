@@ -9,7 +9,7 @@ HARNESS_FILE = Sntp_SendTimeRequest_harness
 MAX_NETWORK_SEND_TRIES=3
 
 # Maximum number of sntp time servers
-MAX_NO_OF_SERVERS=2
+MAX_NO_OF_SERVERS=5
 
 # This should be a unique identifier for this proof, and will appear on the
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
