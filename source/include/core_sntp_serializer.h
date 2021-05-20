@@ -311,9 +311,9 @@ typedef struct SntpResponse
      * refer to https://tools.ietf.org/html/rfc5905#section-8.
      *
      * @note The library ASSUMES that the server and client systems are within
-     * 68 years of each other clock, whether in the same NTP era or across adjacent
-     * NTP eras. Thus, the client and system times MUST be within 68 years of each
-     * other for correct calculation of clock-offset.
+     * ~68 years of each other clock, whether in the same NTP era or across adjacent
+     * NTP eras. Thus, the client and system times MUST be within ~68 years (or 2^31 seconds
+     * exactly) of each other for correct calculation of clock-offset.
      */
     int32_t clockOffsetSec;
 } SntpResponseData_t;
@@ -376,8 +376,11 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_NONE.
  *
  * @note If the server has positively responded with its clock time, then this API
- * function will calculate the clock-offset. For the clock-offset to be correctly calculated,
- * the system clock MUST be within 68 years of the server time mentioned in the response packet.
+ * function will calculate the clock-offset. For the clock-offset to be correctly
+ * calculated, the system clock MUST be within ~68 years (or 2^31 seconds) of the server
+ * time mentioned. This function supports calculation of clock-offset when server and client
+ * timestamps are in adjacent NTP eras, with one system is in NTP era 0 (i.e. before 7 Feb 2036
+ * 6h:28m:14s UTC) and another system in NTP era 1 (on or after 7 Feb 2036 6h:28m:14s UTC).
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the

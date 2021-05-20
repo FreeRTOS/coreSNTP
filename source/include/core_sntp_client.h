@@ -559,7 +559,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * the system time.
  *
  * @note For calculation of clock-offset, the server and client times MUST be within
- * ~68 years of each other.
+ * ~68 years (or 2^31 seconds) of each other.
  *
  * @note This API will rotate the server of use in the library for the next time request
  * (through the @ref Sntp_SendTimeRequest) if either of following events occur:
