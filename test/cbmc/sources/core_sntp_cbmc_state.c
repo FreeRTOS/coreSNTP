@@ -30,6 +30,10 @@
 #include "core_sntp_cbmc_state.h"
 #include "core_sntp_stubs.h"
 
+#ifndef MAX_NO_OF_SERVERS
+    #define MAX_NO_OF_SERVERS    2
+#endif
+
 SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
 {
     SntpServerInfo_t * pTimeServers;
@@ -62,9 +66,19 @@ SntpContext_t * allocateCoreSntpContext( SntpContext_t * pContext )
 
     if( pTimeServers != NULL )
     {
-        __CPROVER_assume( pTimeServers->serverNameLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pTimeServers->port < CBMC_MAX_OBJECT_SIZE );
-        pTimeServers->pServerName = malloc( pTimeServers->serverNameLen );
+        size_t i;
+
+        if( numOfServers > MAX_NO_OF_SERVERS )
+        {
+            numOfServers = MAX_NO_OF_SERVERS;
+        }
+
+        for( i = 0; i < numOfServers; i++ )
+        {
+            __CPROVER_assume( pTimeServers[ i ].serverNameLen < CBMC_MAX_OBJECT_SIZE );
+            __CPROVER_assume( pTimeServers[ i ].port < CBMC_MAX_OBJECT_SIZE );
+            pTimeServers[ i ].pServerName = malloc( pTimeServers[ i ].serverNameLen );
+        }
     }
 
     __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
