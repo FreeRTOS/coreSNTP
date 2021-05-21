@@ -12,7 +12,7 @@ MAX_NETWORK_RECV_TRIES=5
 MAX_NO_OF_SERVERS=5
 
 # Maximum number of iterations needed to receive complete response from server.
-MAX_ITERATIONS_RECEIVE_RESPONSE=2;
+MAX_ITERATIONS_RECEIVE_RESPONSE=2
 
 # This should be a unique identifier for this proof, and will appear on the
 # Litani dashboard. It can be human-readable and contain spaces if you wish.

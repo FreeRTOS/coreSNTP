@@ -67,25 +67,25 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     /* Clean the buffer so as to make it available to write data into it. */
     __CPROVER_havoc_object( pBuffer );
 
-    int32_t bytesRead;
+    int32_t bytesOrError;
     static size_t tries = 0;
 
     /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
-    __CPROVER_assume( bytesRead <= ( int32_t ) bytesToRecv );
+    __CPROVER_assume( bytesOrError <= ( int32_t ) bytesToRecv );
 
     if( tries < ( MAX_NETWORK_RECV_TRIES - 1 ) )
     {
         tries++;
-        bytesRead = 1;
+        bytesOrError = 1;
     }
     else
     {
         tries = 0;
-        bytesRead = 0;
+        bytesOrError = 0;
     }
 
-    return bytesRead;
+    return bytesOrError;
 }
 int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
                                   uint32_t serverAddr,
