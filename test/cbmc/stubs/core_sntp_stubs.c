@@ -47,7 +47,7 @@
  * return an unbound value. At this value and beyond, the
  * NetworkInterfaceReceiveStub will return zero on every call. */
 #ifndef MAX_NETWORK_RECV_TRIES
-    #define MAX_NETWORK_RECV_TRIES    4
+    #define MAX_NETWORK_RECV_TRIES    5
 #endif
 
 static SntpTimestamp_t testTime = TEST_TIMESTAMP;
@@ -67,24 +67,25 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     /* Clean the buffer so as to make it available to write data into it. */
     __CPROVER_havoc_object( pBuffer );
 
-    int32_t bytesOrError;
+    int32_t bytesRead;
     static size_t tries = 0;
 
     /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
-    __CPROVER_assume( bytesOrError <= ( int32_t ) bytesToRecv );
+    __CPROVER_assume( bytesRead <= ( int32_t ) bytesToRecv );
 
     if( tries < ( MAX_NETWORK_RECV_TRIES - 1 ) )
     {
         tries++;
+        bytesRead = 1;
     }
     else
     {
         tries = 0;
-        bytesOrError = 0;
+        bytesRead = 0;
     }
 
-    return bytesOrError;
+    return bytesRead;
 }
 int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
                                   uint32_t serverAddr,
@@ -146,6 +147,14 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
     return sntpStatus;
 }
 
+SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
+                                     const SntpServerInfo_t * pTimeServer,
+                                     const void * pResponseData,
+                                     size_t responseSize )
+{
+    return SntpSuccess;
+}
+
 bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
                          uint32_t * pIpV4Addr )
 {
@@ -182,4 +191,20 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
                                     size_t bufferSize )
 {
     return SntpSuccess;
+}
+
+SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
+                                       const SntpTimestamp_t * pResponseRxTime,
+                                       const void * pResponseBuffer,
+                                       size_t bufferSize,
+                                       SntpResponseData_t * pParsedResponse )
+{
+    if( nondet_bool() )
+    {
+        return SntpSuccess;
+    }
+    else
+    {
+        return SntpRejectedResponseRetryWithBackoff;
+    }
 }
