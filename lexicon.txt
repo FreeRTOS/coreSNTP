@@ -13,6 +13,7 @@ beforelooptime
 blocktimems
 br
 buffersize
+bytesorerror
 bytesremaining
 bytessent
 bytestorecv
@@ -80,6 +81,8 @@ leapsecondinfo
 leapversionmode
 lsb
 misra
+networkinterfacereceivestub
+networkinterfacesendstub
 nist
 noleapsecond
 noninfringement
