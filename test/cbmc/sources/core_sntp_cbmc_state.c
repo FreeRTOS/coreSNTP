@@ -30,10 +30,6 @@
 #include "core_sntp_cbmc_state.h"
 #include "core_sntp_stubs.h"
 
-#ifndef MAX_NO_OF_SERVERS
-    #define MAX_NO_OF_SERVERS    5
-#endif
-
 SntpContext_t * allocateCoreSntpContext()
 {
     SntpServerInfo_t * pTimeServers;
@@ -90,16 +86,19 @@ SntpContext_t * allocateCoreSntpContext()
     {
         pAuthIntf->pAuthContext = malloc( sizeof( SntpAuthContext_t ) );
         pAuthIntf->generateClientAuth = GenerateClientAuthStub;
+        pAuthIntf->validateServerAuth = ValidateServerAuthStub;
     }
 
     /* It is part of the API contract to call Sntp_Init() with the SntpContext_t
      * before any other function in core_sntp_client.h. */
     if( pContext != NULL )
     {
+        pContext->numOfServers = numOfServers;
         pContext->currentServerIndex = currentServerIndex;
         sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
                                 bufferSize, ResolveDnsFuncStub, GetTimeFuncStub, SetTimeFuncStub,
                                 pNetworkIntf, pAuthIntf );
+        pContext->sntpPacketSize = 4;
     }
 
     /* If the SntpContext_t initialization failed, then set the context to NULL

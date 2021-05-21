@@ -93,6 +93,30 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
                                      size_t * pAuthCodeSize );
 
 /**
+ * @brief Application defined function to authenticate server by validating
+ * the authentication code present in its SNTP response to a time request, if
+ * a security mechanism is supported by the server.
+ *
+ * @param[in,out] pContext The application defined NetworkContext_t which
+ * is opaque to the coreSNTP library.
+ * @param[in] pTimeServer The time server that has to be authenticated from its
+ * SNTP response.
+ * @param[in] pResponseData The SNTP response from the server that contains the
+ * authentication code after the first #SNTP_PACKET_BASE_SIZE bytes.
+ * @param[in] responseSize The total size of the response from the server.
+ *
+ * @return The function SHOULD return one of the following integer codes:
+ * - #SntpSuccess when the server is successfully authenticated.
+ * - #SntpServerNotAuthenticated when server could not be authenticated.
+ * - #SntpErrorAuthFailure for failure to authenticate server due to internal
+ * error.
+ */
+SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
+                                     const SntpServerInfo_t * pTimeServer,
+                                     const void * pResponseData,
+                                     size_t responseSize );
+
+/**
  * @brief Application defined function to resolve time server domain-name
  * to an IPv4 address.
  *
