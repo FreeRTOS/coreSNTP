@@ -18,6 +18,8 @@ PROOF_UID = Sntp_SendTimeRequest
 DEFINES +=
 INCLUDES +=
 
+# Providing a stub for this function as we have already have a separate proof
+# for this function
 REMOVE_FUNCTION_BODY +=Sntp_SerializeRequest
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_sendSntpPacket.0:$(MAX_NETWORK_SEND_TRIES)
 UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
