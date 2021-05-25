@@ -27,6 +27,7 @@
 
 #include <stddef.h>
 #include "core_sntp_cbmc_state.h"
+#include "core_sntp_stubs.h"
 #include "core_sntp_client.h"
 
 void harness()
@@ -36,6 +37,18 @@ void harness()
     SntpStatus_t sntpStatus;
 
     pContext = allocateCoreSntpContext();
+
+    if( pContext != NULL )
+    {
+        GetTimeFuncStub( &pContext->lastRequestTime );
+    }
+
+    /* The SNTP_RECEIVE_TIMEOUT is used here to control the number of loops
+     * when receiving on the network. The default is used here because memory
+     * safety can be proven in only a few iterations. Please see this proof's
+     * Makefile for more information. */
+    __CPROVER_assume( blockTimeMs < SNTP_RECEIVE_TIMEOUT );
+
     sntpStatus = Sntp_ReceiveTimeResponse( pContext, blockTimeMs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||

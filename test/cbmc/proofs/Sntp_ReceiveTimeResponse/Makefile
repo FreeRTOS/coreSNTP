@@ -8,6 +8,13 @@ HARNESS_FILE = Sntp_ReceiveTimeResponse_harness
 # more information on MAX_NETWORK_RECV_TRIES.
 MAX_NETWORK_RECV_TRIES=5
 
+# Bound on the timeout in Sntp_ReceiveTimeResponse. This timeout is bounded because
+# memory saftey can be proven in a only a single iteration.
+# Each iteration will try to receive a single packet in its entirey. With a time
+# out of 1 we can get coverage of the entire function. Another iteration will
+# performed unnecessarily duplicating of the proof.
+SNTP_RECEIVE_TIMEOUT=1
+
 # Maximum number of sntp time servers
 MAX_NO_OF_SERVERS=5
 
@@ -19,11 +26,12 @@ MAX_ITERATIONS_RECEIVE_RESPONSE=2
 PROOF_UID = Sntp_ReceiveTimeResponse
 
 DEFINES +=-DMAX_NO_OF_SERVERS=$(MAX_NO_OF_SERVERS)
+DEFINES +=-DSNTP_RECEIVE_TIMEOUT=$(SNTP_RECEIVE_TIMEOUT)
 INCLUDES +=
 
 REMOVE_FUNCTION_BODY +=Sntp_DeserializeResponse
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_receiveSntpResponse.0:$(MAX_NETWORK_RECV_TRIES)
-UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(MAX_ITERATIONS_RECEIVE_RESPONSE) + 1 )
+UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(SNTP_RECEIVE_TIMEOUT) + 1 )
 UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
 
 

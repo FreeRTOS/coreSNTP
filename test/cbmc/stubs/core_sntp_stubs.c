@@ -69,6 +69,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
 
     int32_t bytesOrError;
     static size_t tries = 0;
+    static size_t read = 0;
 
     /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
@@ -77,12 +78,16 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     if( tries < ( MAX_NETWORK_RECV_TRIES - 1 ) )
     {
         tries++;
-        bytesOrError = 1;
+
+        if( bytesOrError > 0 )
+        {
+            read += bytesOrError;
+        }
     }
     else
     {
         tries = 0;
-        bytesOrError = 0;
+        bytesOrError = SNTP_PACKET_BASE_SIZE - read;
     }
 
     return bytesOrError;
