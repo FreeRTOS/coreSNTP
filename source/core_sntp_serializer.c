@@ -228,15 +228,20 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
     int64_t serverTime = ( int64_t ) serverTimeSec;
     int64_t clientTime = ( int64_t ) clientTimeSec;
 
-    /* Determine if server time belongs to an NTP era different than the server, and accordingly
-     * update the 64 bit representation to account for the era. */
+    /* Determine if server time belongs to an NTP era different than the client time, and accordingly
+     * choose the 64 bit representation of the first order difference to account for the era.
+     * The logic for determining the relative era presence of the timestamps is by calculating the
+     * first order difference (of "Server Time - Client Time") for all the 3 different era combinations
+     * (1. both timestamps in same era, 2. server time one era ahead, 3. client time one era ahead)
+     * and choosing the NTP era configuration that has the smallest first order difference value.
+     */
     int64_t diffWithNoEraAdjustment = serverTime - clientTime;
     int64_t diffWithServerEraAdjustment = serverTime + TOTAL_SECONDS_IN_NTP_ERA -
                                           clientTime;                                /* This helps determine whether server is an
                                                                                       * era ahead of client time. */
     int64_t diffWithClientEraAdjustment = serverTime -
                                           ( TOTAL_SECONDS_IN_NTP_ERA + clientTime ); /* This helps determine whether server is an
-                                                                                      * era ahead of client time. */
+                                                                                      * era behind of client time. */
 
 
     /* If the difference value is INT32_MIN, it means that the server and client times are away by
