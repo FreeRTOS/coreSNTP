@@ -87,6 +87,10 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     else
     {
         tries = 0;
+
+        /* This ensures that all the remaining bytes are received in the last try
+         *  if there are any bytes yet to be received and covers the case that SntpSuccess
+         *  is returned. */
         bytesOrError = SNTP_PACKET_BASE_SIZE - read;
     }
 
@@ -126,6 +130,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
     else
     {
         tries = 0;
+        /* This ensures that all the remaining bytes are sent in the last try. */
         bytesOrError = bytesToSend;
     }
 

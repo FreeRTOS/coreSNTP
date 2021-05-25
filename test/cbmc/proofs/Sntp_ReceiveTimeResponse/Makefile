@@ -30,7 +30,7 @@ DEFINES +=-DSNTP_RECEIVE_TIMEOUT=$(SNTP_RECEIVE_TIMEOUT)
 INCLUDES +=
 
 REMOVE_FUNCTION_BODY +=Sntp_DeserializeResponse
-UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_receiveSntpResponse.0:$(MAX_NETWORK_RECV_TRIES)
+UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_receiveSntpResponse.0:$(shell expr $(MAX_NETWORK_RECV_TRIES) + 1 )
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(SNTP_RECEIVE_TIMEOUT) + 1 )
 UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
 
