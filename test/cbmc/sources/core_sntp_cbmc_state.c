@@ -98,7 +98,6 @@ SntpContext_t * allocateCoreSntpContext()
         sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
                                 bufferSize, ResolveDnsFuncStub, GetTimeFuncStub, SetTimeFuncStub,
                                 pNetworkIntf, pAuthIntf );
-        /*pContext->sntpPacketSize = 4; */
     }
 
     /* If the SntpContext_t initialization failed, then set the context to NULL
