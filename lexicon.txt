@@ -22,6 +22,7 @@ bytestosend
 bytestosend
 cbmc
 clienttime
+clienttimesec
 clienttxtime
 clockfreqtolerance
 clockoffsetsec
@@ -168,6 +169,7 @@ servernamelen
 serverport
 serverresponsetimeoutms
 servertime
+servertimesec
 servertxtime
 setsystemtimefunc
 signedfirstorderdiffrecv
