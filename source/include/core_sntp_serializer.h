@@ -312,8 +312,12 @@ typedef struct SntpResponse
      *
      * @note The library ASSUMES that the server and client systems are within
      * ~68 years of each other clock, whether in the same NTP era or across adjacent
-     * NTP eras. Thus, the client and system times MUST be within ~68 years (or 2^31 seconds
-     * exactly) of each other for correct calculation of clock-offset.
+     * NTP eras. Thus, the client and system times MUST be within ~68 years (or
+     * 2^31 seconds exactly) of each other for correct calculation of clock-offset.
+     *
+     * @note When the server and client times are exactly 2^31 (or INT32_MAX + 1 )
+     * seconds apart, the library ASSUMES that the server time is ahead of the client
+     * time, and return the clock-offset value of INT32_MAX.
      */
     int32_t clockOffsetSec;
 } SntpResponseData_t;
@@ -378,9 +382,13 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @note If the server has positively responded with its clock time, then this API
  * function will calculate the clock-offset. For the clock-offset to be correctly
  * calculated, the system clock MUST be within ~68 years (or 2^31 seconds) of the server
- * time mentioned. This function supports calculation of clock-offset when server and client
+ * time mentioned. This function supports clock-offset calculation when server and client
  * timestamps are in adjacent NTP eras, with one system is in NTP era 0 (i.e. before 7 Feb 2036
  * 6h:28m:14s UTC) and another system in NTP era 1 (on or after 7 Feb 2036 6h:28m:14s UTC).
+ *
+ * @note In the special case when the server and client times are exactly 2^31 seconds apart,
+ * the library ASSUMES that the server time is ahead of the client time, and returns the
+ * positive clock-offset value of INT32_MAX seconds.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
