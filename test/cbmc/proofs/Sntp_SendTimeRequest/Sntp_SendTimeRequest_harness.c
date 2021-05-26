@@ -35,7 +35,7 @@ void harness()
     uint32_t randomNumber;
     SntpStatus_t sntpStatus;
 
-    pContext = allocateCoreSntpContext();
+    pContext = unconstarinedCoreSntpContext();
     sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
