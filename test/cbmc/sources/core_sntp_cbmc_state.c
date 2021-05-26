@@ -34,7 +34,7 @@
     #define MAX_NO_OF_SERVERS    5
 #endif
 
-SntpContext_t * allocateCoreSntpContext()
+SntpContext_t * unconstrainedCoreSntpContext()
 {
     SntpServerInfo_t * pTimeServers;
     SntpContext_t * pContext;
