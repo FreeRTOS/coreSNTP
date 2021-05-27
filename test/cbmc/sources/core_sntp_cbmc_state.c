@@ -93,7 +93,6 @@ SntpContext_t * allocateCoreSntpContext()
      * before any other function in core_sntp_client.h. */
     if( pContext != NULL )
     {
-        pContext->numOfServers = numOfServers;
         pContext->currentServerIndex = currentServerIndex;
         sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
                                 bufferSize, ResolveDnsFuncStub, GetTimeFuncStub, SetTimeFuncStub,

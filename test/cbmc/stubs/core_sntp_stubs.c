@@ -81,6 +81,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
 
         if( bytesOrError > 0 )
         {
+            /* Accumulating all the bytes read across multiple tries before the last try. */
             read += bytesOrError;
         }
     }
@@ -89,8 +90,13 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
         tries = 0;
 
         /* This ensures that all the remaining bytes are received in the last try
-         *  if there are any bytes yet to be received and covers the case that SntpSuccess
-         *  is returned. */
+         * if there are any bytes yet to be received and covers the case that
+         * SntpSuccess is returned.
+         *
+         * @note It is possible for this logic to return a negative value
+         * if the accumulated value of read over the multiple tries is
+         * greater than SNTP_PACKET_BASE_SIZE.
+         */
         bytesOrError = SNTP_PACKET_BASE_SIZE - read;
     }
 

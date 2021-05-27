@@ -107,9 +107,6 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
  *
  * @return The function SHOULD return one of the following integer codes:
  * - #SntpSuccess when the server is successfully authenticated.
- * - #SntpServerNotAuthenticated when server could not be authenticated.
- * - #SntpErrorAuthFailure for failure to authenticate server due to internal
- * error.
  */
 SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,

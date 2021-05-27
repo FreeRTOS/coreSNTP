@@ -19,7 +19,7 @@ SNTP_RECEIVE_TIMEOUT=1
 MAX_NO_OF_SERVERS=5
 
 # Maximum number of attempts in outer loop of Sntp_ReceiveTimeResponse needed to receive a response from server.
-MAX_ITERATIONS_RECEIVE_RESPONSE=2
+MAX_ITERATIONS_RECEIVE_RESPONSE=1
 
 # This should be a unique identifier for this proof, and will appear on the
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
@@ -31,7 +31,7 @@ INCLUDES +=
 
 REMOVE_FUNCTION_BODY +=Sntp_DeserializeResponse
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_receiveSntpResponse.0:$(shell expr $(MAX_NETWORK_RECV_TRIES) + 1 )
-UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(SNTP_RECEIVE_TIMEOUT) + 1 )
+UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(MAX_ITERATIONS_RECEIVE_RESPONSE) + 1 )
 UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
 
 

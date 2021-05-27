@@ -40,6 +40,8 @@ void harness()
 
     if( pContext != NULL )
     {
+        /* Setting the initial value of request time to check for response timeout
+         * while reading data from network. */
         GetTimeFuncStub( &pContext->lastRequestTime );
     }
 
