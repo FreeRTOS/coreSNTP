@@ -32,7 +32,7 @@ INCLUDES +=
 REMOVE_FUNCTION_BODY +=Sntp_DeserializeResponse
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_receiveSntpResponse.0:$(shell expr $(MAX_NETWORK_RECV_TRIES) + 1 )
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_Sntp_ReceiveTimeResponse.0:$(shell expr $(MAX_ITERATIONS_RECEIVE_RESPONSE) + 1 )
-UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
+UNWINDSET +=unconstrainedCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
 
 
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/sources/core_sntp_cbmc_state.c
