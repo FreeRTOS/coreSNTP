@@ -109,6 +109,21 @@
 #define KOD_CODE_RATE_UINT_VALUE            ( 0x52415445U )
 
 /**
+ * @brief Macro to represent exactly half of the total number of seconds in an NTP era.
+ * As 32 bits are used to represent the "seconds" part of an SNTP timestamp, the half of
+ * the total range of seconds in an NTP era is 2^31 seconds, which represents ~68 years.
+ *
+ * @note This macro represents the edge case of calculating the client system clock-offset
+ * relative to server time as the library ASSUMES that the client and server times are within
+ * 2^31 seconds apart in duration. This is done to support calculating clock-offset for the
+ * cases when server and client systems are in adjacent NTP eras, which can occur when NTP time
+ * wraps around in 2036, and the relative NTP era presence of client and server times is
+ * determined based on comparing first order difference values between all possible NTP era
+ * configurations of the systems.
+ */
+#define CLOCK_OFFSET_MAX_TIME_DIFFERENCE    ( ( int64_t ) INT32_MAX + 1 )
+
+/**
  * @brief Macro to represent the total seconds that are represented in an NTP era period.
  * The macro value represents a duration of ~136 years.
  *
@@ -232,8 +247,8 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
      * are in the same NTP era. */
     int64_t diffWithNoEraAdjustment = serverTime - clientTime;
 
-    /* If the difference value is INT32_MIN, it means that the server and client times are away by
-     * exactly half the range of SNTP timestamp "second" values representable in unsigned 32 bits.
+    /* If the absolute difference value is 2^31 seconds, it means that the server and client times are
+     * away by exactly half the range of SNTP timestamp "second" values representable in unsigned 32 bits.
      * In this case, the NTP era presence of the server and client systems cannot be determined just
      * by comparing the first order differences of different era configurations, thus, we will ASSUME
      * that the server time is AHEAD of client time.
@@ -242,7 +257,7 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
      *, we will return the maximum value representable by signed 2^31, i.e. 2147483647, resulting in
      * an inaccuracy of 1 second in the clock-offset value.
      */
-    if( diffWithNoEraAdjustment == INT32_MIN )
+    if( absoluteOf( diffWithNoEraAdjustment ) == CLOCK_OFFSET_MAX_TIME_DIFFERENCE )
     {
         /* It does not matter whether server and client are in the same era for this
          * special case as the difference value for both same and adjacent eras will yield
@@ -279,7 +294,7 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
             eraAdjustedDiff = diffWithNoEraAdjustment;
         }
         /* Check if server time is an NTP era ahead of client time. */
-        else if( absSameEraDiff <= absServerEraAheadDiff )
+        else if( absServerEraAheadDiff < absSameEraDiff )
         {
             /* Server time is in NTP era 1 while client time is in NTP era 0. */
             eraAdjustedDiff = diffWithServerEraAdjustment;
