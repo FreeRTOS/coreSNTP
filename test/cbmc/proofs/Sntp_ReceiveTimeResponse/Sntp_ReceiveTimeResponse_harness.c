@@ -36,7 +36,7 @@ void harness()
     uint32_t blockTimeMs;
     SntpStatus_t sntpStatus;
 
-    pContext = allocateCoreSntpContext();
+    pContext = unconstrainedCoreSntpContext();
 
     if( pContext != NULL )
     {
