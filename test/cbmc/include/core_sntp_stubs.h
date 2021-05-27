@@ -24,8 +24,8 @@
  * @file core_sntp_stubs_stubs.h
  * @brief Stubs definitions of UDP transport interface and authentication interface of coreSNTP API.
  */
-#ifndef CORE_SNTP_STUBS_H_
-#define CORE_SNTP_STUBS_H_
+#ifndef CORE_SNTP_CBMC_STUBS_H_
+#define CORE_SNTP_CBMC_STUBS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -149,4 +149,4 @@ void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
                       int32_t clockOffsetSec );
 
-#endif /* ifndef CORE_SNTP_STUBS_H_ */
+#endif /* ifndef CORE_SNTP_CBMC_STUBS_H_ */

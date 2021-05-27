@@ -64,7 +64,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     __CPROVER_assert( __CPROVER_w_ok( pBuffer, bytesToRecv ),
                       "NetworkInterfaceReceiveStub pBuffer is not writable up to bytesToRecv." );
 
-    /* Clean the buffer so as to make it available to write data into it. */
+    /* The havoc fills the buffer with unconstrained values. */
     __CPROVER_havoc_object( pBuffer );
 
     int32_t bytesOrError;
@@ -149,6 +149,12 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
                                      size_t bufferSize,
                                      size_t * pAuthCodeSize )
 {
+    __CPROVER_assert( pTimeServer != NULL,
+                      "GenerateClientAuthStub Time Server is NULL." );
+
+    __CPROVER_assert( pBuffer != NULL,
+                      "GenerateClientAuthStub pBuffer is NULL." );
+
     SntpStatus_t sntpStatus = SntpSuccess;
 
     if( bufferSize <= SNTP_PACKET_BASE_SIZE )
@@ -174,6 +180,9 @@ SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
 bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
                          uint32_t * pIpV4Addr )
 {
+    __CPROVER_assert( pServerAddr != NULL,
+                      "ResolveDnsFuncStub pServerAddr is NULL." );
+
     /* For the proofs, returning a non deterministic boolean value
      * will be good enough. */
     return nondet_bool();
@@ -181,6 +190,9 @@ bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
 
 void GetTimeFuncStub( SntpTimestamp_t * pCurrentTime )
 {
+    __CPROVER_assert( pCurrentTime != NULL,
+                      "GetTimeFuncStub pCurrentTime is NULL." );
+
     bool value = nondet_bool();
 
     if( value )
@@ -199,6 +211,11 @@ void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
                       int32_t clockOffsetSec )
 {
+    __CPROVER_assert( pTimeServer != NULL,
+                      "SetTimeFuncStub pTimeServer is NULL." );
+
+    __CPROVER_assert( pServerTime != NULL,
+                      "SetTimeFuncStub pServerTime is NULL." );
 }
 
 SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
@@ -206,6 +223,12 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
                                     void * pBuffer,
                                     size_t bufferSize )
 {
+    __CPROVER_assert( pRequestTime != NULL,
+                      "Sntp_SerializeRequest pRequestTime is NULL." );
+
+    __CPROVER_assert( pBuffer != NULL,
+                      "Sntp_SerializeRequest pBuffer is NULL." );
+
     return SntpSuccess;
 }
 
