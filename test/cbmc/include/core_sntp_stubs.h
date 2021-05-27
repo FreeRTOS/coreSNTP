@@ -105,7 +105,7 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
  * authentication code after the first #SNTP_PACKET_BASE_SIZE bytes.
  * @param[in] responseSize The total size of the response from the server.
  *
- * @return The function SHOULD return #SntpSuccess
+ * @return The function ALWAYS returns #SntpSuccess
  */
 SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,
