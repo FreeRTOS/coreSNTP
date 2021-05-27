@@ -30,7 +30,7 @@
 #include "core_sntp_cbmc_state.h"
 #include "core_sntp_stubs.h"
 
-SntpContext_t * allocateCoreSntpContext()
+SntpContext_t * unconstrainedCoreSntpContext()
 {
     SntpServerInfo_t * pTimeServers;
     SntpContext_t * pContext;

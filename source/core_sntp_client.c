@@ -606,14 +606,6 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         }
         else
         {
-            /* If the system clock is not within 34 years of server time, clock offset value cannot be
-             * calculated. This case is only treated as a warning instead of an error because one the system
-             * clock is updated with the time from server, the issue will be resolved for time queries. */
-            if( status == SntpClockOffsetOverflow )
-            {
-                LogWarn( ( "Failed to calculate clock offset: System time SHOULD be within 34 years of server time." ) );
-            }
-
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
             LogDebug( ( "Updating system time: ServerTime=%u %ums ClockOffset=%us",
@@ -731,10 +723,6 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
 
         case SntpInvalidResponse:
             pString = "SntpInvalidResponse";
-            break;
-
-        case SntpClockOffsetOverflow:
-            pString = "SntpClockOffsetOverflow";
             break;
 
         case SntpZeroPollInterval:

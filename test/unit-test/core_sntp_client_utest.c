@@ -891,25 +891,6 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     Sntp_DeserializeResponse_IgnoreAndReturn( SntpInvalidResponse );
     TEST_ASSERT_EQUAL( SntpInvalidResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
-
-    /*================ Test clock offset overflow status Sntp_DeserializeResponse API========*/
-
-    /* Reset the indices of lists that control behavior of interface functions. */
-    currentTimeIndex = 0;
-    currentUdpRecvCodeIndex = 0;
-    /* Reset the current server index in the context. */
-    context.currentServerIndex = 0;
-
-    /* Test when the Sntp_DeserializeResponse API returns #SntpClockOffsetOverflow status code.
-     * The Sntp_ReceiveTimeResponse API is expected to treat that code as success and pass the
-     * information to the SntpSetTime_t interface for user-defined handling.*/
-    Sntp_DeserializeResponse_ExpectAndReturn( &context.lastRequestTime, NULL, context.pNetworkBuffer, context.sntpPacketSize, NULL, SntpClockOffsetOverflow );
-    Sntp_DeserializeResponse_IgnoreArg_pResponseRxTime();
-    Sntp_DeserializeResponse_IgnoreArg_pParsedResponse();
-    Sntp_DeserializeResponse_ReturnThruPtr_pParsedResponse( &mockResponseData );
-
-    TEST_ASSERT_EQUAL( SntpSuccess,
-                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 }
 
 void test_ReceiveTimeResponse_Nominal()
@@ -990,7 +971,6 @@ void test_StatusToStr( void )
     TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseOtherCode", Sntp_StatusToStr( SntpRejectedResponseOtherCode ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorBufferTooSmall", Sntp_StatusToStr( SntpErrorBufferTooSmall ) );
     TEST_ASSERT_EQUAL_STRING( "SntpInvalidResponse", Sntp_StatusToStr( SntpInvalidResponse ) );
-    TEST_ASSERT_EQUAL_STRING( "SntpClockOffsetOverflow", Sntp_StatusToStr( SntpClockOffsetOverflow ) );
     TEST_ASSERT_EQUAL_STRING( "SntpZeroPollInterval", Sntp_StatusToStr( SntpZeroPollInterval ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorTimeNotSupported", Sntp_StatusToStr( SntpErrorTimeNotSupported ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorChangeServer", Sntp_StatusToStr( SntpErrorChangeServer ) );
