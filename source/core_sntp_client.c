@@ -588,6 +588,11 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
                                            pContext->sntpPacketSize,
                                            &parsedResponse );
 
+        /* We do not expect the following errors to be returned as the context
+         * has been validated in the Sntp_ReceiveTimeResponse API. */
+        assert( status != SntpErrorBadParameter );
+        assert( status != SntpErrorBufferTooSmall );
+
         if( ( status == SntpRejectedResponseChangeServer ) ||
             ( status == SntpRejectedResponseRetryWithBackoff ) ||
             ( status == SntpRejectedResponseOtherCode ) )
@@ -618,6 +623,19 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
 
             status = SntpSuccess;
         }
+    }
+
+    /* Reset the last request time state in context to protect against replay attacks.*/
+    if( ( status == SntpSuccess ) || ( status == SntpRejectedResponse ) )
+    {
+        /* In the attack of SNTP request packet being replayed, the replayed request packet is serviced by
+         * SNTP/NTP server with SNTP response (as servers are stateless) and client receives the response
+         * containing new values of server timestamps but the stale value of "originate timestamp".
+         * To prevent the coreSNTP library from servicing such a server response (relating to the replayed
+         * SNTP request packet), the last request timestamp state is cleared in the context so that the
+         * response can be invalidated from "originate timestamp" not matching the last request time stored
+         * in the context. */
+        memset( &pContext->lastRequestTime, 0, sizeof( SntpTimestamp_t ) );
     }
 
     return status;
@@ -668,6 +686,10 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
             if( status == SntpSuccess )
             {
                 status = processServerResponse( pContext, &loopIterTime );
+            }
+            else if( status == SntpErrorNetworkFailure )
+            {
+                /* Nothing to be done. */
             }
 
             /* Check whether a response timeout has occurred before re-trying the

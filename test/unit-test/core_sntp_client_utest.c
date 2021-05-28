@@ -300,6 +300,11 @@ void setUp()
                                   setTime,
                                   &transportIntf,
                                   &authIntf ) );
+
+    /* Update the "Last Request Time" state of the context to a non-zero value to
+     * check that it gets cleared by the library only AFTER receiving a valid SNTP response. */
+    context.lastRequestTime.seconds = UINT32_MAX;
+    context.lastRequestTime.fractions = UINT32_MAX / 2;
 }
 
 /* Called at the beginning of the whole suite. */
@@ -755,6 +760,10 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
+    /* Ensure that the "last request time" state of the context was not modified from network error. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
+
     /*============================ Test transport receive timeouts  ==================*/
 
     /* Reset the indices of lists that control behavior of interface functions. */
@@ -769,12 +778,15 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
     currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS ); /* 2nd SntpGetTime_t call with no data read. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified from network error. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
 
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
-    currentUdpSendCodeIndex = 0;
+    currentUdpRecvCodeIndex = 0;
 
-    /* Test case when transport recv timeout occurs with partial reads initially
+    /* Test case when transport recv timeout occurs with partial reads initially and
      * no subsequent reads for #SNTP_RECV_POLLING_TIMEOUT_MS duration after that. */
     udpRecvRetCodes[ 0 ] = 1;                                                                     /* 1st call to check data availability.*/
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE / 2;                                             /* Partial data in 2nd call to receive more remaining packet.*/
@@ -784,32 +796,46 @@ void test_ReceiveTimeResponse_Transport_And_Timeout_Failures( void )
     currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_RECV_POLLING_TIMEOUT_MS * 2 ); /* SntpGetTime_t call after no data read in retry loop. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified from network error. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
 
     /*============================ Test server response timeout  ==================*/
 
     /* Test case when no data is received and server response has timed out. */
+
+    /* Set the "last request time" state of the context to different time for
+     * server response timeout tests. */
+    context.lastRequestTime.seconds = 0;
+    context.lastRequestTime.fractions = 100;
 
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
 
     /* Setup test to receive no data in the first attempt and encounter server response timeout. */
-    udpRecvRetCodes[ 0 ] = 0;                                                          /* 1st call to check data availability. Receive no data. */
-    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT ); /* 1st SntpGetTime_t call after failed attempt.. */
+    udpRecvRetCodes[ 0 ] = 0;                                                                /* 1st call to check data availability. Receive no data. */
+    currentTimeList[ 1 ].fractions = 100 + CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT ); /* 1st SntpGetTime_t call after failed attempt.. */
     TEST_ASSERT_EQUAL( SntpErrorResponseTimeout,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified from network error. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 100, context.lastRequestTime.fractions );
 
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
 
     /* Setup test to receive no data in the second read attempt and then encounter server response timeout. */
-    udpRecvRetCodes[ 0 ] = 0;                                                              /* 1st call to check data availability. Receive no data. */
-    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 2 ); /* SntpGetTime_t call after the 1st no data read attempt. */
-    udpRecvRetCodes[ 1 ] = 0;                                                              /* 2nd call to check data availability. Receive no data. */
-    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT );     /* SntpGetTime_t call after the 2nd no data read attempt. */
+    udpRecvRetCodes[ 0 ] = 0;                                                                    /* 1st call to check data availability. Receive no data. */
+    currentTimeList[ 1 ].fractions = 100 + CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 2 ); /* SntpGetTime_t call after the 1st no data read attempt. */
+    udpRecvRetCodes[ 1 ] = 0;                                                                    /* 2nd call to check data availability. Receive no data. */
+    currentTimeList[ 2 ].fractions = 100 + CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT );     /* SntpGetTime_t call after the 2nd no data read attempt. */
     TEST_ASSERT_EQUAL( SntpErrorResponseTimeout,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified from network error. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 100, context.lastRequestTime.fractions );
 }
 
 void test_ReceiveTimeResponse_Deserialization_Failures()
@@ -827,6 +853,9 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     validateServerAuthRetCode = SntpErrorAuthFailure;
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
 
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
@@ -835,8 +864,11 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     validateServerAuthRetCode = SntpServerNotAuthenticated;
     TEST_ASSERT_EQUAL( SntpServerNotAuthenticated,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+    /* Ensure that the "last request time" state of the context was not modified. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
 
-    /*================ Test de-serialization failures from Sntp_DeserializeResponse API========*/
+    /*================ Test de-serialization failures from Sntp_DeserializeResponse API ========*/
 
     /* Reset the authentication interface and SNTP packet size variables. */
     validateServerAuthRetCode = SntpSuccess;
@@ -858,9 +890,19 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     TEST_ASSERT_EQUAL( SntpRejectedResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
+
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
+
+    /* Re-assign a value for the "last request time" state of the context to check that it
+     * gets cleared for remaining test cases. */
+    context.lastRequestTime.seconds = UINT32_MAX;
+    context.lastRequestTime.fractions = UINT32_MAX / 2;
 
     /* Reset the current server index in the context. */
     context.currentServerIndex = 0;
@@ -869,15 +911,30 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     TEST_ASSERT_EQUAL( SntpRejectedResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
+
     /* Reset the indices of lists that control behavior of interface functions. */
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
     /* Reset the current server index in the context. */
     context.currentServerIndex = 0;
 
+    /* Re-assign a value for the "last request time" state of the context to check that it
+     * gets cleared for remaining test cases. */
+    context.lastRequestTime.seconds = UINT32_MAX;
+    context.lastRequestTime.fractions = UINT32_MAX / 2;
+
     Sntp_DeserializeResponse_IgnoreAndReturn( SntpRejectedResponseOtherCode );
     TEST_ASSERT_EQUAL( SntpRejectedResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
 
     /* Test when the Sntp_DeserializeResponse API returns #SntpInvalidResponse status code.
      * The Sntp_ReceiveTimeResponse API is expected to return the same code back to the caller.*/
@@ -895,6 +952,11 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
 
 void test_ReceiveTimeResponse_Nominal()
 {
+    /* Set the "last request time" state of the context for testing the no server
+     * response received case. */
+    context.lastRequestTime.seconds = 0;
+    context.lastRequestTime.fractions = 0;
+
     /* Test when no response is received from the server for the entire block time. */
     udpRecvRetCodes[ 0 ] = 0;                                                              /* 1st attempt to check data availability. No data received.*/
     udpRecvRetCodes[ 1 ] = 0;                                                              /* 2nd attempt to check data availability. No data received. */
@@ -918,6 +980,9 @@ void test_ReceiveTimeResponse_Nominal()
         currentTimeIndex = 0;                                                                                                                          \
         currentUdpRecvCodeIndex = 0;                                                                                                                   \
         context.currentServerIndex = 0;                                                                                                                \
+                                                                                                                                                       \
+        /* Set the last request time value to determine that the API function clears it on getting a  valid response. */                               \
+        context.lastRequestTime.seconds = UINT32_MAX;                                                                                                  \
     } while( 0 )                                                                                                                                       \
 
     /* Test when server response is received successfully in 1st read attempt. */
@@ -930,6 +995,10 @@ void test_ReceiveTimeResponse_Nominal()
     TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
 
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
 
     /* Test when server response is received successfully over multiple read attempts. */
 
@@ -948,6 +1017,11 @@ void test_ReceiveTimeResponse_Nominal()
     TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
 
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
+
     /* Test when server response is received without server validation. */
     COMMON_TEST_SETUP();
 
@@ -957,6 +1031,11 @@ void test_ReceiveTimeResponse_Nominal()
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1; /* Attempt to read the rest of the packet. */
     TEST_ASSERT_EQUAL( SntpSuccess,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
+
+    /* Ensure that the "Last Request Time" state has been cleared to zero as a valid SNTP
+     * response packet is received. */
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
 }
 
 /**

@@ -407,10 +407,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  *
  * @return This function returns one of the following:
  * - #SntpSuccess if the de-serialization operation is successful.
- * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
- * but clock-offset cannot be calculated due to overflow.
  * - #SntpErrorBadParameter if an invalid parameter is passed.
- * - #SntpBufferTooSmall if the buffer does not have the minimum size
+ * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
  * - #SntpInvalidResponse if the response fails sanity checks expected in an
  * SNTP response.

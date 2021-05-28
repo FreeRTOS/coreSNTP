@@ -202,6 +202,27 @@ static int64_t absoluteOf( int64_t value )
 }
 
 /**
+ * @brief Utility to determine whether a timestamp represents a zero
+ * timestamp value.
+ *
+ * @note This utility is used to determine whether a timestamp value is
+ * invalid. According to the SNTPv4 specification, a zero timestamp value
+ * is considered invalid.
+ *
+ * @param[in] pTime The timestamp whose value is to be inspected for
+ * zero value.
+ *
+ * @return `true` if the timestamp is zero; otherwise `false`.
+ */
+static bool isZeroTimestamp( const SntpTimestamp_t * pTime )
+{
+    bool isSecondsZero = ( pTime->seconds == 0U ) ? true : false;
+    bool isFractionsZero = ( pTime->fractions == 0U ) ? true : false;
+
+    return( isSecondsZero && isFractionsZero );
+}
+
+/**
  * @brief Utility to safely calculate difference between server and client timestamps of
  * unsigned integer type and return the value as a signed 64 bit integer. The calculated value
  * represents the effective subtraction as ( @p serverTimeSec - @p clientTimeSec ).
@@ -540,6 +561,10 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBufferTooSmall;
     }
+    else if( isZeroTimestamp( pRequestTime ) == true )
+    {
+        status = SntpErrorBadParameter;
+    }
     else
     {
         SntpPacket_t * pRequestPacket = ( SntpPacket_t * ) pBuffer;
@@ -591,6 +616,11 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBadParameter;
     }
+    else if( ( isZeroTimestamp( pRequestTime ) == true ) ||
+             ( isZeroTimestamp( pResponseRxTime ) == true ) )
+    {
+        status = SntpErrorBadParameter;
+    }
     else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
         status = SntpErrorBufferTooSmall;
@@ -601,6 +631,20 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
 
         /* Check if the packet represents a server in the "Mode" field. */
         if( ( pResponsePacket->leapVersionMode & SNTP_MODE_BITS_MASK ) != SNTP_MODE_SERVER )
+        {
+            status = SntpInvalidResponse;
+        }
+
+        /* Check if any of the timestamps in the response packet are zero, which is invalid.
+         * Note: This is done to protect against a nuanced server spoofing attack where if the
+         * SNTP client resets its internal state of "Client transmit timestamp" (OR "originate
+         * timestamp" from server perspective) to zero as a protection against replay attack, an
+         * an attacker with this knowledge of the client operation can spoof a server response
+         * containing the "originate timestamp" as zero. Thus, to protect against such attack,
+         * a server response packet with any zero timestamp is rejected. */
+        else if( ( isZeroTimestamp( &pResponsePacket->originTime ) == true ) ||
+                 ( isZeroTimestamp( &pResponsePacket->receiveTime ) == true ) ||
+                 ( isZeroTimestamp( &pResponsePacket->transmitTime ) == true ) )
         {
             status = SntpInvalidResponse;
         }
