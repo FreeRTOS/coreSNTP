@@ -339,7 +339,7 @@ typedef struct SntpAuthenticationIntf
     SntpGenerateAuthCode_t generateClientAuth;
 
     /**
-     * @brief The user-defined function to authenticating server from its SNTP
+     * @brief The user-defined function for authenticating server from its SNTP
      * response.
      */
     SntpValidateServerAuth_t validateServerAuth;

@@ -70,7 +70,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
         LogError( ( "Invalid parameter: Size of server list cannot be zero" ) );
         status = SntpErrorBadParameter;
     }
-    /* Validate that the members of the UDP transport interface. */
+    /* Validate that the UDP transport interface functions are valid. */
     else if( ( pTransportIntf->recvFrom == NULL ) || ( pTransportIntf->sendTo == NULL ) )
     {
         LogError( ( "Invalid parameter: Function members of UDP transport interface cannot be NULL" ) );
@@ -193,13 +193,13 @@ static bool isContextInitialized( SntpContext_t * pContext )
     {
         isValid = false;
     }
-    /* Validate that the members of the UDP transport interface. */
+    /* Validate that the UDP transport interface functions are valid. */
     else if( ( pContext->networkIntf.recvFrom == NULL ) || ( pContext->networkIntf.sendTo == NULL ) )
     {
         isValid = false;
     }
 
-    /* If an authentication interface is provided, validate that boths its function pointer
+    /* If an authentication interface is provided, validate that both its function pointer
      * members are valid. */
     else if( ( ( pContext->authIntf.generateClientAuth != NULL ) && ( pContext->authIntf.validateServerAuth == NULL ) ) ||
              ( ( pContext->authIntf.generateClientAuth == NULL ) && ( pContext->authIntf.validateServerAuth != NULL ) ) )
