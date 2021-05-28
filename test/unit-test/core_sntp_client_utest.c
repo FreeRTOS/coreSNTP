@@ -115,8 +115,8 @@ static SntpResponseData_t mockResponseData =
 /* ========================= Helper Functions ============================ */
 
 /* Test definition of the @ref SntpResolveDns_t interface. */
-bool dnsResolve( const SntpServerInfo_t * pServerAddr,
-                 uint32_t * pIpV4Addr )
+static bool dnsResolve( const SntpServerInfo_t * pServerAddr,
+                        uint32_t * pIpV4Addr )
 {
     TEST_ASSERT_NOT_NULL( pServerAddr );
     TEST_ASSERT_NOT_NULL( pIpV4Addr );
@@ -127,7 +127,7 @@ bool dnsResolve( const SntpServerInfo_t * pServerAddr,
 }
 
 /* Test definition of the @ref SntpGetTime_t interface. */
-void getTime( SntpTimestamp_t * pCurrentTime )
+static void getTime( SntpTimestamp_t * pCurrentTime )
 {
     TEST_ASSERT_NOT_NULL( pCurrentTime );
 
@@ -142,10 +142,10 @@ void getTime( SntpTimestamp_t * pCurrentTime )
 }
 
 /* Test definition of the @ref SntpSetTime_t interface. */
-void setTime( const SntpServerInfo_t * pTimeServer,
-              const SntpTimestamp_t * pServerTime,
-              int32_t clockOffsetSec,
-              SntpLeapSecondInfo_t leapSecondInfo )
+static void setTime( const SntpServerInfo_t * pTimeServer,
+                     const SntpTimestamp_t * pServerTime,
+                     int32_t clockOffsetSec,
+                     SntpLeapSecondInfo_t leapSecondInfo )
 {
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pServerTime );
@@ -155,11 +155,11 @@ void setTime( const SntpServerInfo_t * pTimeServer,
 }
 
 /* Test definition of the @ref UdpTransportSendTo_t interface. */
-int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
-                   uint32_t serverAddr,
-                   uint16_t serverPort,
-                   const void * pBuffer,
-                   size_t bytesToSend )
+static int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
+                          uint32_t serverAddr,
+                          uint16_t serverPort,
+                          const void * pBuffer,
+                          size_t bytesToSend )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -185,11 +185,11 @@ int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
 }
 
 /* Test definition of the @ref UdpTransportRecvFrom_t interface. */
-int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
-                     uint32_t serverAddr,
-                     uint16_t serverPort,
-                     void * pBuffer,
-                     size_t bytesToRecv )
+static int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
+                            uint32_t serverAddr,
+                            uint16_t serverPort,
+                            void * pBuffer,
+                            size_t bytesToRecv )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -218,11 +218,11 @@ int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
 }
 
 /* Test definition for @ref SntpGenerateAuthCode_t interface. */
-SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
-                                 const SntpServerInfo_t * pTimeServer,
-                                 void * pBuffer,
-                                 size_t bufferSize,
-                                 size_t * pAuthCodeSize )
+static SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
+                                        const SntpServerInfo_t * pTimeServer,
+                                        void * pBuffer,
+                                        size_t bufferSize,
+                                        size_t * pAuthCodeSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
@@ -236,10 +236,10 @@ SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
 }
 
 /* Test definition for @ref SntpValidateServerAuth_t interface. */
-SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
-                                 const SntpServerInfo_t * pTimeServer,
-                                 const void * pResponseData,
-                                 size_t responseSize )
+static SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
+                                        const SntpServerInfo_t * pTimeServer,
+                                        const void * pResponseData,
+                                        size_t responseSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
@@ -248,6 +248,122 @@ SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
 
     return validateServerAuthRetCode;
 }
+
+/* Enumeration for the API functions of the SNTP Client layer. */
+enum SntpClientApiType
+{
+    ApiInvalid,
+    ApiSendTimeRequest,
+    ApiReceiveTimeResponse
+};
+
+/* Common function for testing all scenarios of invalid context. */
+static void testApiForInvalidContextCases( enum SntpClientApiType api )
+{
+#define SELECT_API_AND_TEST_INVALID_CONTEXT( api, context )                                                   \
+    do {                                                                                                      \
+        if( api == ApiSendTimeRequest )                                                                       \
+        {                                                                                                     \
+            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_SendTimeRequest( &context,                \
+                                                                                     rand() % UINT32_MAX ) ); \
+        }                                                                                                     \
+        else                                                                                                  \
+        {                                                                                                     \
+            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_ReceiveTimeResponse( &context, 0 ) );     \
+        }                                                                                                     \
+    } while( 0 )
+
+
+    /* Start with a non-initialized context. */
+    SntpContext_t testContext;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Now fully initialize context and then test all scenarios with only one member being invalid. */
+    TEST_ASSERT_EQUAL( SntpSuccess,
+                       Sntp_Init( &testContext,
+                                  testServers,
+                                  sizeof( testServers ) / sizeof( SntpServerInfo_t ),
+                                  TEST_RESPONSE_TIMEOUT,
+                                  testBuffer,
+                                  sizeof( testBuffer ),
+                                  dnsResolve,
+                                  getTime,
+                                  setTime,
+                                  &transportIntf,
+                                  &authIntf ) );
+
+    /* Test with invalid servers in the context. */
+    testContext.pTimeServers = NULL;
+    testContext.numOfServers = 0;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+    testContext.pTimeServers = testServers;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the server list to be valid. */
+    testContext.pTimeServers = testServers;
+    testContext.numOfServers = sizeof( testServers ) / sizeof( SntpServerInfo_t );
+
+    /* Test with invalid network buffer and/or buffer size in the context. */
+    testContext.pNetworkBuffer = NULL;
+    testContext.bufferSize = 0;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+    testContext.pNetworkBuffer = testBuffer;
+    testContext.bufferSize = SNTP_PACKET_BASE_SIZE - 1;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the network buffer and size to be valid in the context. */
+    testContext.pNetworkBuffer = testBuffer;
+    testContext.bufferSize = sizeof( testBuffer );
+
+    /* Test with invalid DNS Resolution interface function. */
+    testContext.resolveDnsFunc = NULL;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the DNS Resolution function pointer to be valid. */
+    testContext.resolveDnsFunc = dnsResolve;
+
+    /* Test with invalid SntpGetTime_t interface function. */
+    testContext.getTimeFunc = NULL;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the SntpGetTime_t function pointer to be valid. */
+    testContext.getTimeFunc = getTime;
+
+    /* Test with invalid SntpSetTime_t interface function. */
+    testContext.setTimeFunc = NULL;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the SntpSetTime_t function pointer to be valid. */
+    testContext.setTimeFunc = setTime;
+
+    /* Test with invalid SntpSetTime_t interface function. */
+    testContext.networkIntf.recvFrom = NULL;
+    testContext.networkIntf.sendTo = NULL;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+    testContext.networkIntf.sendTo = UdpSendTo;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+    testContext.networkIntf.sendTo = NULL;
+    testContext.networkIntf.recvFrom = UdpRecvFrom;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Reset the network interface function pointers to be valid. */
+    testContext.networkIntf.sendTo = UdpSendTo;
+    testContext.networkIntf.recvFrom = UdpRecvFrom;
+
+    /* Test cases when only one of the authentication interface functions is set,
+     * instead of both. */
+    testContext.authIntf.generateClientAuth = NULL;
+    testContext.authIntf.validateServerAuth = validateServerAuth;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+    testContext.authIntf.generateClientAuth = generateClientAuth;
+    testContext.authIntf.validateServerAuth = NULL;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+
+    /* Test with invalid value of the sntpPacketSize member of the context. */
+    testContext.sntpPacketSize = SNTP_PACKET_BASE_SIZE - 1;
+    SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
+}
+
 
 /* ============================   UNITY FIXTURES ============================ */
 
@@ -573,6 +689,9 @@ void test_Sntp_SendTimeRequest_ErrorCases()
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_SendTimeRequest( NULL, rand() % UINT32_MAX ) );
 
+    /* Test all cases of context with invalid members. */
+    testApiForInvalidContextCases( ApiSendTimeRequest );
+
     /* Test case when no remaining server exists to request time from. */
     context.currentServerIndex = sizeof( testServers ) / sizeof( SntpServerInfo_t );
     TEST_ASSERT_EQUAL( SntpErrorChangeServer,
@@ -664,7 +783,7 @@ void test_SendTimeRequest_Nominal( void )
     /* Set the size of authentication data within the SNTP packet. */
     authCodeSize = sizeof( testBuffer ) - SNTP_PACKET_BASE_SIZE - 1;
 
-#define TEST_SUCCESS_CASE( generateClientAuthFunc, timeBeforeLoop, timeIn1stIteration )                                         \
+#define TEST_SUCCESS_CASE( packetSize, timeBeforeLoop, timeIn1stIteration )                                                     \
     do {                                                                                                                        \
         /* Reset indices to lists controlling behavior of interface functions. */                                               \
         currentTimeIndex = 0;                                                                                                   \
@@ -674,12 +793,8 @@ void test_SendTimeRequest_Nominal( void )
         Sntp_SerializeRequest_ExpectAndReturn( &context.lastRequestTime, randNum,                                               \
                                                testBuffer, sizeof( testBuffer ), SntpSuccess );                                 \
                                                                                                                                 \
-        /* Set expected packet size of SNTP request, depending on whether client  authentication data is used. */               \
-        expectedBytesToSend = ( generateClientAuthFunc == NULL ) ?                                                              \
-                              SNTP_PACKET_BASE_SIZE : SNTP_PACKET_BASE_SIZE + authCodeSize;                                     \
-                                                                                                                                \
-        /* Set the @ref SntpGenerateAuthCode_t interface in the context. */                                                     \
-        context.authIntf.generateClientAuth = generateClientAuthFunc;                                                           \
+        /* Update the global variable of expected number of bytes to send with network send function. */                        \
+        expectedBytesToSend = packetSize;                                                                                       \
                                                                                                                                 \
         /* Set the behavior of the transport send and get time interface functions. */                                          \
         udpSendRetCodes[ 0 ] = 0;                                      /* 1st return value for partial data send. */            \
@@ -699,10 +814,14 @@ void test_SendTimeRequest_Nominal( void )
     inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
 
     /* Test when no authentication interface is provided. */
-    TEST_SUCCESS_CASE( NULL, beforeLoopTime, inLoopTime );
+    context.authIntf.generateClientAuth = NULL;
+    context.authIntf.validateServerAuth = NULL;
+    TEST_SUCCESS_CASE( SNTP_PACKET_BASE_SIZE, beforeLoopTime, inLoopTime );
 
     /* Test when an authentication interface is provided. */
-    TEST_SUCCESS_CASE( generateClientAuth, beforeLoopTime, inLoopTime );
+    context.authIntf.generateClientAuth = generateClientAuth;
+    context.authIntf.validateServerAuth = validateServerAuth;
+    TEST_SUCCESS_CASE( SNTP_PACKET_BASE_SIZE + authCodeSize, beforeLoopTime, inLoopTime );
 
     /* Test edge case when SNTP time overflows (i.e. at 7 Feb 2036 6h 28m 16s UTC )
      * during the send operation. */
@@ -711,7 +830,7 @@ void test_SendTimeRequest_Nominal( void )
     inLoopTime.seconds = 0;                /* Time in SNTP era 1. */
     inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
     /* Test when an authentication interface is provided. */
-    TEST_SUCCESS_CASE( generateClientAuth, beforeLoopTime, inLoopTime );
+    TEST_SUCCESS_CASE( SNTP_PACKET_BASE_SIZE + authCodeSize, beforeLoopTime, inLoopTime );
 }
 
 /**
@@ -722,6 +841,9 @@ void test_Sntp_ReceiveTimeResponse_InvalidParams()
     /* Test with NULL context parameter. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_ReceiveTimeResponse( NULL, TEST_RESPONSE_TIMEOUT ) );
+
+    /* Test all cases of context with invalid members. */
+    testApiForInvalidContextCases( ApiReceiveTimeResponse );
 
     /* Test case when API is called even though all servers in the list have been
      * exhausted from use . */
@@ -953,6 +1075,7 @@ void test_ReceiveTimeResponse_Nominal()
 
     /* Test when server response is received without server validation. */
     context.authIntf.validateServerAuth = NULL;       /* Remove the authentication interface from the context. */
+    context.authIntf.generateClientAuth = NULL;
     udpRecvRetCodes[ 0 ] = 1;                         /* 1st attempt to check data availability. */
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1; /* Attempt to read the rest of the packet. */
     TEST_ASSERT_EQUAL( SntpSuccess,
