@@ -169,21 +169,27 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  *
  * @param[in] pContext The SNTP context to validate.
  *
- * @return `true` if the context is validated to be initialized; `false`
- * if any member of the context is invalid.
+ * @return Returns one of the following:
+ * - #SntpSuccess if the context is verified to be initialized.
+ * - #SntpErrorBadParameter if the context is NULL.
+ * - #SntpErrorContextNotInitialized if the context is validated to be initialized.
  */
-static bool isContextInitialized( SntpContext_t * pContext )
+static SntpStatus_t validateContext( SntpContext_t * pContext )
 {
-    bool isValid = false;
+    SntpStatus_t status = SntpSuccess;
 
-    assert( pContext != NULL );
+    /* Check if the context parameter is invalid. */
+    if( pContext == NULL )
+    {
+        status = SntpErrorBadParameter;
+    }
 
     /* Validate pointer parameters are not NULL. */
-    if( ( pContext->pTimeServers == NULL ) || ( pContext->pNetworkBuffer == NULL ) ||
-        ( pContext->resolveDnsFunc == NULL ) ||
-        ( pContext->getTimeFunc == NULL ) || ( pContext->setTimeFunc == NULL ) )
+    else if( ( pContext->pTimeServers == NULL ) || ( pContext->pNetworkBuffer == NULL ) ||
+             ( pContext->resolveDnsFunc == NULL ) ||
+             ( pContext->getTimeFunc == NULL ) || ( pContext->setTimeFunc == NULL ) )
     {
-        isValid = false;
+        status = SntpErrorContextNotInitialized;
     }
 
     /* Validate the size of the configured servers list, network buffer size and the state
@@ -191,12 +197,12 @@ static bool isContextInitialized( SntpContext_t * pContext )
     else if( ( pContext->numOfServers == 0U ) || ( pContext->bufferSize < SNTP_PACKET_BASE_SIZE ) ||
              ( pContext->sntpPacketSize < SNTP_PACKET_BASE_SIZE ) )
     {
-        isValid = false;
+        status = SntpErrorContextNotInitialized;
     }
     /* Validate that the UDP transport interface functions are valid. */
     else if( ( pContext->networkIntf.recvFrom == NULL ) || ( pContext->networkIntf.sendTo == NULL ) )
     {
-        isValid = false;
+        status = SntpErrorContextNotInitialized;
     }
 
     /* If an authentication interface is provided, validate that both its function pointer
@@ -204,14 +210,14 @@ static bool isContextInitialized( SntpContext_t * pContext )
     else if( ( ( pContext->authIntf.generateClientAuth != NULL ) && ( pContext->authIntf.validateServerAuth == NULL ) ) ||
              ( ( pContext->authIntf.generateClientAuth == NULL ) && ( pContext->authIntf.validateServerAuth != NULL ) ) )
     {
-        isValid = false;
+        status = SntpErrorContextNotInitialized;
     }
     else
     {
-        isValid = true;
+        status = SntpSuccess;
     }
 
-    return isValid;
+    return status;
 }
 
 /**
@@ -384,16 +390,12 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
 {
     SntpStatus_t status = SntpSuccess;
 
-    if( pContext == NULL )
-    {
-        status = SntpErrorBadParameter;
-        LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
-    }
+    /* Validate the context parameter. */
+    status = validateContext( pContext );
 
-    else if( isContextInitialized( pContext ) == false )
+    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
     {
-        status = SntpErrorContextNotInitialized;
-        LogError( ( "Invalid parameter: Context is not initialized with Sntp_Init" ) );
+        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
     }
 
     /* Check if there is any time server available for requesting time
@@ -515,7 +517,6 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
     assert( pTransportIntf != NULL );
     assert( pTransportIntf->recvFrom != NULL );
     assert( pBuffer != NULL );
-    assert( responseSize >= SNTP_PACKET_BASE_SIZE );
 
     /* Check whether there is any data available on the network to read by attempting to read
      * a single byte. */
@@ -569,7 +570,6 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
     }
     else if( bytesRead == 0 )
     {
-        LogDebug( ( "No data available on the network to read." ) );
         status = SntpNoResponseReceived;
     }
     else
@@ -689,16 +689,12 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 {
     SntpStatus_t status = SntpNoResponseReceived;
 
-    if( pContext == NULL )
-    {
-        status = SntpErrorBadParameter;
-        LogError( ( "Invalid context parameter: Context cannot be NULL" ) );
-    }
+    /* Validate the context parameter. */
+    status = validateContext( pContext );
 
-    else if( isContextInitialized( pContext ) == false )
+    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
     {
-        status = SntpErrorContextNotInitialized;
-        LogError( ( "Invalid parameter: Context is not initialized with Sntp_Init" ) );
+        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
     }
 
     /* Check whether there is any remaining server in the list of configured
