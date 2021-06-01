@@ -47,7 +47,7 @@
  * return an unbound value. At this value and beyond, the
  * NetworkInterfaceReceiveStub will return zero on every call. */
 #ifndef MAX_NETWORK_RECV_TRIES
-    #define MAX_NETWORK_RECV_TRIES    4
+    #define MAX_NETWORK_RECV_TRIES    5
 #endif
 
 static SntpTimestamp_t testTime = TEST_TIMESTAMP;
@@ -69,6 +69,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
 
     int32_t bytesOrError;
     static size_t tries = 0;
+    static size_t read = 0;
 
     /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
@@ -77,11 +78,26 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
     if( tries < ( MAX_NETWORK_RECV_TRIES - 1 ) )
     {
         tries++;
+
+        if( bytesOrError > 0 )
+        {
+            /* Accumulating all the bytes read across multiple tries before the last try. */
+            read += bytesOrError;
+        }
     }
     else
     {
         tries = 0;
-        bytesOrError = 0;
+
+        /* This ensures that all the remaining bytes are received in the last try
+         * if there are any bytes yet to be received and covers the case that
+         * SntpSuccess is returned.
+         *
+         * @note It is possible for this logic to return a negative value
+         * if the accumulated value of read over the multiple tries is
+         * greater than SNTP_PACKET_BASE_SIZE.
+         */
+        bytesOrError = SNTP_PACKET_BASE_SIZE - read;
     }
 
     return bytesOrError;
@@ -120,6 +136,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
     else
     {
         tries = 0;
+        /* This ensures that all the remaining bytes are sent in the last try. */
         bytesOrError = bytesToSend;
     }
 
@@ -150,6 +167,14 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
     }
 
     return sntpStatus;
+}
+
+SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
+                                     const SntpServerInfo_t * pTimeServer,
+                                     const void * pResponseData,
+                                     size_t responseSize )
+{
+    return SntpSuccess;
 }
 
 bool ResolveDnsFuncStub( const SntpServerInfo_t * pServerAddr,
@@ -205,4 +230,20 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
                       "Sntp_SerializeRequest pBuffer is NULL." );
 
     return SntpSuccess;
+}
+
+SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
+                                       const SntpTimestamp_t * pResponseRxTime,
+                                       const void * pResponseBuffer,
+                                       size_t bufferSize,
+                                       SntpResponseData_t * pParsedResponse )
+{
+    if( nondet_bool() )
+    {
+        return SntpSuccess;
+    }
+    else
+    {
+        return SntpRejectedResponseRetryWithBackoff;
+    }
 }

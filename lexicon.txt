@@ -183,12 +183,14 @@ sntperrorauthfailure
 sntperrorbadparameter
 sntperrorbuffertoosmall
 sntperrorchangeserver
+sntperrorcontextnotinitialized
 sntperrordnsfailure
 sntperrornetworkfailure
 sntperrorresponsetimeout
 sntperrortimenotsupported
 sntpinvalidresponse
 sntpnoresponse
+sntppacketsize
 sntprejectedresponse
 sntprejectedresponsechangeserver
 sntprejectedresponseothercode
