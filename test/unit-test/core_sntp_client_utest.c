@@ -276,6 +276,7 @@ static void testApiForInvalidContextCases( enum SntpClientApiType api )
 
     /* Start with a non-initialized context. */
     SntpContext_t testContext;
+    memset( &testContext, 0, sizeof( SntpContext_t ) );
     SELECT_API_AND_TEST_INVALID_CONTEXT( api, testContext );
 
     /* Now fully initialize context and then test all scenarios with only one member being invalid. */
