@@ -247,6 +247,10 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
      * are in the same NTP era. */
     int64_t diffWithNoEraAdjustment = serverTime - clientTime;
 
+    /* Store the absolute value of the time difference which will be used for comparison with
+     * different cases of relative NTP era configuration of client and server times. */
+    int64_t absSameEraDiff = absoluteOf( diffWithNoEraAdjustment );
+
     /* If the absolute difference value is 2^31 seconds, it means that the server and client times are
      * away by exactly half the range of SNTP timestamp "second" values representable in unsigned 32 bits.
      * In this case, the NTP era presence of the server and client systems cannot be determined just
@@ -257,7 +261,7 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
      *, we will return the maximum value representable by signed 2^31, i.e. 2147483647, resulting in
      * an inaccuracy of 1 second in the clock-offset value.
      */
-    if( absoluteOf( diffWithNoEraAdjustment ) == CLOCK_OFFSET_MAX_TIME_DIFFERENCE )
+    if( absSameEraDiff == CLOCK_OFFSET_MAX_TIME_DIFFERENCE )
     {
         /* It does not matter whether server and client are in the same era for this
          * special case as the difference value for both same and adjacent eras will yield
@@ -282,7 +286,6 @@ static int64_t safeTimeDifference( uint32_t serverTimeSec,
 
         /* Store the absolute value equivalents of all the time difference configurations
          * for easier comparison to smallest value from them. */
-        int64_t absSameEraDiff = absoluteOf( diffWithNoEraAdjustment );
         int64_t absServerEraAheadDiff = absoluteOf( diffWithServerEraAdjustment );
         int64_t absClientEraAheadDiff = absoluteOf( diffWithClientEraAdjustment );
 
