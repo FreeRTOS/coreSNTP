@@ -339,7 +339,7 @@ typedef struct SntpAuthenticationIntf
     SntpGenerateAuthCode_t generateClientAuth;
 
     /**
-     * @brief The user-defined function to authenticating server from its SNTP
+     * @brief The user-defined function for authenticating server from its SNTP
      * response.
      */
     SntpValidateServerAuth_t validateServerAuth;
@@ -528,6 +528,8 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  *  - #SntpSuccess if a time request is successfully sent to the currently configured
  * time server in the context.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
+ *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
+ * to the function.
  *  - #SntpErrorChangeServer if there is no server remaining in the list of configured
  * servers that has not rejected a prior time request.
  *  - #SntpErrorDnsFailure if there is failure in the user-defined function for
@@ -580,6 +582,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  *
  * @return This API functions returns one of the following:
  *  - #SntpSuccess if a successful server response is received.
+ *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
+ * to the function.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
  *  - #SntpErrorChangeServer if all servers configured in the context have already
  * rejected time requests in previous attempts, and application SHOULD change server(s)
