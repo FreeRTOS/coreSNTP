@@ -570,16 +570,22 @@ void test_DeserializeResponse_AcceptedResponse_ClockOffset_Edge_Cases( void )
      * is ahead of the client in this special case, and thus return the maximum
      * signed 32 bit integer as the clock-offset.
      */
-    serverTime.seconds = clientTime.seconds - INT32_MAX - 1;
-    testClockOffsetCalculation( &clientTime, &serverTime,
-                                &serverTime, &clientTime,
-                                SntpSuccess,
-                                INT32_MAX );
+    /* Case when "Server Time - Client Time" results in negative value. */
     serverTime.seconds = clientTime.seconds + INT32_MAX + 1;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
                                 SntpSuccess,
                                 INT32_MAX );
+    /* Test when "Server Time - Client Time" results in positive value. */
+    serverTime.seconds = UINT32_MAX;
+    clientTime.seconds = serverTime.seconds - INT32_MAX - 1;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                INT32_MAX );
+
+    /* Reset client time to UINT32_MAX */
+    clientTime.seconds = UINT32_MAX;
 
     /* Now test cases when the server and client times are exactly
      * INT32_MAX seconds apart. */

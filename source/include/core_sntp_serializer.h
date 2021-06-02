@@ -228,7 +228,13 @@ typedef enum SntpStatus
      * @brief No SNTP packet for server response is received from the network by the
      * @ref Sntp_ReceiveTimeResponse API.
      */
-    SntpNoResponseReceived
+    SntpNoResponseReceived,
+
+    /**
+     * @brief The SNTP context passed to @ref Sntp_SendTimeRequest or @ref Sntp_ReceiveTimeResponse APIs is
+     * is uninitialized.
+     */
+    SntpErrorContextNotInitialized
 } SntpStatus_t;
 
 /**

@@ -21,26 +21,40 @@
  */
 
 /**
- * @file Sntp_SendTimeRequest_harness.c
- * @brief Implements the proof harness for Sntp_SendTimeRequest function.
+ * @file Sntp_ReceiveTimeResponse_harness.c
+ * @brief Implements the proof harness for Sntp_ReceiveTimeResponse function.
  */
 
 #include <stddef.h>
-#include "core_sntp_client.h"
 #include "core_sntp_cbmc_state.h"
+#include "core_sntp_stubs.h"
+#include "core_sntp_client.h"
 
 void harness()
 {
     SntpContext_t * pContext;
-    uint32_t randomNumber;
+    uint32_t blockTimeMs;
     SntpStatus_t sntpStatus;
 
     pContext = unconstrainedCoreSntpContext();
-    sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber );
+
+    if( pContext != NULL )
+    {
+        /* Setting the initial value of request time to check for response timeout
+         * while reading data from network. */
+        GetTimeFuncStub( &pContext->lastRequestTime );
+    }
+
+    /* The SNTP_RECEIVE_TIMEOUT is used here to control the number of loops
+     * when receiving on the network. The default is used here because memory
+     * safety can be proven in only a few iterations. Please see this proof's
+     * Makefile for more information. */
+    __CPROVER_assume( blockTimeMs < SNTP_RECEIVE_TIMEOUT );
+
+    sntpStatus = Sntp_ReceiveTimeResponse( pContext, blockTimeMs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
-                        sntpStatus == SntpErrorContextNotInitialized ||
-                        sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorChangeServer ||
-                        sntpStatus == SntpErrorDnsFailure || sntpStatus == SntpErrorAuthFailure ||
+                        sntpStatus == SntpNoResponseReceived || sntpStatus == SntpErrorChangeServer ||
+                        sntpStatus == SntpRejectedResponse || sntpStatus == SntpErrorResponseTimeout ||
                         sntpStatus == SntpErrorNetworkFailure ), "The return value is not a valid SNTP Status" );
 }

@@ -21,26 +21,32 @@
  */
 
 /**
- * @file Sntp_SendTimeRequest_harness.c
- * @brief Implements the proof harness for Sntp_SendTimeRequest function.
+ * @file Sntp_DeserializeResponse_harness.c
+ * @brief Implements the proof harness for Sntp_DeserializeResponse function.
  */
 
-#include <stddef.h>
-#include "core_sntp_client.h"
-#include "core_sntp_cbmc_state.h"
+#include <stdint.h>
+#include "core_sntp_serializer.h"
 
 void harness()
 {
-    SntpContext_t * pContext;
-    uint32_t randomNumber;
+    SntpTimestamp_t * pRequestTime;
+    SntpTimestamp_t * pResponseRxTime;
+    void * pResponseBuffer;
+    size_t bufferSize;
+    SntpResponseData_t * pParsedResponse;
     SntpStatus_t sntpStatus;
 
-    pContext = unconstrainedCoreSntpContext();
-    sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber );
+    __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
-                        sntpStatus == SntpErrorContextNotInitialized ||
-                        sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorChangeServer ||
-                        sntpStatus == SntpErrorDnsFailure || sntpStatus == SntpErrorAuthFailure ||
-                        sntpStatus == SntpErrorNetworkFailure ), "The return value is not a valid SNTP Status" );
+    pRequestTime = malloc( sizeof( SntpTimestamp_t ) );
+    pResponseRxTime = malloc( sizeof( SntpTimestamp_t ) );
+    pResponseBuffer = malloc( bufferSize );
+    pParsedResponse = malloc( sizeof( SntpResponseData_t ) );
+
+    sntpStatus = Sntp_DeserializeResponse( pRequestTime, pResponseRxTime, pResponseBuffer, bufferSize, pParsedResponse );
+
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter ) || ( sntpStatus == SntpErrorBufferTooSmall ) ||
+                      ( sntpStatus == SntpInvalidResponse ) || ( sntpStatus == SntpSuccess ) || ( sntpStatus == SntpRejectedResponseChangeServer ) ||
+                      ( sntpStatus == SntpRejectedResponseRetryWithBackoff ) || ( sntpStatus == SntpRejectedResponseOtherCode ), "This is a valid sntp return status" );
 }

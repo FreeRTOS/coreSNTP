@@ -22,7 +22,7 @@ INCLUDES +=
 # for this function
 REMOVE_FUNCTION_BODY +=Sntp_SerializeRequest
 UNWINDSET +=__CPROVER_file_local_core_sntp_client_c_sendSntpPacket.0:$(MAX_NETWORK_SEND_TRIES)
-UNWINDSET +=allocateCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
+UNWINDSET +=unconstrainedCoreSntpContext.0:$(shell expr $(MAX_NO_OF_SERVERS) + 1 )
 
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/sources/core_sntp_cbmc_state.c
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/core_sntp_stubs.c
