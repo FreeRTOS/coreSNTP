@@ -731,6 +731,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     else
     {
         SntpTimestamp_t startTime, loopIterTime;
+        const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
 
         pContext->getTimeFunc( &startTime );
 
@@ -755,24 +756,16 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
             {
                 status = processServerResponse( pContext, &loopIterTime );
             }
-            else if( status == SntpErrorNetworkFailure )
-            {
-                /* Nothing to be done. */
-            }
 
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
-            else if( calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) >= pContext->responseTimeoutMs )
+            if( ( status == SntpNoResponseReceived ) &&
+                ( calculateElapsedTimeMs( &loopIterTime, pRequestTime ) >= pContext->responseTimeoutMs ) )
             {
                 status = SntpErrorResponseTimeout;
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
-                            "TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
-                            FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ),
-                            calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) ) );
-            }
-            else
-            {
-                /* Empty else marker. */
+                            "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
+                            calculateElapsedTimeMs( &loopIterTime, pRequestTime ) ) );
             }
         } while( ( status == SntpNoResponseReceived ) &&
                  ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
