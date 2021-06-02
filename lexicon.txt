@@ -132,6 +132,7 @@ pserverrxtime
 pservertime
 pservertxtime
 psntptime
+ptime
 ptimeserver
 ptimeservers
 ptr
