@@ -692,10 +692,15 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         /* In the attack of SNTP request packet being replayed, the replayed request packet is serviced by
          * SNTP/NTP server with SNTP response (as servers are stateless) and client receives the response
          * containing new values of server timestamps but the stale value of "originate timestamp".
-         * To prevent the coreSNTP library from servicing such a server response (relating to the replayed
-         * SNTP request packet), the last request timestamp state is cleared in the context so that the
-         * response can be invalidated from "originate timestamp" not matching the last request time stored
-         * in the context. */
+         * To prevent the coreSNTP library from servicing such a server response (associated with the replayed
+         * SNTP request packet), the last request timestamp state is cleared in the context after receiving the
+         * first valid server response. Therefore, any subsequent server response(s) from replayed client request
+         * packets can be invalidated due to the "originate timestamp" not matching the last request time stored
+         * in the context.
+         * Note: If an attacker spoofs a server response with a zero "originate timestamp" after the coreSNTP
+         * library (i.e. the SNTP client) has cleared the internal state to zero, the spoofed packet will be
+         * discarded as the coreSNTP serializer does not accept server responses with zero value for timestamps.
+         */
         memset( &pContext->lastRequestTime, 0, sizeof( SntpTimestamp_t ) );
     }
 

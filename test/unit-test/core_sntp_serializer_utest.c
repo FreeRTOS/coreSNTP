@@ -232,7 +232,7 @@ void test_SerializeRequest_InvalidParams( void )
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_SerializeRequest( &zeroTimestamp,
                                               ( rand() % UINT32_MAX ),
-                                              NULL,
+                                              testBuffer,
                                               sizeof( testBuffer ) ) );
 
     /* Pass a buffer size less than 48 bytes of minimum SNTP packet size. */
@@ -299,7 +299,6 @@ void test_SerializeRequest_NominalCase( void )
                                   sizeof( SntpTimestamp_t ) ) );
 }
 
-
 /**
  * @brief Test @ref Sntp_DeserializeResponse with invalid parameters.
  */
@@ -351,15 +350,7 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  &testTime,
                                                  testBuffer,
                                                  sizeof( testBuffer ),
-                                                 NULL ) );
-
-    /* Pass zero timestamp for response time. */
-    TEST_ASSERT_EQUAL( SntpErrorBadParameter,
-                       Sntp_DeserializeResponse( &testTime,
-                                                 &zeroTimestamp,
-                                                 testBuffer,
-                                                 sizeof( testBuffer ),
-                                                 NULL ) );
+                                                 &parsedData ) );
 }
 
 /**

@@ -579,6 +579,11 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBufferTooSmall;
     }
+
+    /* Zero timestamps for client request time is not allowed to protect against
+     * attack spoofing server response containing zero value for "originate timestamp".
+     * Note: In SNTP/NTP communication, the "originate timestamp" of a valid server response
+     * matches the "transmit timestamp" in corresponding client request packet. */
     else if( isZeroTimestamp( pRequestTime ) == true )
     {
         status = SntpErrorBadParameter;
@@ -634,54 +639,51 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
     {
         status = SntpErrorBadParameter;
     }
-    else if( ( isZeroTimestamp( pRequestTime ) == true ) ||
-             ( isZeroTimestamp( pResponseRxTime ) == true ) )
-    {
-        status = SntpErrorBadParameter;
-    }
     else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
         status = SntpErrorBufferTooSmall;
     }
-    else
+
+    /* Zero timestamps for client request time is not allowed to protect against
+     * attack spoofing server response containing zero value for "originate timestamp".
+     * Note: In SNTP/NTP communication, the "originate timestamp" of a valid server response
+     * matches the "transmit timestamp" in corresponding client request packet. */
+    else if( isZeroTimestamp( pRequestTime ) == true )
     {
-        /* Check that the server response is valid. */
-
-        /* Check if the packet represents a server in the "Mode" field. */
-        if( ( pResponsePacket->leapVersionMode & SNTP_MODE_BITS_MASK ) != SNTP_MODE_SERVER )
-        {
-            status = SntpInvalidResponse;
-        }
-
-        /* Check if any of the timestamps in the response packet are zero, which is invalid.
-         * Note: This is done to protect against a nuanced server spoofing attack where if the
-         * SNTP client resets its internal state of "Client transmit timestamp" (OR "originate
-         * timestamp" from server perspective) to zero as a protection against replay attack, an
-         * an attacker with this knowledge of the client operation can spoof a server response
-         * containing the "originate timestamp" as zero. Thus, to protect against such attack,
-         * a server response packet with any zero timestamp is rejected. */
-        else if( ( isZeroTimestamp( &pResponsePacket->originTime ) == true ) ||
-                 ( isZeroTimestamp( &pResponsePacket->receiveTime ) == true ) ||
-                 ( isZeroTimestamp( &pResponsePacket->transmitTime ) == true ) )
-        {
-            status = SntpInvalidResponse;
-        }
-
-        if( status == SntpSuccess )
-        {
-            /* Validate that the server has sent the client's request timestamp in the
-             * "originate" timestamp field of the response. */
-            if( ( pRequestTime->seconds !=
-                  readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.seconds ) ) ||
-                ( pRequestTime->fractions !=
-                  readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.fractions ) ) )
-            {
-                status = SntpInvalidResponse;
-            }
-        }
+        status = SntpErrorBadParameter;
+    }
+    /* Check if the packet represents a server in the "Mode" field. */
+    else if( ( pResponsePacket->leapVersionMode & SNTP_MODE_BITS_MASK ) != SNTP_MODE_SERVER )
+    {
+        status = SntpInvalidResponse;
     }
 
-    if( status == SntpSuccess )
+    /* Check if any of the timestamps in the response packet are zero, which is invalid.
+     * Note: This is done to protect against a nuanced server spoofing attack where if the
+     * SNTP client resets its internal state of "Client transmit timestamp" (OR "originate
+     * timestamp" from server perspective) to zero as a protection against replay attack, an
+     * an attacker with this knowledge of the client operation can spoof a server response
+     * containing the "originate timestamp" as zero. Thus, to protect against such attack,
+     * a server response packet with any zero timestamp is rejected. */
+    else if( ( isZeroTimestamp( &pResponsePacket->originTime ) == true ) ||
+             ( isZeroTimestamp( &pResponsePacket->receiveTime ) == true ) ||
+             ( isZeroTimestamp( &pResponsePacket->transmitTime ) == true ) )
+    {
+        status = SntpInvalidResponse;
+    }
+
+
+    /* Validate that the server has sent the client's request timestamp in the
+     * "originate" timestamp field of the response. */
+    else if( ( pRequestTime->seconds !=
+               readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.seconds ) ) ||
+             ( pRequestTime->fractions !=
+               readWordFromNetworkByteOrderMemory( &pResponsePacket->originTime.fractions ) ) )
+
+    {
+        status = SntpInvalidResponse;
+    }
+    else
     {
         /* As the response packet is valid, parse more information from it and
          * populate the output parameter. */
