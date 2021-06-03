@@ -77,6 +77,7 @@ jan
 january
 june
 kod
+lastrequesttime
 leapsecondinfo
 leapversionmode
 lsb
