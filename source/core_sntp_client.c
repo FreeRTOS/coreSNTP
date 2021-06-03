@@ -686,8 +686,15 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         }
     }
 
-    /* Reset the last request time state in context to protect against replay attacks.*/
-    if( ( status == SntpSuccess ) || ( status == SntpRejectedResponse ) )
+    /* Reset the last request time state in context to protect against replay attacks.
+     * Note: The last request time is not cleared when a rejection response packet is received and the client does
+     * has not authenticated server from the response. This is because clearing of the state causes the coreSNTP
+     * library to discard any subsequent server response packets (as the "originate timestamp" of those packets will
+     * not match the last request time value of the context), and thus, an attacker can cause Denial of Service
+     * attacks by spoofing server response before the actual server is able to respond.
+     */
+    if( ( status == SntpSuccess ) ||
+        ( ( pContext->authIntf.validateServerAuth != NULL ) && ( status == SntpRejectedResponse ) ) )
     {
         /* In the attack of SNTP request packet being replayed, the replayed request packet is serviced by
          * SNTP/NTP server with SNTP response (as servers are stateless) and client receives the response
@@ -701,7 +708,8 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
          * library (i.e. the SNTP client) has cleared the internal state to zero, the spoofed packet will be
          * discarded as the coreSNTP serializer does not accept server responses with zero value for timestamps.
          */
-        memset( &pContext->lastRequestTime, 0, sizeof( SntpTimestamp_t ) );
+        pContext->lastRequestTime.seconds = 0UL;
+        pContext->lastRequestTime.fractions = 0UL;
     }
 
     return status;

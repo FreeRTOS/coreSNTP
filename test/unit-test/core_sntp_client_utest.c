@@ -1059,6 +1059,11 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     TEST_ASSERT_EQUAL( 0, context.lastRequestTime.seconds );
     TEST_ASSERT_EQUAL( 0, context.lastRequestTime.fractions );
 
+    /* Re-assign a value for the "last request time" state of the context to check that it
+     * gets cleared for remaining test cases. */
+    context.lastRequestTime.seconds = UINT32_MAX;
+    context.lastRequestTime.fractions = UINT32_MAX / 2;
+
     /* Test when the Sntp_DeserializeResponse API returns #SntpInvalidResponse status code.
      * The Sntp_ReceiveTimeResponse API is expected to return the same code back to the caller.*/
 
@@ -1066,11 +1071,54 @@ void test_ReceiveTimeResponse_Deserialization_Failures()
     currentTimeIndex = 0;
     currentUdpRecvCodeIndex = 0;
     /* Reset the current server index in the context. */
-
     context.currentServerIndex = 0;
+
     Sntp_DeserializeResponse_IgnoreAndReturn( SntpInvalidResponse );
     TEST_ASSERT_EQUAL( SntpInvalidResponse,
                        Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
+
+    /* Ensure that the "last request time" state of the context was not modified as valid response
+     * packet has not been received. */
+    TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );
+    TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );
+}
+
+/**
+ * @brief Validates that the @ref Sntp_ReceiveTimeResponse API does not clear the lastRequestTime
+ * state of the context when server authentication functionality is not enable and the received response
+ * represents a server rejection and the server. This behavior is expected from the API to prevent
+ * attackers to spoof server response packets for launching Denial of Service attacks that is dependent
+ * on the state clearing functionality.
+ */
+void test_ReceiveTimeResponse_DoSAttack_Protection_NoServerAuth( void )
+{
+    /* Test when server response is received without server validation. */
+    context.authIntf.validateServerAuth = NULL;
+    context.authIntf.generateClientAuth = NULL;
+
+    udpRecvRetCodes[ 0 ] = 1;
+    udpRecvRetCodes[ 1 ] = context.sntpPacketSize - 1;
+
+#define COMMON_TEST_DOS_PROTECTION( rejectedStatus )                                      \
+    do {                                                                                  \
+                                                                                          \
+        /* Reset the indices of lists that control behavior of interface functions. */    \
+        currentTimeIndex = 0;                                                             \
+        currentUdpRecvCodeIndex = 0;                                                      \
+        /* Reset the current server index in the context. */                              \
+        context.currentServerIndex = 0;                                                   \
+        Sntp_DeserializeResponse_IgnoreAndReturn( rejectedStatus );                       \
+        TEST_ASSERT_EQUAL( SntpRejectedResponse,                                          \
+                           Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) ); \
+                                                                                          \
+        /* Ensure that the "last request time" state of the context was not modified. */  \
+        TEST_ASSERT_EQUAL( UINT32_MAX, context.lastRequestTime.seconds );                 \
+        TEST_ASSERT_EQUAL( UINT32_MAX / 2, context.lastRequestTime.fractions );           \
+    } while( 0 )
+
+    COMMON_TEST_DOS_PROTECTION( SntpRejectedResponseChangeServer );
+    COMMON_TEST_DOS_PROTECTION( SntpRejectedResponseOtherCode );
+    COMMON_TEST_DOS_PROTECTION( SntpRejectedResponseRetryWithBackoff );
 }
 
 void test_ReceiveTimeResponse_Nominal()
