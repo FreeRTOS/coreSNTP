@@ -649,6 +649,11 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
                                            pContext->sntpPacketSize,
                                            &parsedResponse );
 
+        /* We do not expect the following errors to be returned as the context
+         * has been validated in the Sntp_ReceiveTimeResponse API. */
+        assert( status != SntpErrorBadParameter );
+        assert( status != SntpErrorBufferTooSmall );
+
         if( ( status == SntpRejectedResponseChangeServer ) ||
             ( status == SntpRejectedResponseRetryWithBackoff ) ||
             ( status == SntpRejectedResponseOtherCode ) )
@@ -681,6 +686,32 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         }
     }
 
+    /* Reset the last request time state in context to protect against replay attacks.
+     * Note: The last request time is not cleared when a rejection response packet is received and the client does
+     * has not authenticated server from the response. This is because clearing of the state causes the coreSNTP
+     * library to discard any subsequent server response packets (as the "originate timestamp" of those packets will
+     * not match the last request time value of the context), and thus, an attacker can cause Denial of Service
+     * attacks by spoofing server response before the actual server is able to respond.
+     */
+    if( ( status == SntpSuccess ) ||
+        ( ( pContext->authIntf.validateServerAuth != NULL ) && ( status == SntpRejectedResponse ) ) )
+    {
+        /* In the attack of SNTP request packet being replayed, the replayed request packet is serviced by
+         * SNTP/NTP server with SNTP response (as servers are stateless) and client receives the response
+         * containing new values of server timestamps but the stale value of "originate timestamp".
+         * To prevent the coreSNTP library from servicing such a server response (associated with the replayed
+         * SNTP request packet), the last request timestamp state is cleared in the context after receiving the
+         * first valid server response. Therefore, any subsequent server response(s) from replayed client request
+         * packets can be invalidated due to the "originate timestamp" not matching the last request time stored
+         * in the context.
+         * Note: If an attacker spoofs a server response with a zero "originate timestamp" after the coreSNTP
+         * library (i.e. the SNTP client) has cleared the internal state to zero, the spoofed packet will be
+         * discarded as the coreSNTP serializer does not accept server responses with zero value for timestamps.
+         */
+        pContext->lastRequestTime.seconds = 0UL;
+        pContext->lastRequestTime.fractions = 0UL;
+    }
+
     return status;
 }
 
@@ -708,6 +739,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     else
     {
         SntpTimestamp_t startTime, loopIterTime;
+        const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
 
         pContext->getTimeFunc( &startTime );
 
@@ -735,17 +767,13 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
-            else if( calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) >= pContext->responseTimeoutMs )
+            if( ( status == SntpNoResponseReceived ) &&
+                ( calculateElapsedTimeMs( &loopIterTime, pRequestTime ) >= pContext->responseTimeoutMs ) )
             {
                 status = SntpErrorResponseTimeout;
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
-                            "TimeoutDuration=%ums", pContext->lastRequestTime.seconds,
-                            FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ),
-                            calculateElapsedTimeMs( &loopIterTime, &pContext->lastRequestTime ) ) );
-            }
-            else
-            {
-                /* Empty else marker. */
+                            "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
+                            calculateElapsedTimeMs( &loopIterTime, pRequestTime ) ) );
             }
         } while( ( status == SntpNoResponseReceived ) &&
                  ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );

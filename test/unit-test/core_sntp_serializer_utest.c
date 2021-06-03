@@ -41,6 +41,12 @@
         .fractions = 1000      \
     }
 
+#define ZERO_TIMESTAMP \
+    {                  \
+        .seconds = 0,  \
+        .fractions = 0 \
+    }
+
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
 #define SNTP_PACKET_VERSION_VAL                    ( 4 /* Version */ << 3 /* Bits 3-5 used in byte */ )
 
@@ -87,6 +93,8 @@ static uint8_t testBuffer[ SNTP_PACKET_BASE_SIZE ];
 
 static SntpResponseData_t parsedData;
 
+static SntpTimestamp_t zeroTimestamp = ZERO_TIMESTAMP;
+
 /* ============================ Helper Functions ============================ */
 
 static void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
@@ -121,6 +129,20 @@ static void fillValidSntpResponseData( uint8_t * pBuffer,
     addTimestampToResponseBuffer( pRequestTime,
                                   pBuffer,
                                   SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+
+    SntpTimestamp_t testTime = TEST_TIMESTAMP;
+
+    /* Set the SNTP response packet to contain the "receive" timestamp
+     * correctly, as matching the SNTP request timestamp. */
+    addTimestampToResponseBuffer( &testTime,
+                                  pBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+
+    /* Set the SNTP response packet to contain the "transmit" timestamp
+     * correctly, as matching the SNTP request timestamp. */
+    addTimestampToResponseBuffer( &testTime,
+                                  pBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
 
     /* Set the "Stratum" byte in the response packet to represent a
      * secondary NTP server. */
@@ -206,6 +228,13 @@ void test_SerializeRequest_InvalidParams( void )
                                               NULL,
                                               sizeof( testBuffer ) ) );
 
+    /* Pass zero timestamp for request time. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter,
+                       Sntp_SerializeRequest( &zeroTimestamp,
+                                              ( rand() % UINT32_MAX ),
+                                              testBuffer,
+                                              sizeof( testBuffer ) ) );
+
     /* Pass a buffer size less than 48 bytes of minimum SNTP packet size. */
     TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
                        Sntp_SerializeRequest( &testTime,
@@ -270,7 +299,6 @@ void test_SerializeRequest_NominalCase( void )
                                   sizeof( SntpTimestamp_t ) ) );
 }
 
-
 /**
  * @brief Test @ref Sntp_DeserializeResponse with invalid parameters.
  */
@@ -315,6 +343,14 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  testBuffer,
                                                  sizeof( testBuffer ),
                                                  NULL ) );
+
+    /* Pass zero timestamp for request time. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter,
+                       Sntp_DeserializeResponse( &zeroTimestamp,
+                                                 &testTime,
+                                                 testBuffer,
+                                                 sizeof( testBuffer ),
+                                                 &parsedData ) );
 }
 
 /**
@@ -338,14 +374,65 @@ void test_DeserializeResponse_Invalid_Responses( void )
                                                                       sizeof( testBuffer ),
                                                                       &parsedData ) );
 
-    /******** Test when SNTP response packet does not
-     *  have "originate" timestamp matching
-     * the "transmit" time sent by the client in the SNTP
-     * request. ************/
-    SntpTimestamp_t originateTime = TEST_TIMESTAMP;
 
     /* Set the Mode field to the correct value for Server. */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
+
+    /************** Test when "originate timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "originate timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+
+
+    /************** Test when "receive timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "receive timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+
+
+    /************** Test when "transmit timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "transmit timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+
+
+    /******** Test when SNTP response packet does not have "originate" timestamp matching
+     * the "transmit" time sent by the client in the SNTP request. ************/
+    SntpTimestamp_t originateTime = TEST_TIMESTAMP;
+
 
     /* Test when only the seconds part of the "originate" timestamp does not match
      * the client request time .*/
