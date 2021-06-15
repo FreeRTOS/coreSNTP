@@ -173,8 +173,8 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * - #SntpSuccess if the context is verified to be initialized.
  * - #SntpErrorBadParameter if the context is NULL.
  * - #SntpErrorContextNotInitialized if the context is validated to be initialized.
- * - #SntpErrorChangeServer if no more servers are remaining from the configured list to
- * synchronizing time from.
+ * - #SntpErrorChangeServer if no more servers are remaining from the configured list
+ *   from which to synchronize time.
  */
 static SntpStatus_t validateContext( SntpContext_t * pContext )
 {
