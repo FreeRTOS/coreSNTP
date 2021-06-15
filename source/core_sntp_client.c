@@ -173,6 +173,8 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * - #SntpSuccess if the context is verified to be initialized.
  * - #SntpErrorBadParameter if the context is NULL.
  * - #SntpErrorContextNotInitialized if the context is validated to be initialized.
+ * - #SntpErrorChangeServer if no more servers are remaining from the configured list to
+ * synchronizing time from.
  */
 static SntpStatus_t validateContext( SntpContext_t * pContext )
 {
@@ -182,6 +184,7 @@ static SntpStatus_t validateContext( SntpContext_t * pContext )
     if( pContext == NULL )
     {
         status = SntpErrorBadParameter;
+        LogError( ( "Invalid context parameter: Context is NULL" ) );
     }
 
     /* Validate pointer parameters are not NULL. */
@@ -212,9 +215,23 @@ static SntpStatus_t validateContext( SntpContext_t * pContext )
     {
         status = SntpErrorContextNotInitialized;
     }
+
+    /* Check whether there is any remaining server in the list of configured
+     * servers that it is reasonable to expect a response from. */
+    else if( pContext->currentServerIndex >= pContext->numOfServers )
+    {
+        status = SntpErrorChangeServer;
+        LogError( ( "Invalid API call: All servers have already rejected time requests: "
+                    "Re-initialize context to change configured servers." ) );
+    }
     else
     {
         status = SntpSuccess;
+    }
+
+    if( status == SntpErrorContextNotInitialized )
+    {
+        LogError( ( "Invalid context parameter: Context is not initialized with Sntp_Init" ) );
     }
 
     return status;
@@ -393,20 +410,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
     /* Validate the context parameter. */
     status = validateContext( pContext );
 
-    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
-    {
-        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
-    }
-
-    /* Check if there is any time server available for requesting time
-     * that has not already rejected a prior request. */
-    else if( pContext->currentServerIndex >= pContext->numOfServers )
-    {
-        LogError( ( "Cannot request time: All servers have rejected time requests: "
-                    "Re-initialize context with new servers" ) );
-        status = SntpErrorChangeServer;
-    }
-    else
+    if( status == SntpSuccess )
     {
         const SntpServerInfo_t * pServer = NULL;
 
@@ -723,20 +727,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     /* Validate the context parameter. */
     status = validateContext( pContext );
 
-    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
-    {
-        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
-    }
-
-    /* Check whether there is any remaining server in the list of configured
-     * servers that it is reasonable to expect a response from. */
-    else if( pContext->currentServerIndex >= pContext->numOfServers )
-    {
-        status = SntpErrorChangeServer;
-        LogError( ( "Invalid API call: All servers have already rejected time requests: "
-                    "Re-initialize context to change configured servers." ) );
-    }
-    else
+    if( status == SntpSuccess )
     {
         SntpTimestamp_t startTime, loopIterTime;
         const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
@@ -771,6 +762,11 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
                 ( calculateElapsedTimeMs( &loopIterTime, pRequestTime ) >= pContext->responseTimeoutMs ) )
             {
                 status = SntpErrorResponseTimeout;
+
+                /* As server has timed out in sending its response, we will rotate to the next server in
+                 * the list of configured time servers. */
+                pContext->currentServerIndex++;
+
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
                             "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
                             calculateElapsedTimeMs( &loopIterTime, pRequestTime ) ) );
