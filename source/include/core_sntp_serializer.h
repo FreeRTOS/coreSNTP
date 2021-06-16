@@ -181,16 +181,6 @@ typedef enum SntpStatus
     SntpErrorTimeNotSupported,
 
     /**
-     * @brief No server is available for requesting time as all servers configured in the
-     * SNTP context have rejected a time request in previous attempts. The application
-     * SHOULD change to a new server by re-initializing the context.
-     *
-     * @note This status is returned by either of @ref Sntp_SendTimeRequest OR
-     * @ref Sntp_GetTimeResponse APIs.
-     */
-    SntpErrorChangeServer,
-
-    /**
      * @brief The user-defined DNS resolution interface, @ref SntpResolveDns_t, failed to resolve
      * address for a time server. This status is returned by the @ref Sntp_SendTimeRequest API.
      */

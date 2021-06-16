@@ -173,8 +173,6 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * - #SntpSuccess if the context is verified to be initialized.
  * - #SntpErrorBadParameter if the context is NULL.
  * - #SntpErrorContextNotInitialized if the context is validated to be initialized.
- * - #SntpErrorChangeServer if no more servers are remaining from the configured list
- *   from which to synchronize time.
  */
 static SntpStatus_t validateContext( SntpContext_t * pContext )
 {
@@ -214,15 +212,6 @@ static SntpStatus_t validateContext( SntpContext_t * pContext )
              ( ( pContext->authIntf.generateClientAuth == NULL ) && ( pContext->authIntf.validateServerAuth != NULL ) ) )
     {
         status = SntpErrorContextNotInitialized;
-    }
-
-    /* Check whether there is any remaining server in the list of configured
-     * servers that it is reasonable to expect a response from. */
-    else if( pContext->currentServerIndex >= pContext->numOfServers )
-    {
-        status = SntpErrorChangeServer;
-        LogError( ( "Invalid API call: All servers have already rejected time requests: "
-                    "Re-initialize context to change configured servers." ) );
     }
     else
     {
@@ -664,7 +653,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         {
             /* Server has rejected the time request. Thus, we will rotate to the next time server
             * in the list, if we have not exhausted time requests with all configured servers. */
-            pContext->currentServerIndex++;
+            pContext->currentServerIndex = ( pContext->currentServerIndex + 1 ) % pContext->numOfServers;
 
             LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
                         ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
@@ -731,6 +720,8 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     {
         SntpTimestamp_t startTime, loopIterTime;
         const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
+        uint32_t elapsedTimeMs = 0U;
+
 
         pContext->getTimeFunc( &startTime );
 
@@ -756,16 +747,19 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
                 status = processServerResponse( pContext, &loopIterTime );
             }
 
+            /* Calculate time elapsed since the associated time request was sent out. */
+            elapsedTimeMs = calculateElapsedTimeMs( &loopIterTime, pRequestTime );
+
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
             if( ( status == SntpNoResponseReceived ) &&
-                ( calculateElapsedTimeMs( &loopIterTime, pRequestTime ) >= pContext->responseTimeoutMs ) )
+                ( elapsedTimeMs >= pContext->responseTimeoutMs ) )
             {
                 status = SntpErrorResponseTimeout;
 
                 /* As server has timed out in sending its response, we will rotate to the next server in
                  * the list of configured time servers. */
-                pContext->currentServerIndex++;
+                pContext->currentServerIndex = ( pContext->currentServerIndex + 1 ) % pContext->numOfServers;
 
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
                             "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
@@ -818,10 +812,6 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
 
         case SntpErrorTimeNotSupported:
             pString = "SntpErrorTimeNotSupported";
-            break;
-
-        case SntpErrorChangeServer:
-            pString = "SntpErrorChangeServer";
             break;
 
         case SntpErrorDnsFailure:

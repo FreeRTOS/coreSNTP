@@ -698,11 +698,6 @@ void test_Sntp_SendTimeRequest_ErrorCases()
     /* Test all cases of context with invalid members. */
     testApiForInvalidContextCases( ApiSendTimeRequest );
 
-    /* Test case when no remaining server exists to request time from. */
-    context.currentServerIndex = sizeof( testServers ) / sizeof( SntpServerInfo_t );
-    TEST_ASSERT_EQUAL( SntpErrorChangeServer,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
-
     /* Reset the context member for current server to a valid value. */
     context.currentServerIndex = 0U;
 
@@ -850,12 +845,6 @@ void test_Sntp_ReceiveTimeResponse_InvalidParams()
 
     /* Test all cases of context with invalid members. */
     testApiForInvalidContextCases( ApiReceiveTimeResponse );
-
-    /* Test case when API is called even though all servers in the list have been
-     * exhausted from use . */
-    context.currentServerIndex = sizeof( testServers ) / sizeof( SntpServerInfo_t );
-    TEST_ASSERT_EQUAL( SntpErrorChangeServer,
-                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT ) );
 }
 
 /**
@@ -1226,6 +1215,62 @@ void test_ReceiveTimeResponse_Nominal()
 }
 
 /**
+ * @brief Validate that the server rotation logic in the library wraps around to the starting
+ * of the list of servers when all servers have been exhausted. This test validates for the
+ * case when the server rotation occurs due to reception of server rejection of time request.
+ */
+void test_Sntp_ReceiveTimeResponse_ServerRotation_WrapAround_ServerRejection( void )
+{
+    /* Test server rotation wrap around when a server rejection response is received. */
+
+    /* Configure the behavior of the Sntp_DeserializeResponse API to return server rejection status. */
+    Sntp_DeserializeResponse_IgnoreAndReturn( SntpRejectedResponseChangeServer );
+
+    /* Update the context to refer to the last server in the configured list of servers to test that server
+     * rotation wraps around to the first server in the list. */
+    context.currentServerIndex = 1;
+
+    /* Configure the behavior of test's GetTime and transport receive interface functions. */
+    udpRecvRetCodes[ 0 ] = 1;                                                              /* 1st attempt to check data availability. No data received.*/
+    udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1;                                      /* 2nd attempt to check data availability. No data received. */
+    currentTimeList[ 0 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 8 ); /* 1st GetTime_t call. */
+    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 4 ); /* GetTime_t call in 1st read attempt. */
+
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpRejectedResponse,
+                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
+
+    /* Validate that the server rotation chose the next server by wrapping around to the
+     *  first server in the list. */
+    TEST_ASSERT_EQUAL( 0, context.currentServerIndex );
+}
+
+/**
+ * @brief Validate that the server rotation logic in the library wraps around to the starting
+ * of the list of servers when all servers have been exhausted. This test validates for the
+ * case when the server rotation occurs due to server response timeout.
+ */
+void test_Sntp_ReceiveTimeResponse_ServerRotation_WrapAround_ResponseTimeout( void )
+{
+    /* ================= Test server rotation wrap around when a server response times out. ==================*/
+
+    /* Update the context to refer to the last server in the configured list of servers to test that server
+     * rotation wraps around to the first server in the list. */
+    context.currentServerIndex = 1;
+
+    /* Setup test to receive no data in the first attempt and encounter server response timeout. */
+    udpRecvRetCodes[ 0 ] = 0;                                                          /* 1st call to check data availability. Receive no data. */
+    currentTimeList[ 1 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT ); /* 1st SntpGetTime_t call after failed attempt.. */
+    TEST_ASSERT_EQUAL( SntpErrorResponseTimeout,
+                       Sntp_ReceiveTimeResponse( &context, TEST_RESPONSE_TIMEOUT / 2 ) );
+
+    /* Validate that the server rotation chose the next server by wrapping around to the
+     *  first server in the list. */
+    TEST_ASSERT_EQUAL( 0, context.currentServerIndex );
+}
+
+
+/**
  * @brief Validates the @ref Sntp_StatusToStr function.
  */
 void test_StatusToStr( void )
@@ -1239,7 +1284,6 @@ void test_StatusToStr( void )
     TEST_ASSERT_EQUAL_STRING( "SntpInvalidResponse", Sntp_StatusToStr( SntpInvalidResponse ) );
     TEST_ASSERT_EQUAL_STRING( "SntpZeroPollInterval", Sntp_StatusToStr( SntpZeroPollInterval ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorTimeNotSupported", Sntp_StatusToStr( SntpErrorTimeNotSupported ) );
-    TEST_ASSERT_EQUAL_STRING( "SntpErrorChangeServer", Sntp_StatusToStr( SntpErrorChangeServer ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorDnsFailure", Sntp_StatusToStr( SntpErrorDnsFailure ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorNetworkFailure", Sntp_StatusToStr( SntpErrorNetworkFailure ) );
     TEST_ASSERT_EQUAL_STRING( "SntpServerNotAuthenticated", Sntp_StatusToStr( SntpServerNotAuthenticated ) );
