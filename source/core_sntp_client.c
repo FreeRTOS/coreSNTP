@@ -147,7 +147,22 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
     assert( pCurrentTime != NULL );
     assert( pOlderTime != NULL );
 
-    timeDiffMs = ( pCurrentTime->seconds - pOlderTime->seconds ) * 1000U;
+    /* Detect if SNTP time has overflown between the 2 timestamps. */
+    if( pCurrentTime->seconds < pOlderTime->seconds )
+    {
+        /* Handle the SNTP time overflow by calculating the actual time
+         * duration from pOlderTime, that exists in NTP era 0,  to pCurrentTime,
+         * that exists in NTP era 1. */
+        timeDiffMs = ( ( UINT32_MAX - pOlderTime->seconds ) + /* Time in NTP era 0. */
+                       1U +                                   /* Epoch time in NTP era 1, i.e. 7 Feb 2036 6h:14m:28s. */
+                       pCurrentTime->seconds )                /* Time in NTP era 1. */
+                     * 1000U;                                 /* Convert to milliseconds. */
+    }
+    else
+    {
+        uint32_t timeDiff = ( pCurrentTime->seconds - pOlderTime->seconds );
+        timeDiffMs = timeDiff * 1000U;
+    }
 
     if( pCurrentTime->fractions > pOlderTime->fractions )
     {
@@ -275,7 +290,6 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
                                     size_t packetSize )
 {
     const uint8_t * pIndex = pPacket;
-    size_t bytesRemaining = packetSize;
     int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
     uint32_t timeSinceLastSendMs;
@@ -291,13 +305,13 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
     getTimeFunc( &lastSendTime );
 
     /* Loop until the entire packet is sent. */
-    while( ( bytesRemaining > 0UL ) && ( sendError == false ) )
+    while( ( bytesSent != ( int32_t ) packetSize ) && ( sendError == false ) )
     {
         bytesSent = pNetworkIntf->sendTo( pNetworkIntf->pUserContext,
                                           timeServer,
                                           serverPort,
                                           pIndex,
-                                          bytesRemaining );
+                                          packetSize );
 
         if( bytesSent < 0 )
         {
@@ -305,20 +319,15 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
                         "ErrorCode=%ld.", ( long int ) bytesSent ) );
             sendError = true;
         }
-        else if( bytesSent > 0 )
+
+        /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
+         * The buffer size should not Thus, this will be treated as failure as well. */
+        else if( ( bytesSent > 0 ) && ( bytesSent != ( int32_t ) packetSize ) )
         {
-            /* Record the time of successful transmission. This resets the retry timeout window.*/
-            getTimeFunc( &lastSendTime );
+            LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
+                        "ReturnCode=%ld, ExpectedCode=%lu", ( long int ) bytesSent, packetSize ) );
 
-            /* It is a bug in the application's transport send implementation if
-             * more bytes than expected are sent. To avoid a possible overflow
-             * in converting bytesRemaining from unsigned to signed, this assert
-             * must exist after the check for bytesSent being negative. */
-            assert( ( size_t ) bytesSent <= bytesRemaining );
-
-            bytesRemaining -= ( size_t ) bytesSent;
-            pIndex += bytesSent;
-            LogDebug( ( "BytesSent=%d, BytesRemaining=%lu", bytesSent, bytesRemaining ) );
+            sendError = true;
         }
         else
         {
