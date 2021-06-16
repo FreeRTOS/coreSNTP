@@ -470,6 +470,36 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
 }
 
 /**
+ * @brief Utility to update the SNTP context to rotate the server of use for subsequent
+ * time request(s).
+ *
+ * @note If there is no next server remaining, after the current server's index, in the list of
+ * configured servers, the server rotation algorithm wraps around to the first server in the list.
+ * The wrap around is done so that an application using the library for a long-running SNTP client
+ * functionality (like a daemon task) does not become dysfunctional after all configured time
+ * servers have been used up. Time synchronization can be a critical functionality for a system
+ * and the wrap around logic ensures that the SNTP client continues to function in such a case.
+ *
+ * @note Server rotation is performed ONLY when either of:
+ * - The current server responds with a rejection for time request.
+ *                         OR
+ * - The current server response wait has timed out.
+ */
+static void rotateServerForNextTimeQuery( SntpContext_t * pContext )
+{
+    uint8_t nextServerIndex = ( pContext->currentServerIndex + 1 ) % pContext->numOfServers;
+
+    LogInfo( ( "Rotating server for next time query: PreviousServer=%.*s, NextServer=%.*s",
+               ( int ) pContext->pTimeServers[ pContext->currentServerIndex ].serverNameLen,
+               pContext->pTimeServers[ pContext->currentServerIndex ].pServerName,
+               ( int ) pContext->pTimeServers[ nextServerIndex ].serverNameLen,
+               pContext->pTimeServers[ nextServerIndex ].pServerName ) );
+
+    pContext->currentServerIndex = nextServerIndex;
+}
+
+
+/**
  * @brief This function attempts to receive the SNTP response packet from a server
  * if the time window for server response has not timed out.
  *
@@ -652,8 +682,8 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
             ( status == SntpRejectedResponseOtherCode ) )
         {
             /* Server has rejected the time request. Thus, we will rotate to the next time server
-            * in the list, if we have not exhausted time requests with all configured servers. */
-            pContext->currentServerIndex = ( pContext->currentServerIndex + 1 ) % pContext->numOfServers;
+             * in the list. */
+            rotateServerForNextTimeQuery( pContext );
 
             LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
                         ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
@@ -759,7 +789,7 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 
                 /* As server has timed out in sending its response, we will rotate to the next server in
                  * the list of configured time servers. */
-                pContext->currentServerIndex = ( pContext->currentServerIndex + 1 ) % pContext->numOfServers;
+                rotateServerForNextTimeQuery( pContext );
 
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
                             "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),

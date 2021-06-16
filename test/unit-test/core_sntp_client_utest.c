@@ -1230,7 +1230,7 @@ void test_Sntp_ReceiveTimeResponse_ServerRotation_WrapAround_ServerRejection( vo
      * rotation wraps around to the first server in the list. */
     context.currentServerIndex = 1;
 
-    /* Configure the behavior of test's GetTime and transport receive interface functions. */
+    /* Configure the behavior of test's SntpGetTime_t and transport receive interface functions. */
     udpRecvRetCodes[ 0 ] = 1;                                                              /* 1st attempt to check data availability. No data received.*/
     udpRecvRetCodes[ 1 ] = SNTP_PACKET_BASE_SIZE - 1;                                      /* 2nd attempt to check data availability. No data received. */
     currentTimeList[ 0 ].fractions = CONVERT_MS_TO_FRACTIONS( TEST_RESPONSE_TIMEOUT / 8 ); /* 1st GetTime_t call. */
