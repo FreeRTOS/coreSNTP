@@ -40,7 +40,7 @@ void harness()
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
                         sntpStatus == SntpErrorContextNotInitialized ||
-                        sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorChangeServer ||
-                        sntpStatus == SntpErrorDnsFailure || sntpStatus == SntpErrorAuthFailure ||
-                        sntpStatus == SntpErrorNetworkFailure ), "The return value is not a valid SNTP Status" );
+                        sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorDnsFailure ||
+                        sntpStatus == SntpErrorAuthFailure || sntpStatus == SntpErrorNetworkFailure ),
+                      "The return value is not a valid coreSNTP Status" );
 }
