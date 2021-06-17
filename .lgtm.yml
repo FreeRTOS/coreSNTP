@@ -4,7 +4,8 @@ path_classifiers:
 extraction:
   cpp:
     prepare:
-      - cmake
+      packages:
+        - cmake
     configure:
       command:
         - cmake -S test -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -Wformat -Wformat-security -Warray-bounds'
