@@ -515,17 +515,15 @@ static void rotateServerForNextTimeQuery( SntpContext_t * pContext )
 
 
 /**
- * @brief This function attempts to receive the SNTP response packet from a server
- * if the time window for server response has not timed out.
+ * @brief This function attempts to receive the SNTP response packet from a server.
+ * If no data is received from the network, this function retries reads until the timeout
+ * window, specified by SNTP_RECV_POLLING_TIMEOUT_MS configuration, expires.
  *
- * @note This function does not block on receiving the response packet from the network.
- * Instead, it determines whether the response packet is already available on the network
- * by first reading ONLY a single byte of data first.
- * If the single byte is available from the network, then rest of the SNTP response packet is
- * read from the network with retries for zero or partial reads until either:
- * - All the remaining bytes of server response are received
- *                     OR
- * - A timeout of #SNTP_RECV_POLLING_TIMEOUT_MS occurs of receiving no data over the network.
+ * @note This function treats reads of data sizes less than the expected server response packet,
+ * as an error as UDP does not support partial reads. Such a scenario can exist either due:
+ * - An error in the server sending its response with smaller packet size than the request packet OR
+ * - A malicious attacker spoofing or modifying server response OR
+ * - An error in the UDP transport interface implementation for read operation.
  *
  * @param[in] pTransportIntf The UDP transport interface to use for receiving data from
  * the network.
@@ -546,80 +544,63 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
                                          uint32_t timeServer,
                                          uint16_t serverPort,
                                          uint8_t * pBuffer,
-                                         size_t responseSize,
+                                         uint16_t responseSize,
                                          SntpGetTime_t getTimeFunc )
 {
-    SntpStatus_t status = SntpSuccess;
+    SntpStatus_t status = SntpNoResponseReceived;
     int32_t bytesRead = 0;
 
     assert( pTransportIntf != NULL );
     assert( pTransportIntf->recvFrom != NULL );
     assert( pBuffer != NULL );
+    assert( responseSize >= SNTP_PACKET_BASE_SIZE );
 
-    /* Check whether there is any data available on the network to read by attempting to read
-     * a single byte. */
-    bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
-                                          timeServer,
-                                          serverPort,
-                                          pBuffer,
-                                          1U );
+    /* Record time before read attempts so that it can be used as starting time for
+     * a retry timeout window in case of read retries. */
+    SntpTimestamp_t startTime;
+    getTimeFunc( &startTime );
 
-    if( bytesRead > 0 )
+    while( status == SntpNoResponseReceived )
     {
-        size_t bytesRemaining = responseSize - 1U;
-        SntpTimestamp_t startTime;
+        bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
+                                              timeServer,
+                                              serverPort,
+                                              pBuffer,
+                                              1U );
 
-        assert( bytesRead == 1 );
-
-        getTimeFunc( &startTime );
-
-        while( ( bytesRemaining > 0U ) && ( status == SntpSuccess ) )
+        /* Negative return code indicates error. */
+        if( bytesRead < 0 )
         {
-            bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
-                                                  timeServer,
-                                                  serverPort,
-                                                  pBuffer,
-                                                  1U );
+            status = SntpErrorNetworkFailure;
+            LogError( ( "Unable to receive server response: Transport receive failed: Code=%ld",
+                        ( long int ) bytesRead ) );
+        }
+        /* If the packet was not available on the network, check whether we can retry. */
+        else if( bytesRead == 0 )
+        {
+            SntpTimestamp_t currentTime;
+            getTimeFunc( &currentTime );
 
-            if( bytesRead > 0 )
+            if( calculateElapsedTimeMs( &currentTime, &startTime ) >= SNTP_RECV_POLLING_TIMEOUT_MS )
             {
-                bytesRemaining -= ( size_t ) bytesRead;
-
-                /* Read the current system time to set it as the new base line
-                 * for evaluating the receive retry timeout, #SNTP_RECV_POLLING_TIMEOUT_MS.*/
-                getTimeFunc( &startTime );
-            }
-            else if( bytesRead == 0 )
-            {
-                SntpTimestamp_t currentTime;
-                getTimeFunc( &currentTime );
-
-                if( calculateElapsedTimeMs( &currentTime, &startTime ) >= SNTP_RECV_POLLING_TIMEOUT_MS )
-                {
-                    LogError( ( "Unable to receive server response: Timed out retrying reads" ) );
-                    status = SntpErrorNetworkFailure;
-                }
-            }
-            else
-            {
+                LogError( ( "Unable to receive server response: Timed out retrying reads" ) );
                 status = SntpErrorNetworkFailure;
             }
         }
-    }
-    else if( bytesRead == 0 )
-    {
-        status = SntpNoResponseReceived;
-    }
-    else
-    {
-        /* Empty else marker. */
-    }
 
-    if( bytesRead < 0 )
-    {
-        status = SntpErrorNetworkFailure;
-        LogError( ( "Unable to receive server response: Transport receive failed: Code=%ld",
-                    ( long int ) bytesRead ) );
+        /* Partial reads are not supported by UDP, which only supports receiving the entire datagram as a whole.
+         * Thus, if the transport receive function returns reception of partial data, it will be treated as failure. */
+        else if( ( bytesRead > 0 ) && ( bytesRead != ( int32_t ) responseSize ) )
+        {
+            LogError( ( "Failed to receive server response: Transport recv returned less than expected bytes."
+                        "ExpectedBytes=%u, ReadBytes=%ld", responseSize, ( long int ) bytesRead ) );
+            status = SntpErrorNetworkFailure;
+        }
+        else
+        {
+            LogDebug( ( "Received server response: PacketSize=%ld", ( long int ) bytesRead ) );
+            status = SntpSuccess;
+        }
     }
 
     return status;
