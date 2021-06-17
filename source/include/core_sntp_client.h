@@ -536,8 +536,6 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
  *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
  * to the function.
- *  - #SntpErrorChangeServer if there is no server remaining in the list of configured
- * servers that has not rejected a prior time request.
  *  - #SntpErrorDnsFailure if there is failure in the user-defined function for
  * DNS resolution of the time server.
  *  - #SntpErrorNetworkFailure if the SNTP request could not be sent over the network
@@ -576,6 +574,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  *  - The server has responded with a rejection for the time request.
  *                         OR
  *  - The server response wait has timed out.
+ * If all the servers configured in the context have been used, the API will rotate server for
+ * time query back to the first server in the list which will be used in next time request.
  *
  * @param[in] pContext The context representing an SNTPv4 client.
  * @param[in] blockTimeMs The maximum duration of time the function will block on
@@ -591,9 +591,6 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
  * to the function.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
- *  - #SntpErrorChangeServer if all servers configured in the context have already
- * rejected time requests in previous attempts, and application SHOULD change server(s)
- * for future time requests with the @ref Sntp_Init API.
  *  - #SntpErrorNetworkFailure if there is a failure in the user-defined transport
  *  - #SntpErrorAuthFailure if an internal error occurs in the user-defined
  * authentication interface when validating the server response.

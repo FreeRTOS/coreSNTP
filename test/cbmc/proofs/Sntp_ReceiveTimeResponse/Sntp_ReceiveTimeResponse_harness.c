@@ -54,7 +54,7 @@ void harness()
     sntpStatus = Sntp_ReceiveTimeResponse( pContext, blockTimeMs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
-                        sntpStatus == SntpNoResponseReceived || sntpStatus == SntpErrorChangeServer ||
-                        sntpStatus == SntpRejectedResponse || sntpStatus == SntpErrorResponseTimeout ||
-                        sntpStatus == SntpErrorNetworkFailure ), "The return value is not a valid SNTP Status" );
+                        sntpStatus == SntpNoResponseReceived || sntpStatus == SntpRejectedResponse ||
+                        sntpStatus == SntpErrorResponseTimeout || sntpStatus == SntpErrorNetworkFailure ),
+                      "The return value is not a valid coreSNTP Status" );
 }
