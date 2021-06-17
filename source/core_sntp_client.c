@@ -282,10 +282,9 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
                                     uint16_t serverPort,
                                     SntpGetTime_t getTimeFunc,
                                     const uint8_t * pPacket,
-                                    size_t packetSize )
+                                    uint16_t packetSize )
 {
     const uint8_t * pIndex = pPacket;
-    size_t bytesRemaining = packetSize;
     int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
     uint64_t timeSinceLastSendMs;
@@ -301,13 +300,13 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
     getTimeFunc( &lastSendTime );
 
     /* Loop until the entire packet is sent. */
-    while( ( bytesRemaining > 0UL ) && ( sendError == false ) )
+    while( ( bytesSent != ( int32_t ) packetSize ) && ( sendError == false ) )
     {
         bytesSent = pNetworkIntf->sendTo( pNetworkIntf->pUserContext,
                                           timeServer,
                                           serverPort,
                                           pIndex,
-                                          bytesRemaining );
+                                          packetSize );
 
         if( bytesSent < 0 )
         {
@@ -315,20 +314,15 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
                         "ErrorCode=%ld.", ( long int ) bytesSent ) );
             sendError = true;
         }
-        else if( bytesSent > 0 )
+
+        /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
+         * Thus, if the transport send function returns status representing partial send, it will be treated as failure. */
+        else if( ( bytesSent > 0 ) && ( bytesSent != ( int32_t ) packetSize ) )
         {
-            /* Record the time of successful transmission. This resets the retry timeout window.*/
-            getTimeFunc( &lastSendTime );
+            LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
+                        "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );
 
-            /* It is a bug in the application's transport send implementation if
-             * more bytes than expected are sent. To avoid a possible overflow
-             * in converting bytesRemaining from unsigned to signed, this assert
-             * must exist after the check for bytesSent being negative. */
-            assert( ( size_t ) bytesSent <= bytesRemaining );
-
-            bytesRemaining -= ( size_t ) bytesSent;
-            pIndex += bytesSent;
-            LogDebug( ( "BytesSent=%d, BytesRemaining=%lu", bytesSent, bytesRemaining ) );
+            sendError = true;
         }
         else
         {
@@ -370,7 +364,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
 static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 {
     SntpStatus_t status = SntpSuccess;
-    size_t authDataSize = 0U;
+    uint16_t authDataSize = 0U;
 
     assert( pContext != NULL );
     assert( pContext->authIntf.generateClientAuth != NULL );
@@ -665,7 +659,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         status = pContext->authIntf.validateServerAuth( pContext->authIntf.pAuthContext,
                                                         pServer,
                                                         pContext->pNetworkBuffer,
-                                                        pContext->bufferSize );
+                                                        pContext->sntpPacketSize );
         assert( ( status == SntpSuccess ) || ( status == SntpErrorAuthFailure ) ||
                 ( status == SntpServerNotAuthenticated ) );
 

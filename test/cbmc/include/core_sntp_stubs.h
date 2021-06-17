@@ -47,7 +47,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
                                   uint32_t serverAddr,
                                   uint16_t serverPort,
                                   const void * pBuffer,
-                                  size_t bytesToSend );
+                                  uint16_t bytesToSend );
 
 /**
  * @brief Application defined network interface receive function.
@@ -64,7 +64,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
                                      uint32_t serverAddr,
                                      uint16_t serverPort,
                                      void * pBuffer,
-                                     size_t bytesToRecv );
+                                     uint16_t bytesToRecv );
 
 /**
  * @brief Application defined function to generate and append
@@ -90,7 +90,7 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,
                                      void * pBuffer,
                                      size_t bufferSize,
-                                     size_t * pAuthCodeSize );
+                                     uint16_t * pAuthCodeSize );
 
 /**
  * @brief Application defined function to authenticate server by validating
@@ -110,7 +110,7 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
 SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,
                                      const void * pResponseData,
-                                     size_t responseSize );
+                                     uint16_t responseSize );
 
 /**
  * @brief Application defined function to resolve time server domain-name

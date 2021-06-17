@@ -56,7 +56,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
                                      uint32_t serverAddr,
                                      uint16_t serverPort,
                                      void * pBuffer,
-                                     size_t bytesToRecv )
+                                     uint16_t bytesToRecv )
 {
     __CPROVER_assert( pBuffer != NULL,
                       "NetworkInterfaceReceiveStub pBuffer is NULL." );
@@ -69,7 +69,7 @@ int32_t NetworkInterfaceReceiveStub( NetworkContext_t * pNetworkContext,
 
     int32_t bytesOrError;
     static size_t tries = 0;
-    static size_t read = 0;
+    static uint16_t read = 0;
 
     /* It is a bug for the application defined transport receive function to return
      * more than bytesToRecv. */
@@ -106,7 +106,7 @@ int32_t NetworkInterfaceSendStub( NetworkContext_t * pNetworkContext,
                                   uint32_t serverAddr,
                                   uint16_t serverPort,
                                   const void * pBuffer,
-                                  size_t bytesToSend )
+                                  uint16_t bytesToSend )
 {
     __CPROVER_assert( pBuffer != NULL,
                       "NetworkInterfaceSendStub pBuffer is NULL." );
@@ -147,7 +147,7 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,
                                      void * pBuffer,
                                      size_t bufferSize,
-                                     size_t * pAuthCodeSize )
+                                     uint16_t * pAuthCodeSize )
 {
     __CPROVER_assert( pTimeServer != NULL,
                       "GenerateClientAuthStub Time Server is NULL." );
@@ -172,7 +172,7 @@ SntpStatus_t GenerateClientAuthStub( SntpAuthContext_t * pContext,
 SntpStatus_t ValidateServerAuthStub( SntpAuthContext_t * pContext,
                                      const SntpServerInfo_t * pTimeServer,
                                      const void * pResponseData,
-                                     size_t responseSize )
+                                     uint16_t responseSize )
 {
     return SntpSuccess;
 }

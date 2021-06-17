@@ -96,7 +96,7 @@ static size_t expectedBytesToRecvAfterFirstByte = SNTP_PACKET_BASE_SIZE;
 static int32_t udpRecvRetCodes[ 3 ];
 static uint8_t currentUdpRecvCodeIndex;
 static SntpStatus_t generateClientAuthRetCode = SntpSuccess;
-static size_t authCodeSize;
+static uint16_t authCodeSize;
 static SntpStatus_t validateServerAuthRetCode = SntpSuccess;
 
 /* Output parameter for mock of Sntp_DeserializeResponse API. */
@@ -159,7 +159,7 @@ static int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
                           uint32_t serverAddr,
                           uint16_t serverPort,
                           const void * pBuffer,
-                          size_t bytesToSend )
+                          uint16_t bytesToSend )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -189,7 +189,7 @@ static int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
                             uint32_t serverAddr,
                             uint16_t serverPort,
                             void * pBuffer,
-                            size_t bytesToRecv )
+                            uint16_t bytesToRecv )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -222,7 +222,7 @@ static SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
                                         const SntpServerInfo_t * pTimeServer,
                                         void * pBuffer,
                                         size_t bufferSize,
-                                        size_t * pAuthCodeSize )
+                                        uint16_t * pAuthCodeSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
@@ -239,12 +239,13 @@ static SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
 static SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
                                         const SntpServerInfo_t * pTimeServer,
                                         const void * pResponseData,
-                                        size_t responseSize )
+                                        uint16_t responseSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_EQUAL_PTR( testBuffer, pResponseData );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, responseSize );
+    TEST_ASSERT_EQUAL( context.sntpPacketSize, responseSize );
 
     return validateServerAuthRetCode;
 }
@@ -683,14 +684,11 @@ void test_Init_Nominal( void )
 }
 
 /**
- * @brief Validate the behavior of @ref Sntp_SendTimeRequest for all error cases.
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest for invalid
+ * parameters
  */
-void test_Sntp_SendTimeRequest_ErrorCases()
+void test_Sntp_SendTimeRequest_InvalidParams()
 {
-    /* Set the behavior of the serializer function dependency to always return
-     * success. */
-    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
-
     /* Test with NULL context parameter. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
                        Sntp_SendTimeRequest( NULL, rand() % UINT32_MAX ) );
@@ -700,26 +698,64 @@ void test_Sntp_SendTimeRequest_ErrorCases()
 
     /* Reset the context member for current server to a valid value. */
     context.currentServerIndex = 0U;
+}
 
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when the DNS resolution
+ * of time server fails.
+ */
+void test_Sntp_SendTimeRequest_Dns_Failure()
+{
     /* Test case when DNS resolution of server fails. */
     dnsResolveRetCode = false;
     TEST_ASSERT_EQUAL( SntpErrorDnsFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset DNS resolution interface return code. */
-    dnsResolveRetCode = true;
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when authentication
+ * interface returns error of the request buffer being insufficient in size for
+ * adding authentication data.
+ */
+void test_Sntp_SendTimeRequest_Auth_Failure_BufferTooSmall()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when authentication interface call for adding client authentication
      * fails. */
     generateClientAuthRetCode = SntpErrorBufferTooSmall;
     TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
+
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when failure from
+ * the authentication interface function, that generates client authentication,
+ * returning failure.
+ */
+void test_Sntp_SendTimeRequest_Auth_Failure_InternalError()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
+
     generateClientAuthRetCode = SntpErrorAuthFailure;
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset authentication interface function return code. */
-    generateClientAuthRetCode = SntpSuccess;
+/**
+ * @brief Validate that @ref Sntp_SendTimeRequest returns failure when the authentication
+ * data size returned by the @ref SntpGenerateAuthCode_t function of authentication interface
+ * is invalid, i.e. the size exceeds the buffer capacity for holding authentication data.
+ */
+void test_Sntp_SendTimeRequest_Auth_Failure_InvalidOutputParam()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test when authentication interface returns an invalid authentication data
      * size.*/
@@ -727,49 +763,83 @@ void test_Sntp_SendTimeRequest_ErrorCases()
                                                                       * take for holding auth data. */
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset authentication code size variable. */
-    authCodeSize = sizeof( testBuffer ) - SNTP_PACKET_BASE_SIZE;
-    expectedBytesToSend = SNTP_PACKET_BASE_SIZE + authCodeSize;
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when transport send operation
+ * fails in the first try.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnFirstTry()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when transport send fails with negative error code sent in the first
      * call to transport interface send function. */
     udpSendRetCodes[ currentUdpSendCodeIndex ] = -2;
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset the index in the current time list. */
-    currentTimeIndex = 0;
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when transport send operation
+ * fails in a retry attempt.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnRetry()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
+
 
     /* Test case when transport send fails with negative error code sent after some
      * calls to transport interface send function. */
-    udpSendRetCodes[ 0 ] = 1;  /* 1st call sending 1 byte.*/
+    udpSendRetCodes[ 0 ] = 0;  /* 1st call sending 0 bytes.*/
     udpSendRetCodes[ 1 ] = -1; /* 2nd call returning error.*/
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
 
     /* Reset the index in the current time list. */
     currentTimeIndex = 0;
+    currentUdpSendCodeIndex = 0;
+}
+
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when retries time
+ * out for transport send operation.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Error_RetryTimeout()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when transport send operation times out due to no data being
      * sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration. */
-    currentTimeList[ 1 ].fractions = 0;                                                         /* SntpGetTime_t call before the loop in sendSntpPacket. */
-    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 ); /* SntpGetTime_t call in 1st iteration of loop. */
-    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ); /* SntpGetTime_t call in 2nd iteration of loop. */
-    udpSendRetCodes[ currentUdpSendCodeIndex ] = 0;
+    udpSendRetCodes[ 0 ] = 0;
+    udpSendRetCodes[ 1 ] = 0;
+    currentTimeList[ 1 ].fractions = 0;                                                             /* SntpGetTime_t call before the loop in sendSntpPacket. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );     /* SntpGetTime_t call in 1st iteration of loop. */
+    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( ( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ) ); /* SntpGetTime_t call in 2nd iteration of loop. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset the indices of lists that control behavior of interface functions. */
-    currentTimeIndex = 0;
-    currentUdpSendCodeIndex = 0;
+/**
+ * @brief Validate that the @ref Sntp_SendTimeRequest API treats partial data being sent
+ * by the UDP transport interface as an error because UDP does not support partial sends.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Error_PartialSend()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
-    /* Test case when transport send timeout occurs with partial data being initially
-     * no data sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration after that. */
-    udpSendRetCodes[ 0 ] = 5;                                                               /* 1st return value for partial data send. */
-    udpSendRetCodes[ 1 ] = 0;                                                               /* 2nd return value for no data send. */
-    currentTimeList[ 2 ].fractions = 0;                                                     /* SntpGetTime_t call in 1st iteration of loop. */
-    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS ); /* SntpGetTime_t call in 2nd iteration of loop. */
+    /* Test case when transport send returns partial number of bytes sent. This is
+     * incorrect as UDP protocol does not support partial writes. */
+    udpSendRetCodes[ 0 ] = 0;                       /* 1st call sending 0 bytes.*/
+    udpSendRetCodes[ 1 ] = expectedBytesToSend / 2; /* 2nd call returning partial bytes.*/
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
 }

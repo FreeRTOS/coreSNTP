@@ -10,7 +10,7 @@ extraction:
         - cmake -S test -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -Wformat -Wformat-security -Warray-bounds'
     index:
       build_command:
-        - make -C build coverity_analysis 
+        - make -C build coverity_analysis
 
   csharp:
     after_prepare:
