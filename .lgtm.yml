@@ -1,0 +1,29 @@
+path_classifiers:
+  library:
+    - exclude: /
+extraction:
+  cpp:
+    prepare:
+      - cmake
+    configure:
+      command:
+        - cmake -S test -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -Wformat -Wformat-security -Warray-bounds'
+    index:
+      build_command:
+        - make -C build coverity_analysis
+
+  csharp:
+    after_prepare:
+      - false
+  go:
+    after_prepare:
+      - false
+  java:
+    after_prepare:
+      - false
+  javascript:
+    after_prepare:
+      - false
+  python:
+    after_prepare:
+      - false
