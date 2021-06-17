@@ -713,10 +713,11 @@ void test_Sntp_SendTimeRequest_Dns_Failure()
 }
 
 /**
- * @brief Validate the behavior of @ref Sntp_SendTimeRequest when failures occur in
- * generating client authentication code from authentication interface.
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when authentication
+ * interface returns error of the request buffer being insufficient in size for
+ * adding authentication data.
  */
-void test_Sntp_SendTimeRequest_Auth_Failures()
+void test_Sntp_SendTimeRequest_Auth_Failure_BufferTooSmall()
 {
     /* Set the behavior of the serializer function dependency to always return
      * success. */
@@ -727,12 +728,34 @@ void test_Sntp_SendTimeRequest_Auth_Failures()
     generateClientAuthRetCode = SntpErrorBufferTooSmall;
     TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
+
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when failure from
+ * the authentication interface function, that generates client authentication,
+ * returning failure.
+ */
+void test_Sntp_SendTimeRequest_Auth_Failure_InternalError()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
+
     generateClientAuthRetCode = SntpErrorAuthFailure;
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset authentication interface function return code. */
-    generateClientAuthRetCode = SntpSuccess;
+/**
+ * @brief Validate that @ref Sntp_SendTimeRequest returns failure when the authentication
+ * data size returned by the @ref SntpGenerateAuthCode_t function of authentication interface
+ * is invalid, i.e. the size exceeds the buffer capacity for holding authentication data.
+ */
+void test_Sntp_SendTimeRequest_Auth_Failure_InvalidOutputParam()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test when authentication interface returns an invalid authentication data
      * size.*/
@@ -743,10 +766,10 @@ void test_Sntp_SendTimeRequest_Auth_Failures()
 }
 
 /**
- * @brief Validate the behavior of @ref Sntp_SendTimeRequest when failures occur in
- * transport send operation.
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when transport send operation
+ * fails in the first try.
  */
-void test_Sntp_SendTimeRequest_Transport_Send_Failures()
+void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnFirstTry()
 {
     /* Set the behavior of the serializer function dependency to always return
      * success. */
@@ -757,9 +780,18 @@ void test_Sntp_SendTimeRequest_Transport_Send_Failures()
     udpSendRetCodes[ currentUdpSendCodeIndex ] = -2;
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset the index in the current time list. */
-    currentTimeIndex = 0;
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when transport send operation
+ * fails in a retry attempt.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnRetry()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
+
 
     /* Test case when transport send fails with negative error code sent after some
      * calls to transport interface send function. */
@@ -771,6 +803,17 @@ void test_Sntp_SendTimeRequest_Transport_Send_Failures()
     /* Reset the index in the current time list. */
     currentTimeIndex = 0;
     currentUdpSendCodeIndex = 0;
+}
+
+/**
+ * @brief Validate the behavior of @ref Sntp_SendTimeRequest when retries time
+ * out for transport send operation.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Error_RetryTimeout()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when transport send operation times out due to no data being
      * sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration. */
@@ -781,10 +824,17 @@ void test_Sntp_SendTimeRequest_Transport_Send_Failures()
     currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( ( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ) ); /* SntpGetTime_t call in 2nd iteration of loop. */
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
                        Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+}
 
-    /* Reset the index in the current time list. */
-    currentTimeIndex = 0;
-    currentUdpSendCodeIndex = 0;
+/**
+ * @brief Validate that the @ref Sntp_SendTimeRequest API treats partial data being sent
+ * by the UDP transport interface as an error because UDP does not support partial sends.
+ */
+void test_Sntp_SendTimeRequest_Transport_Send_Error_PartialSend()
+{
+    /* Set the behavior of the serializer function dependency to always return
+     * success. */
+    Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when transport send returns partial number of bytes sent. This is
      * incorrect as UDP protocol does not support partial writes. */
