@@ -210,6 +210,7 @@ sublicense
 testbuffer
 testclockoffsetcalculation
 timebeforeloop
+timediffsec
 timeserver
 transmittime
 trng
