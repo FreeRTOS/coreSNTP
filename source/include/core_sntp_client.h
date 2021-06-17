@@ -154,8 +154,8 @@ typedef struct NetworkContext NetworkContext_t;
 
 /**
  * @ingroup core_sntp_callback_types
- * @brief Interface for user-defined function to send data to the network
- * over User Datagram Protocol (UDP).
+ * @brief Interface for user-defined function to send time request as a single datagram
+ * to server on the network over User Datagram Protocol (UDP).
  *
  * @note It is RECOMMENDED that the send operation is non-blocking, i.e. it
  * SHOULD immediately return when the entire UDP data cannot be sent over the
@@ -181,12 +181,13 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
                                             uint32_t serverAddr,
                                             uint16_t serverPort,
                                             const void * pBuffer,
-                                            size_t bytesToSend );
+                                            uint16_t bytesToSend );
 
 /**
  * @ingroup core_sntp_callback_types
- * @brief Interface for user-defined function to receive data from the network
- * over User Datagram Protocol (UDP).
+ * @brief Interface for user-defined function to receive the server response, to a time
+ * request (sent through the @ref UdpTransportSendTo_t function), from the network over
+ * User Datagram Protocol (UDP).
  *
  * @note It is RECOMMENDED that the read operation is non-blocking, i.e. it
  * SHOULD immediately return when no data is available on the network.
@@ -213,7 +214,7 @@ typedef int32_t ( * UdpTransportRecvFrom_t )( NetworkContext_t * pNetworkContext
                                               uint32_t serverAddr,
                                               uint16_t serverPort,
                                               void * pBuffer,
-                                              size_t bytesToRecv );
+                                              uint16_t bytesToRecv );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -281,7 +282,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
                                                   const SntpServerInfo_t * pTimeServer,
                                                   void * pBuffer,
                                                   size_t bufferSize,
-                                                  size_t * pAuthCodeSize );
+                                                  uint16_t * pAuthCodeSize );
 
 /**
  * @ingroup core_sntp_callback_types
@@ -319,7 +320,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
 typedef SntpStatus_t (* SntpValidateServerAuth_t )( SntpAuthContext_t * pContext,
                                                     const SntpServerInfo_t * pTimeServer,
                                                     const void * pResponseData,
-                                                    size_t responseSize );
+                                                    uint16_t responseSize );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -444,7 +445,7 @@ typedef struct SntpContext
      * This value is used for expecting the same size for an SNTP response
      * from the server.
      */
-    size_t sntpPacketSize;
+    uint16_t sntpPacketSize;
 
     /**
      * @brief The timeout duration (in milliseconds) for receiving a response, through

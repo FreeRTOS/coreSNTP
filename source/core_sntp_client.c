@@ -282,7 +282,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
                                     uint16_t serverPort,
                                     SntpGetTime_t getTimeFunc,
                                     const uint8_t * pPacket,
-                                    size_t packetSize )
+                                    uint16_t packetSize )
 {
     const uint8_t * pIndex = pPacket;
     int32_t bytesSent = 0;
@@ -316,11 +316,11 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         }
 
         /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
-         * The buffer size should not Thus, this will be treated as failure as well. */
+         * Thus, if the transport send function returns status representing partial send, it will be treated as failure. */
         else if( ( bytesSent > 0 ) && ( bytesSent != ( int32_t ) packetSize ) )
         {
             LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
-                        "ReturnCode=%ld, ExpectedCode=%lu", ( long int ) bytesSent, packetSize ) );
+                        "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );
 
             sendError = true;
         }
@@ -364,7 +364,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
 static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 {
     SntpStatus_t status = SntpSuccess;
-    size_t authDataSize = 0U;
+    uint16_t authDataSize = 0U;
 
     assert( pContext != NULL );
     assert( pContext->authIntf.generateClientAuth != NULL );
@@ -659,7 +659,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         status = pContext->authIntf.validateServerAuth( pContext->authIntf.pAuthContext,
                                                         pServer,
                                                         pContext->pNetworkBuffer,
-                                                        pContext->bufferSize );
+                                                        pContext->sntpPacketSize );
         assert( ( status == SntpSuccess ) || ( status == SntpErrorAuthFailure ) ||
                 ( status == SntpServerNotAuthenticated ) );
 

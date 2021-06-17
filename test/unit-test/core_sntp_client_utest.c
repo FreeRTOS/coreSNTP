@@ -96,7 +96,7 @@ static size_t expectedBytesToRecvAfterFirstByte = SNTP_PACKET_BASE_SIZE;
 static int32_t udpRecvRetCodes[ 3 ];
 static uint8_t currentUdpRecvCodeIndex;
 static SntpStatus_t generateClientAuthRetCode = SntpSuccess;
-static size_t authCodeSize;
+static uint16_t authCodeSize;
 static SntpStatus_t validateServerAuthRetCode = SntpSuccess;
 
 /* Output parameter for mock of Sntp_DeserializeResponse API. */
@@ -159,7 +159,7 @@ static int32_t UdpSendTo( NetworkContext_t * pNetworkContext,
                           uint32_t serverAddr,
                           uint16_t serverPort,
                           const void * pBuffer,
-                          size_t bytesToSend )
+                          uint16_t bytesToSend )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -189,7 +189,7 @@ static int32_t UdpRecvFrom( NetworkContext_t * pNetworkContext,
                             uint32_t serverAddr,
                             uint16_t serverPort,
                             void * pBuffer,
-                            size_t bytesToRecv )
+                            uint16_t bytesToRecv )
 {
     TEST_ASSERT_EQUAL_PTR( &netContext, pNetworkContext );
     TEST_ASSERT_NOT_NULL( pBuffer );
@@ -222,7 +222,7 @@ static SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
                                         const SntpServerInfo_t * pTimeServer,
                                         void * pBuffer,
                                         size_t bufferSize,
-                                        size_t * pAuthCodeSize )
+                                        uint16_t * pAuthCodeSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
@@ -239,12 +239,13 @@ static SntpStatus_t generateClientAuth( SntpAuthContext_t * pContext,
 static SntpStatus_t validateServerAuth( SntpAuthContext_t * pContext,
                                         const SntpServerInfo_t * pTimeServer,
                                         const void * pResponseData,
-                                        size_t responseSize )
+                                        uint16_t responseSize )
 {
     TEST_ASSERT_EQUAL_PTR( &authContext, pContext );
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_EQUAL_PTR( testBuffer, pResponseData );
     TEST_ASSERT_GREATER_OR_EQUAL( SNTP_PACKET_BASE_SIZE, responseSize );
+    TEST_ASSERT_EQUAL( context.sntpPacketSize, responseSize );
 
     return validateServerAuthRetCode;
 }
