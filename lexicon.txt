@@ -36,6 +36,7 @@ currenttimelist
 de
 deamon
 december
+deserialization
 deserialize
 deserializer
 deserializeresponse
@@ -209,6 +210,7 @@ sublicense
 testbuffer
 testclockoffsetcalculation
 timebeforeloop
+timediffsec
 timeserver
 transmittime
 trng

@@ -138,26 +138,47 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  * and the @p OlderTime represents time in NTP era 0 (i.e. time since 1st Jan 1900).
  *
  * @return Returns the calculated time duration between the two timestamps.
+ *
+ * @note This function returns the calculated time difference as unsigned 64 bit
+ * to avoid integer overflow when converting time difference between the seconds part
+ * of the timestamps, which are 32 bits wide, to milliseconds.
  */
-static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
+static uint64_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
                                         const SntpTimestamp_t * pOlderTime )
 {
-    uint32_t timeDiffMs = 0U;
+    uint64_t timeDiffMs = 0UL;
+    uint32_t timeDiffSec = 0U;
 
     assert( pCurrentTime != NULL );
     assert( pOlderTime != NULL );
 
-    timeDiffMs = ( pCurrentTime->seconds - pOlderTime->seconds ) * 1000U;
-
-    if( pCurrentTime->fractions > pOlderTime->fractions )
+    /* Detect if SNTP time has overflown between the 2 timestamps. */
+    if( pCurrentTime->seconds < pOlderTime->seconds )
     {
-        timeDiffMs += ( pCurrentTime->fractions - pOlderTime->fractions ) /
-                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U );
+        /* Handle the SNTP time overflow by calculating the actual time
+         * duration from pOlderTime, that exists in NTP era 0, to pCurrentTime,
+         * that exists in NTP era 1. */
+        timeDiffSec = ( UINT32_MAX - pOlderTime->seconds ) + /* Time in NTP era 0. */
+                      1U +                                   /* Epoch time in NTP era 1, i.e. 7 Feb 2036 6h:14m:28s. */
+                      pCurrentTime->seconds;                 /* Time in NTP era 1. */
+
+        timeDiffMs = ( uint64_t ) timeDiffSec * 1000UL;
     }
     else
     {
-        timeDiffMs -= ( pOlderTime->fractions - pCurrentTime->fractions ) /
-                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000U );
+        timeDiffSec = ( pCurrentTime->seconds - pOlderTime->seconds );
+        timeDiffMs = ( uint64_t ) timeDiffSec * 1000UL;
+    }
+
+    if( pCurrentTime->fractions > pOlderTime->fractions )
+    {
+        timeDiffMs += ( ( uint64_t ) pCurrentTime->fractions - ( uint64_t ) pOlderTime->fractions ) /
+                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000UL );
+    }
+    else
+    {
+        timeDiffMs -= ( ( uint64_t ) pOlderTime->fractions - ( uint64_t ) pCurrentTime->fractions ) /
+                      ( SNTP_FRACTION_VALUE_PER_MICROSECOND * 1000UL );
     }
 
     return timeDiffMs;
@@ -174,7 +195,7 @@ static uint32_t calculateElapsedTimeMs( const SntpTimestamp_t * pCurrentTime,
  * - #SntpErrorBadParameter if the context is NULL.
  * - #SntpErrorContextNotInitialized if the context is validated to be initialized.
  */
-static SntpStatus_t validateContext( SntpContext_t * pContext )
+static SntpStatus_t validateContext( const SntpContext_t * pContext )
 {
     SntpStatus_t status = SntpSuccess;
 
@@ -182,6 +203,7 @@ static SntpStatus_t validateContext( SntpContext_t * pContext )
     if( pContext == NULL )
     {
         status = SntpErrorBadParameter;
+        LogError( ( "Invalid context parameter: Context is NULL" ) );
     }
 
     /* Validate pointer parameters are not NULL. */
@@ -215,6 +237,11 @@ static SntpStatus_t validateContext( SntpContext_t * pContext )
     else
     {
         status = SntpSuccess;
+    }
+
+    if( status == SntpErrorContextNotInitialized )
+    {
+        LogError( ( "Invalid context parameter: Context is not initialized with Sntp_Init" ) );
     }
 
     return status;
@@ -261,7 +288,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
     size_t bytesRemaining = packetSize;
     int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
-    uint32_t timeSinceLastSendMs;
+    uint64_t timeSinceLastSendMs;
     bool sendError = false;
 
     assert( pPacket != NULL );
@@ -393,20 +420,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
     /* Validate the context parameter. */
     status = validateContext( pContext );
 
-    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
-    {
-        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
-    }
-
-    /* Check if there is any time server available for requesting time
-     * that has not already rejected a prior request. */
-    else if( pContext->currentServerIndex >= pContext->numOfServers )
-    {
-        LogError( ( "Cannot request time: All servers have rejected time requests: "
-                    "Re-initialize context with new servers" ) );
-        status = SntpErrorChangeServer;
-    }
-    else
+    if( status == SntpSuccess )
     {
         const SntpServerInfo_t * pServer = NULL;
 
@@ -475,6 +489,36 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
 
     return status;
 }
+
+/**
+ * @brief Utility to update the SNTP context to rotate the server of use for subsequent
+ * time request(s).
+ *
+ * @note If there is no next server remaining, after the current server's index, in the list of
+ * configured servers, the server rotation algorithm wraps around to the first server in the list.
+ * The wrap around is done so that an application using the library for a long-running SNTP client
+ * functionality (like a daemon task) does not become dysfunctional after all configured time
+ * servers have been used up. Time synchronization can be a critical functionality for a system
+ * and the wrap around logic ensures that the SNTP client continues to function in such a case.
+ *
+ * @note Server rotation is performed ONLY when either of:
+ * - The current server responds with a rejection for time request.
+ *                         OR
+ * - The current server response wait has timed out.
+ */
+static void rotateServerForNextTimeQuery( SntpContext_t * pContext )
+{
+    size_t nextServerIndex = ( pContext->currentServerIndex + 1U ) % pContext->numOfServers;
+
+    LogInfo( ( "Rotating server for next time query: PreviousServer=%.*s, NextServer=%.*s",
+               ( int ) pContext->pTimeServers[ pContext->currentServerIndex ].serverNameLen,
+               pContext->pTimeServers[ pContext->currentServerIndex ].pServerName,
+               ( int ) pContext->pTimeServers[ nextServerIndex ].serverNameLen,
+               pContext->pTimeServers[ nextServerIndex ].pServerName ) );
+
+    pContext->currentServerIndex = nextServerIndex;
+}
+
 
 /**
  * @brief This function attempts to receive the SNTP response packet from a server
@@ -659,8 +703,8 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
             ( status == SntpRejectedResponseOtherCode ) )
         {
             /* Server has rejected the time request. Thus, we will rotate to the next time server
-            * in the list, if we have not exhausted time requests with all configured servers. */
-            pContext->currentServerIndex++;
+             * in the list. */
+            rotateServerForNextTimeQuery( pContext );
 
             LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
                         ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
@@ -708,8 +752,8 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
          * library (i.e. the SNTP client) has cleared the internal state to zero, the spoofed packet will be
          * discarded as the coreSNTP serializer does not accept server responses with zero value for timestamps.
          */
-        pContext->lastRequestTime.seconds = 0UL;
-        pContext->lastRequestTime.fractions = 0UL;
+        pContext->lastRequestTime.seconds = 0U;
+        pContext->lastRequestTime.fractions = 0U;
     }
 
     return status;
@@ -723,23 +767,11 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
     /* Validate the context parameter. */
     status = validateContext( pContext );
 
-    if( ( status == SntpErrorBadParameter ) || ( status == SntpErrorContextNotInitialized ) )
-    {
-        LogError( ( "Invalid context parameter: Either context is NULL OR it is not initialized with Sntp_Init" ) );
-    }
-
-    /* Check whether there is any remaining server in the list of configured
-     * servers that it is reasonable to expect a response from. */
-    else if( pContext->currentServerIndex >= pContext->numOfServers )
-    {
-        status = SntpErrorChangeServer;
-        LogError( ( "Invalid API call: All servers have already rejected time requests: "
-                    "Re-initialize context to change configured servers." ) );
-    }
-    else
+    if( status == SntpSuccess )
     {
         SntpTimestamp_t startTime, loopIterTime;
         const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
+        uint64_t elapsedTimeMs = 0U;
 
         pContext->getTimeFunc( &startTime );
 
@@ -765,15 +797,23 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
                 status = processServerResponse( pContext, &loopIterTime );
             }
 
+            /* Calculate time elapsed since the associated time request was sent out. */
+            elapsedTimeMs = calculateElapsedTimeMs( &loopIterTime, pRequestTime );
+
             /* Check whether a response timeout has occurred before re-trying the
              * read in the next iteration. */
             if( ( status == SntpNoResponseReceived ) &&
-                ( calculateElapsedTimeMs( &loopIterTime, pRequestTime ) >= pContext->responseTimeoutMs ) )
+                ( elapsedTimeMs >= pContext->responseTimeoutMs ) )
             {
                 status = SntpErrorResponseTimeout;
+
+                /* As server has timed out in sending its response, we will rotate to the next server in
+                 * the list of configured time servers. */
+                rotateServerForNextTimeQuery( pContext );
+
                 LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
-                            "TimeoutDuration=%ums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
-                            calculateElapsedTimeMs( &loopIterTime, pRequestTime ) ) );
+                            "TimeoutDuration=%lums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
+                            elapsedTimeMs ) );
             }
         } while( ( status == SntpNoResponseReceived ) &&
                  ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
@@ -822,10 +862,6 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
 
         case SntpErrorTimeNotSupported:
             pString = "SntpErrorTimeNotSupported";
-            break;
-
-        case SntpErrorChangeServer:
-            pString = "SntpErrorChangeServer";
             break;
 
         case SntpErrorDnsFailure:
