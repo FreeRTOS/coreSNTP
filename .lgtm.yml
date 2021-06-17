@@ -1,0 +1,25 @@
+path_classifiers:
+  library:
+    - exclude: /
+extraction:
+  cpp:
+    index:
+      build_command:
+        - export 'CFLAGS=-Iinclude -ansi -Wall -Wextra -Wpedantic -Werror -DSNTP_DO_NOT_USE_CUSTOM_CONFIG'
+        - make -C source core_sntp_client.o core_sntp_serializer.o 
+
+  csharp:
+    after_prepare:
+      - false
+  go:
+    after_prepare:
+      - false
+  java:
+    after_prepare:
+      - false
+  javascript:
+    after_prepare:
+      - false
+  python:
+    after_prepare:
+      - false
