@@ -107,6 +107,7 @@ pclienttxtime
 pclockoffset
 pcontext
 pcurrenttime
+phasresponsetimedout
 pml
 pnetworkbuffer
 pnetworkbuffer
@@ -120,6 +121,7 @@ ppacket
 pparsedresponse
 ppm
 ppollinterval
+preadstarttime
 prequestpacket
 prequesttime
 prequesttxtime
@@ -154,6 +156,7 @@ reftime
 rejectedresponsecode
 resolvednsfunc
 responsesize
+responsetimeoutms
 retryable
 rfc
 rootdelay
@@ -174,6 +177,7 @@ serverresponsetimeoutms
 servertime
 servertimesec
 servertxtime
+setsystemtimeatindex
 setsystemtimefunc
 signedfirstorderdiffrecv
 signedfirstorderdiffsend
@@ -193,6 +197,7 @@ sntperrorresponsetimeout
 sntperrortimenotsupported
 sntpinvalidresponse
 sntpnoresponse
+sntpnoresponsereceived
 sntppacketsize
 sntprejectedresponse
 sntprejectedresponsechangeserver

@@ -770,23 +770,23 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         *pHasResponseTimedOut = true;
 
         LogError( ( "Unable to receive response: Server response has timed out: "
-                    "RequestTime=%lus %lums, TimeoutDuration=%lums, ElapsedTime=%lu",
+                    "RequestTime=%us %ums, TimeoutDuration=%ums, ElapsedTime=%lu",
                     pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
-                    responseTimeout, timeSinceRequestMs ) );
+                    responseTimeoutMs, timeSinceRequestMs ) );
     }
     /* Check whether the block time window has expired to determine whether read can be retried. */
     else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
     {
         shouldRetry = false;
         LogDebug( ( "Did not receive server response: Read block time has expired: "
-                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums",
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums",
                     blockTimeMs, timeSinceRequestMs ) );
     }
     else
     {
         shouldRetry = true;
         LogDebug( ( "Did not receive server response: Retrying read: "
-                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%lu",
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%u",
                     blockTimeMs, timeSinceRequestMs, responseTimeoutMs ) );
     }
 
