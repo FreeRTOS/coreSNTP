@@ -53,26 +53,6 @@
 #endif
 
 /**
- * @brief The maximum duration between non-empty network reads while
- * receiving an SNTP packet via the #Sntp_ReceiveTimeResponse API function.
- *
- * When an incoming SNTP packet is detected, the transport receive function
- * may be called multiple times until all of the expected number of bytes of the
- * packet are received. This timeout represents the maximum polling duration that
- * is allowed without any data reception from the network for the incoming packet.
- *
- * If the timeout expires, the #Sntp_ReceiveTimeResponse function will return
- * #SntpErrorNetworkFailure.
- *
- * <b>Possible values:</b> Any positive 16 bit integer. Recommended to use a
- * small timeout value. <br>
- * <b>Default value:</b> `10`
- */
-#ifndef SNTP_RECV_POLLING_TIMEOUT_MS
-    #define SNTP_RECV_POLLING_TIMEOUT_MS    ( 10U )
-#endif
-
-/**
  * @brief The maximum duration between non-empty network transmissions while
  * sending an SNTP packet via the #Sntp_SendTimeRequest API function.
  *

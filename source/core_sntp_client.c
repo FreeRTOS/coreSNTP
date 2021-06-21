@@ -515,17 +515,13 @@ static void rotateServerForNextTimeQuery( SntpContext_t * pContext )
 
 
 /**
- * @brief This function attempts to receive the SNTP response packet from a server
- * if the time window for server response has not timed out.
+ * @brief This function attempts to receive the SNTP response packet from a server.
  *
- * @note This function does not block on receiving the response packet from the network.
- * Instead, it determines whether the response packet is already available on the network
- * by first reading ONLY a single byte of data first.
- * If the single byte is available from the network, then rest of the SNTP response packet is
- * read from the network with retries for zero or partial reads until either:
- * - All the remaining bytes of server response are received
- *                     OR
- * - A timeout of #SNTP_RECV_POLLING_TIMEOUT_MS occurs of receiving no data over the network.
+ * @note This function treats reads of data sizes less than the expected server response packet,
+ * as an error as UDP does not support partial reads. Such a scenario can exist either due:
+ * - An error in the server sending its response with smaller packet size than the request packet OR
+ * - A malicious attacker spoofing or modifying server response OR
+ * - An error in the UDP transport interface implementation for read operation.
  *
  * @param[in] pTransportIntf The UDP transport interface to use for receiving data from
  * the network.
@@ -534,11 +530,10 @@ static void rotateServerForNextTimeQuery( SntpContext_t * pContext )
  * @param[in, out] pBuffer This will be filled with the server response read from the
  * network.
  * @param[in] responseSize The size of server response to read from the network.
- * @param[in] getTimeFunc The interface for obtaining system time.
  *
  * @return It returns one of the following:
  * - #SntpSuccess if an SNTP response packet is received from the network.
- * - #SntpNoResponse if a server response is not received from the network.
+ * - #SntpNoResponseReceived if a server response is not received from the network.
  * - #SntpErrorNetworkFailure if there is an internal failure in reading from the network
  * in the user-defined transport interface.
  */
@@ -546,80 +541,48 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
                                          uint32_t timeServer,
                                          uint16_t serverPort,
                                          uint8_t * pBuffer,
-                                         size_t responseSize,
-                                         SntpGetTime_t getTimeFunc )
+                                         uint16_t responseSize )
 {
-    SntpStatus_t status = SntpSuccess;
+    SntpStatus_t status = SntpNoResponseReceived;
     int32_t bytesRead = 0;
 
     assert( pTransportIntf != NULL );
     assert( pTransportIntf->recvFrom != NULL );
     assert( pBuffer != NULL );
+    assert( responseSize >= SNTP_PACKET_BASE_SIZE );
 
-    /* Check whether there is any data available on the network to read by attempting to read
-     * a single byte. */
     bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
                                           timeServer,
                                           serverPort,
                                           pBuffer,
-                                          1U );
+                                          responseSize );
 
-    if( bytesRead > 0 )
-    {
-        size_t bytesRemaining = responseSize - 1U;
-        SntpTimestamp_t startTime;
-
-        assert( bytesRead == 1 );
-
-        getTimeFunc( &startTime );
-
-        while( ( bytesRemaining > 0U ) && ( status == SntpSuccess ) )
-        {
-            bytesRead = pTransportIntf->recvFrom( pTransportIntf->pUserContext,
-                                                  timeServer,
-                                                  serverPort,
-                                                  pBuffer,
-                                                  1U );
-
-            if( bytesRead > 0 )
-            {
-                bytesRemaining -= ( size_t ) bytesRead;
-
-                /* Read the current system time to set it as the new base line
-                 * for evaluating the receive retry timeout, #SNTP_RECV_POLLING_TIMEOUT_MS.*/
-                getTimeFunc( &startTime );
-            }
-            else if( bytesRead == 0 )
-            {
-                SntpTimestamp_t currentTime;
-                getTimeFunc( &currentTime );
-
-                if( calculateElapsedTimeMs( &currentTime, &startTime ) >= SNTP_RECV_POLLING_TIMEOUT_MS )
-                {
-                    LogError( ( "Unable to receive server response: Timed out retrying reads" ) );
-                    status = SntpErrorNetworkFailure;
-                }
-            }
-            else
-            {
-                status = SntpErrorNetworkFailure;
-            }
-        }
-    }
-    else if( bytesRead == 0 )
-    {
-        status = SntpNoResponseReceived;
-    }
-    else
-    {
-        /* Empty else marker. */
-    }
-
+    /* Negative return code indicates error. */
     if( bytesRead < 0 )
     {
         status = SntpErrorNetworkFailure;
         LogError( ( "Unable to receive server response: Transport receive failed: Code=%ld",
                     ( long int ) bytesRead ) );
+    }
+    /* If the packet was not available on the network, check whether we can retry. */
+    else if( bytesRead == 0 )
+    {
+        status = SntpNoResponseReceived;
+        LogDebug( ( "No server response received: Determining whether we should retry." ) );
+    }
+
+    /* Partial reads are not supported by UDP, which only supports receiving the entire datagram as a whole.
+     * Thus, if the transport receive function returns reception of partial data, it will be treated as failure. */
+    else if( bytesRead != ( int32_t ) responseSize )
+    {
+        LogError( ( "Failed to receive server response: Transport recv returned less than expected bytes."
+                    "ExpectedBytes=%u, ReadBytes=%ld", responseSize, ( long int ) bytesRead ) );
+        status = SntpErrorNetworkFailure;
+    }
+    else
+    {
+        LogDebug( ( "Received server response: PacketSize=%ld", ( long int ) bytesRead ) );
+        status = SntpSuccess;
     }
 
     return status;
@@ -753,64 +716,154 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
     return status;
 }
 
+/**
+ * @brief Determines whether a retry attempt should be made to receive server response packet from the network
+ * depending on the timing constraints of server response timeout, @p responseTimeoutMs, and the block time
+ * period, @blockTimeMs, passed. If neither of the time windows have expired, the function determines that the
+ * read operation can be re-tried.
+ *
+ * @param[in] pCurrentTime The current time in the system used for calculating elapsed time windows.
+ * @param[in] pReadStartTime The time of the first read attempt in the current set of read tries occurring
+ * from the Sntp_ReceiveTimeRequest API call by the application. This time is used for calculating the elapsed
+ * time to determine whether the block time has expired.
+ * @param[in] pRequestTime The time of sending the SNTP request to the server for which the response is
+ * awaited. This time is used for calculating total elapsed elapsed time of waiting for server response to
+ * determine if a server response timeout has occurred.
+ * @param[in] responseTimeoutMs The server response timeout configuration.
+ * @param[in] blockTimeMs The maximum block time of waiting for server response across read tries in the current
+ * call made by application to Sntp_ReceiveTimeResponse API.
+ * @param[out] pHasResponseTimedOut This will be populated with state to indicate whether the wait for server
+ * response has timed out.
+ *
+ * @return Returns true for retrying read operation of server response; false on either server response timeout
+ * OR completion of block time window.
+ */
+static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
+                                  const SntpTimestamp_t * pReadStartTime,
+                                  const SntpTimestamp_t * pRequestTime,
+                                  uint32_t responseTimeoutMs,
+                                  uint32_t blockTimeMs,
+                                  bool * pHasResponseTimedOut )
+{
+    uint64_t timeSinceRequestMs = 0UL;
+    uint64_t timeElapsedInReadAttempts = 0UL;
+    bool shouldRetry = false;
+
+    assert( pCurrentTime != NULL );
+    assert( pReadStartTime != NULL );
+    assert( pRequestTime != NULL );
+    assert( pHasResponseTimedOut != NULL );
+
+    /* Calculate time elapsed since the time request was sent to the server
+     * to determine whether the server response has timed out. */
+    timeSinceRequestMs = calculateElapsedTimeMs( pCurrentTime, pRequestTime );
+
+    /* Calculate the time elapsed across all the read attempts so far to determine
+     * whether the block time window for reading server response has expired. */
+    timeElapsedInReadAttempts = calculateElapsedTimeMs( pCurrentTime, pReadStartTime );
+
+    /* Check whether a response timeout has occurred to inform whether we should
+     * wait for server response anymore. */
+    if( timeSinceRequestMs >= ( uint64_t ) responseTimeoutMs )
+    {
+        shouldRetry = false;
+        *pHasResponseTimedOut = true;
+
+        LogError( ( "Unable to receive response: Server response has timed out: "
+                    "RequestTime=%us %ums, TimeoutDuration=%ums, ElapsedTime=%lu",
+                    pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
+                    responseTimeoutMs, timeSinceRequestMs ) );
+    }
+    /* Check whether the block time window has expired to determine whether read can be retried. */
+    else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
+    {
+        shouldRetry = false;
+        LogDebug( ( "Did not receive server response: Read block time has expired: "
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums",
+                    blockTimeMs, timeSinceRequestMs ) );
+    }
+    else
+    {
+        shouldRetry = true;
+        LogDebug( ( "Did not receive server response: Retrying read: "
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%u",
+                    blockTimeMs, timeSinceRequestMs, responseTimeoutMs ) );
+    }
+
+    return shouldRetry;
+}
+
 SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
                                        uint32_t blockTimeMs )
 {
     SntpStatus_t status = SntpNoResponseReceived;
+    bool hasResponseTimedOut = false;
 
     /* Validate the context parameter. */
     status = validateContext( pContext );
 
     if( status == SntpSuccess )
     {
-        SntpTimestamp_t startTime, loopIterTime;
+        SntpTimestamp_t startTime, currentTime;
         const SntpTimestamp_t * pRequestTime = &pContext->lastRequestTime;
-        uint64_t elapsedTimeMs = 0U;
+        bool shouldRetry = false;
 
+        /* Record time before read attempts so that it can be used as base time for
+         * for tracking the block time window across read retries. */
         pContext->getTimeFunc( &startTime );
 
         do
         {
+            /* Reset the retry read operation flag. If the server response is not received in the current iteration's read
+             * attempt and the wait has not timed out, the flag will be set to perform a retry. */
+            shouldRetry = false;
+
+            /* Make an attempt to read the server response from the network. */
             status = receiveSntpResponse( &pContext->networkIntf,
                                           pContext->currentServerAddr,
                                           pContext->pTimeServers[ pContext->currentServerIndex ].port,
                                           pContext->pNetworkBuffer,
-                                          pContext->sntpPacketSize,
-                                          pContext->getTimeFunc );
-
-            /* Get current time to either de-serialize the SNTP packet if a server response has been
-             * received OR utilize for determining whether another attempt for reading the packet can
-             * be made. */
-            pContext->getTimeFunc( &loopIterTime );
+                                          pContext->sntpPacketSize );
 
             /* If the server response is received, deserialize it, validate the server
              * (if authentication interface is provided), and update system time with
              * the calculated clock offset. */
             if( status == SntpSuccess )
             {
-                status = processServerResponse( pContext, &loopIterTime );
+                /* Get current time to de-serialize the receive server response packet. */
+                pContext->getTimeFunc( &currentTime );
+
+                status = processServerResponse( pContext, &currentTime );
             }
-
-            /* Calculate time elapsed since the associated time request was sent out. */
-            elapsedTimeMs = calculateElapsedTimeMs( &loopIterTime, pRequestTime );
-
-            /* Check whether a response timeout has occurred before re-trying the
-             * read in the next iteration. */
-            if( ( status == SntpNoResponseReceived ) &&
-                ( elapsedTimeMs >= pContext->responseTimeoutMs ) )
+            else if( status == SntpNoResponseReceived )
             {
-                status = SntpErrorResponseTimeout;
+                /* Get current time to determine whether another attempt for reading the packet can
+                 * be made. */
+                pContext->getTimeFunc( &currentTime );
 
-                /* As server has timed out in sending its response, we will rotate to the next server in
-                 * the list of configured time servers. */
-                rotateServerForNextTimeQuery( pContext );
-
-                LogError( ( "Unable to receive response: Server response has timed out: RequestTime=%us %ums, "
-                            "TimeoutDuration=%lums", pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
-                            elapsedTimeMs ) );
+                /* Set the flag to retry read of server response from the network. */
+                shouldRetry = decideAboutReadRetry( &currentTime,
+                                                    &startTime,
+                                                    pRequestTime,
+                                                    pContext->responseTimeoutMs,
+                                                    blockTimeMs,
+                                                    &hasResponseTimedOut );
             }
-        } while( ( status == SntpNoResponseReceived ) &&
-                 ( calculateElapsedTimeMs( &loopIterTime, &startTime ) < blockTimeMs ) );
+            else
+            {
+                /* Empty else marker. */
+            }
+        } while( shouldRetry == true );
+
+        /* If the wait for server response to the time request has timed out, rotate the server of use in the
+         * context for subsequent time request(s). Also, update the return status to indicate response timeout. */
+        if( hasResponseTimedOut == true )
+        {
+            status = SntpErrorResponseTimeout;
+
+            /* Rotate server to the next in the list of configured servers in the context. */
+            rotateServerForNextTimeQuery( pContext );
+        }
     }
 
     return status;
