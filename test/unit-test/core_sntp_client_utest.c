@@ -26,9 +26,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/* POSIX include. */
-#include <arpa/inet.h>
-
 /* Unity include. */
 #include "unity.h"
 
