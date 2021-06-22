@@ -675,13 +675,13 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         {
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
-            LogDebug( ( "Updating system time: ServerTime=%u %ums ClockOffset=%us",
+            LogDebug( ( "Updating system time: ServerTime=%u %ums ClockOffset=%lums",
                         parsedResponse.serverTime.seconds, FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                        parsedResponse.clockOffsetSec ) );
+                        parsedResponse.clockOffsetMs ) );
 
             /* Update the system clock with the calculated offset. */
             pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
-                                   parsedResponse.clockOffsetSec, parsedResponse.leapSecondType );
+                                   parsedResponse.clockOffsetMs, parsedResponse.leapSecondType );
 
             status = SntpSuccess;
         }

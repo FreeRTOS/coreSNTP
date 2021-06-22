@@ -116,8 +116,8 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  *
  * @param[in] pTimeServer The time server used to request time.
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
- * @param[in] clockOffSetSec The calculated clock offset of the system relative
- * to the server time.
+ * @param[in] clockOffSetMs The calculated clock offset (in milliseconds) of the
+ * system relative to the server time.
  * @param[in] leapSecondInfo Information about whether there is about an upcoming
  * leap second adjustment of insertion or deletion in the last minute before midnight
  * on the last day of the current month. For more information on leap seconds, refer
@@ -125,20 +125,21 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * on the accuracy requirements of the system clock, the user can choose to account
  * for the leap second or ignore it in their system clock update logic.
  *
- * @note The user can use either a "step" or "slew" clock discipline methodology
- * depending on the application needs.
- * If the application requires a smooth time continuum of system time is required,
- * then the "slew" discipline methodology can be used with the clock offset value,
- * @p clockOffSetSec, to apply correction to the system clock with a "slew rate"
- * (that is higher than the SNTP polling rate).
+ * @note If the @p clockOffsetMs is positive, then the system time is BEHIND the server time,
+ * and if the @p clockOffsetMs, the system time is AHEAD of the server time. To correct the
+ * system time, the user can use either of "step", "slew" OR combination of the two clock
+ * discipline methodologies depending on the application needs.
+ * If the application requires a smooth time continuum of system time, then the "slew"
+ * discipline methodology can be used with the clock offset value, @p clockOffSetMs, to correct
+ * the system clock gradually with a "slew rate".
  * If the application can accept sudden jump in time (forward or backward), then
  * the "step" discipline methodology can be used to directly update the system
- * clock with the current server time, @p pServerTime, every time the coreSNTP
- * library calls the interface.
+ * clock with the current server time, @p pServerTime, every time the coreSNTP library
+ * calls the interface.
  */
 typedef void ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   const SntpTimestamp_t * pServerTime,
-                                  int32_t clockOffsetSec,
+                                  int64_t pClockOffsetMs,
                                   SntpLeapSecondInfo_t leapSecondInfo );
 
 /**

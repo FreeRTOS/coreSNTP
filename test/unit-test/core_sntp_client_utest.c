@@ -108,7 +108,7 @@ static SntpStatus_t validateServerAuthRetCode = SntpSuccess;
 /* Output parameter for mock of Sntp_DeserializeResponse API. */
 static SntpResponseData_t mockResponseData =
 {
-    .clockOffsetSec       = 1000,
+    .clockOffsetMs        = 1000,
     .leapSecondType       = NoLeapSecond,
     .rejectedResponseCode = SNTP_KISS_OF_DEATH_CODE_NONE,
     .serverTime           =
@@ -150,12 +150,12 @@ static void getTime( SntpTimestamp_t * pCurrentTime )
 /* Test definition of the @ref SntpSetTime_t interface. */
 static void setTime( const SntpServerInfo_t * pTimeServer,
                      const SntpTimestamp_t * pServerTime,
-                     int32_t clockOffsetSec,
+                     int64_t clockOffsetMs,
                      SntpLeapSecondInfo_t leapSecondInfo )
 {
     TEST_ASSERT_NOT_NULL( pTimeServer );
     TEST_ASSERT_NOT_NULL( pServerTime );
-    TEST_ASSERT_EQUAL( mockResponseData.clockOffsetSec, clockOffsetSec );
+    TEST_ASSERT_EQUAL( mockResponseData.clockOffsetMs, clockOffsetMs );
     TEST_ASSERT_EQUAL( mockResponseData.leapSecondType, leapSecondInfo );
     TEST_ASSERT_EQUAL_MEMORY( &mockResponseData.serverTime, pServerTime, sizeof( SntpTimestamp_t ) );
 }

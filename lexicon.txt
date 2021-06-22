@@ -25,7 +25,7 @@ clienttime
 clienttimesec
 clienttxtime
 clockfreqtolerance
-clockoffsetsec
+clockoffsetms
 cmac
 com
 config

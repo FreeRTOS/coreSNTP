@@ -194,7 +194,7 @@ void GetTimeFuncStub( SntpTimestamp_t * pCurrentTime )
 
 void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
-                      int32_t clockOffsetSec )
+                      int64_t clockOffsetMs )
 {
     __CPROVER_assert( pTimeServer != NULL,
                       "SetTimeFuncStub pTimeServer is NULL." );

@@ -156,7 +156,7 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
                                         SntpTimestamp_t * serverTxTime,
                                         SntpTimestamp_t * clientRxTime,
                                         SntpStatus_t expectedStatus,
-                                        int32_t expectedClockOffset )
+                                        int64_t expectedClockOffset )
 {
     /* Update the response packet with the server time. */
     addTimestampToResponseBuffer( clientTxTime,
@@ -178,7 +178,7 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
 
     /* Make sure that the API has indicated in the output parameter that
      * clock-offset could not be calculated. */
-    TEST_ASSERT_EQUAL( expectedClockOffset, parsedData.clockOffsetSec );
+    TEST_ASSERT_EQUAL( ( int64_t ) expectedClockOffset * 1000, parsedData.clockOffsetMs );
 
     /* Validate other fields in the output parameter. */
     TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, serverTxTime, sizeof( SntpTimestamp_t ) ) );
@@ -566,14 +566,14 @@ void test_DeserializeResponse_AcceptedResponse_ClockOffset_Edge_Cases( void )
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
                                 SntpSuccess,
-                                INT32_MAX );
+                                ( int64_t ) INT32_MAX + 1 );
     /* Test when "Server Time - Client Time" results in positive value. */
     serverTime.seconds = UINT32_MAX;
     clientTime.seconds = serverTime.seconds - INT32_MAX - 1;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
                                 SntpSuccess,
-                                INT32_MAX );
+                                ( int64_t ) INT32_MAX + 1 );
 
     /* Reset client time to UINT32_MAX */
     clientTime.seconds = UINT32_MAX;
@@ -732,7 +732,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
                                                                   &parsedData ) );                        \
                                                                                                           \
         /* As the clock and server times are same, the clock offset, should be zero. */                   \
-        TEST_ASSERT_EQUAL( 0, parsedData.clockOffsetSec );                                                \
+        TEST_ASSERT_EQUAL( 0, parsedData.clockOffsetMs );                                                 \
                                                                                                           \
         /* Validate other fields in the output parameter. */                                              \
         TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \
