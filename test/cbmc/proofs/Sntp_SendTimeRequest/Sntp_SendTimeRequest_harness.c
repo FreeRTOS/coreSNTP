@@ -34,9 +34,17 @@ void harness()
     SntpContext_t * pContext;
     uint32_t randomNumber;
     SntpStatus_t sntpStatus;
+    uint32_t blockTimeMs;
 
     pContext = unconstrainedCoreSntpContext();
-    sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber );
+
+    /* The SNTP_RECEIVE_TIMEOUT is used here to control the number of loops
+     * when sending data on the network. The default is used here because memory
+     * safety can be proven in only a few iterations. Please see this proof's
+     * Makefile for more information. */
+    __CPROVER_assume( blockTimeMs < SNTP_SEND_TIMEOUT );
+
+    sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber, blockTimeMs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
                         sntpStatus == SntpErrorContextNotInitialized ||

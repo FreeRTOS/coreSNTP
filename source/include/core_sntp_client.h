@@ -160,7 +160,11 @@ typedef struct NetworkContext NetworkContext_t;
  * @note It is RECOMMENDED that the send operation is non-blocking, i.e. it
  * SHOULD immediately return when the entire UDP data cannot be sent over the
  * network. In such a case, the coreSNTP library will re-try send operation
- * for a maximum period of time configured in the SNTP_SEND_RETRY_TIMEOUT_MS macro.
+ * for a maximum period of blocking time passed to the @ref Sntp_SendTimeRequest API.
+ *
+ * @note If the size of the SNTP packet exceeds the Maximum Transmission Unit (MTU)
+ * supported by the network interface of the device, the user-defined implementation
+ * SHOULD support fragmentation of UDP packets.
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
@@ -192,7 +196,12 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  * @note It is RECOMMENDED that the read operation is non-blocking, i.e. it
  * SHOULD immediately return when no data is available on the network.
  * In such a case, the coreSNTP library will re-try send operation for a maximum period
- * of time configured in the SNTP_RECV_POLLING_TIMEOUT_MS macro.
+ * of blocking time passed through the @ref Sntp_ReceiveTimeResponse API.
+ *
+ * @note If the size of the SNTP response packet from the server exceeds the
+ * Maximum Transmission Unit (MTU) supported by the network interface of the device,
+ * the user-defined implementation of the interface SHOULD support receiving and assembling
+ * fragmented UDP packets.
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
@@ -527,9 +536,17 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  *
  * @param[in] pContext The context representing an SNTPv4 client.
  * @param[in] randomNumber A random number serializing the SNTP request packet
- * to protect against replay attacks as suggested by SNTPv4 specification in
- * [RFC 4330 Section 3](https://tools.ietf.org/html/rfc4330#section-3). It is
- * RECOMMENDED that a True Random Generator is used to generate the random number.
+ * to protect against spoofing attacks by attackers that are off the network path
+ * of the SNTP client-server communication. This mechanism is suggested by SNTPv4
+ * specification in [RFC 4330 Section 3](https://tools.ietf.org/html/rfc4330#section-3).
+ * @param[in] blockTimeMs The maximum duration of time (in milliseconds) the function will
+ * block on attempting to send time request to the server over the network. If a zero
+ * block time value is provided, then the function will attempt to send the packet ONLY
+ * once.
+ *
+ * @note It is RECOMMENDED that a True Random Generator is used to generate the
+ * random number by using a hardware module, like Hardware Security Module (HSM), Secure Element,
+ * etc, as the entropy source.
  *
  * @return The API function returns one of the following:
  *  - #SntpSuccess if a time request is successfully sent to the currently configured
@@ -543,10 +560,13 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  * through the user-defined transport interface.
  *  - #SntpErrorAuthFailure if there was a failure in generating the client
  * authentication code in the user-defined authentication interface.
+ *  - #SntpErrorSendTimeout if the time request packet could not be sent over the
+ * network for the entire @p blockTimeMs duration.
  */
 /* @[define_sntp_sendtimerequest] */
 SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
-                                   uint32_t randomNumber );
+                                   uint32_t randomNumber,
+                                   uint32_t blockTimeMs );
 /* @[define_sntp_sendtimerequest] */
 
 
@@ -579,8 +599,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * time query back to the first server in the list which will be used in next time request.
  *
  * @param[in] pContext The context representing an SNTPv4 client.
- * @param[in] blockTimeMs The maximum duration of time the function will block on
- * receiving a response from the server unless either the response is received
+ * @param[in] blockTimeMs The maximum duration of time (in milliseconds) the function will
+ * block on receiving a response from the server unless either the response is received
  * OR a response timeout occurs.
  *
  * @note This function can be called multiple times with zero or small blocking times

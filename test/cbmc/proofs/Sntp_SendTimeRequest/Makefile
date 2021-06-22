@@ -8,6 +8,13 @@ HARNESS_FILE = Sntp_SendTimeRequest_harness
 # more information on MAX_NETWORK_SEND_TRIES.
 MAX_NETWORK_SEND_TRIES=3
 
+# Bound on the timeout in Sntp_ReceiveTimeResponse. This timeout is bounded because
+# memory saftey can be proven in a only a single iteration.
+# Each iteration will try to receive a single packet in its entirey. With a time
+# out of 1 we can get coverage of the entire function. Another iteration will
+# performed unnecessarily duplicating of the proof.
+SNTP_SEND_TIMEOUT=1
+
 # Maximum number of sntp time servers
 MAX_NO_OF_SERVERS=5
 
@@ -16,6 +23,7 @@ MAX_NO_OF_SERVERS=5
 PROOF_UID = Sntp_SendTimeRequest
 
 DEFINES +=-DMAX_NO_OF_SERVERS=$(MAX_NO_OF_SERVERS)
+DEFINES +=-DSNTP_SEND_TIMEOUT=$(SNTP_SEND_TIMEOUT)
 INCLUDES +=
 
 # Providing a stub for this function as we have already have a separate proof
