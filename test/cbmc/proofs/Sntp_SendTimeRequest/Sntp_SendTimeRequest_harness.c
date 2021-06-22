@@ -38,7 +38,7 @@ void harness()
 
     pContext = unconstrainedCoreSntpContext();
 
-    /* The SNTP_RECEIVE_TIMEOUT is used here to control the number of loops
+    /* The SNTP_SEND_TIMEOUT is used here to control the number of loops
      * when sending data on the network. The default is used here because memory
      * safety can be proven in only a few iterations. Please see this proof's
      * Makefile for more information. */

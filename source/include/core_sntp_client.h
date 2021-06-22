@@ -548,7 +548,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  * block time value is provided, then the function will attempt to send the packet ONLY
  * once.
  *
- * @note It is RECOMMENDED that a True Random Generator is used to generate the
+ * @note It is RECOMMENDED that a True Random Number Generator is used to generate the
  * random number by using a hardware module, like Hardware Security Module (HSM), Secure Element,
  * etc, as the entropy source.
  *
