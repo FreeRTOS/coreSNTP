@@ -291,9 +291,8 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
     const uint8_t * pIndex = pPacket;
     int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
-    uint64_t elapsedTimeMs;
     bool shouldRetry = false;
-    SntpStatus_t status;
+    SntpStatus_t status = SntpErrorSendTimeout;
 
     assert( pPacket != NULL );
     assert( getTimeFunc != NULL );
@@ -326,7 +325,9 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         else if( bytesSent == 0 )
         {
             /* No bytes were sent over the network. Retry send if we have not timed out. */
+
             SntpTimestamp_t currentTime;
+            uint64_t elapsedTimeMs;
 
             getTimeFunc( &currentTime );
 

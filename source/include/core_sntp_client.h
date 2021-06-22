@@ -164,7 +164,9 @@ typedef struct NetworkContext NetworkContext_t;
  *
  * @note If the size of the SNTP packet exceeds the Maximum Transmission Unit (MTU)
  * supported by the network interface of the device, the user-defined implementation
- * SHOULD support fragmentation of UDP packets.
+ * MAY either support fragmentation of UDP packets OR use a size for authentication data
+ * that allows the SNTP packet to fit within the MTU required size threshold. (Note that
+ * the size of SNTP packet is #SNTP_PACKET_BASE_SIZE + authentication data.)
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
@@ -200,8 +202,10 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  *
  * @note If the size of the SNTP response packet from the server exceeds the
  * Maximum Transmission Unit (MTU) supported by the network interface of the device,
- * the user-defined implementation of the interface SHOULD support receiving and assembling
- * fragmented UDP packets.
+ * the user-defined implementation of the interface MAY either support receiving and
+ * assembling fragmented UDP packets OR use an authentication data size that allows
+ * SNTP packet to fit within the MTU required packet size threshold. (Note that
+ * the size of SNTP packet is #SNTP_PACKET_BASE_SIZE + authentication data.)
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
