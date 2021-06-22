@@ -61,6 +61,7 @@ getsystemtimefunc
 gettimefunc
 github
 gov
+hsm
 html
 htonl
 https
@@ -83,6 +84,7 @@ leapsecondinfo
 leapversionmode
 lsb
 misra
+mtu
 networkinterfacereceivestub
 networkinterfacesendstub
 nist
@@ -194,6 +196,7 @@ sntperrorcontextnotinitialized
 sntperrordnsfailure
 sntperrornetworkfailure
 sntperrorresponsetimeout
+sntperrorsendtimeout
 sntperrortimenotsupported
 sntpinvalidresponse
 sntpnoresponse
@@ -216,6 +219,7 @@ testbuffer
 testclockoffsetcalculation
 timebeforeloop
 timediffsec
+timeoutms
 timeserver
 transmittime
 trng

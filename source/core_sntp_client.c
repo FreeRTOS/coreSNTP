@@ -348,7 +348,7 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
 
         /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
          * Thus, if the transport send function returns status representing partial send, it will be treated as failure. */
-        else if( ( bytesSent > 0 ) && ( bytesSent != ( int32_t ) packetSize ) )
+        else if( bytesSent != ( int32_t ) packetSize )
         {
             LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
                         "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );

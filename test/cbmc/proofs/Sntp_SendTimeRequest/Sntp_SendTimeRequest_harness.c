@@ -47,7 +47,7 @@ void harness()
     sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber, blockTimeMs );
 
     __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
-                        sntpStatus == SntpErrorContextNotInitialized ||
+                        sntpStatus == SntpErrorContextNotInitialized || sntpStatus == SntpErrorSendTimeout ||
                         sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorDnsFailure ||
                         sntpStatus == SntpErrorAuthFailure || sntpStatus == SntpErrorNetworkFailure ),
                       "The return value is not a valid coreSNTP Status" );
