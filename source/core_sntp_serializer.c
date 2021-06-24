@@ -237,8 +237,17 @@ static bool isZeroTimestamp( const SntpTimestamp_t * pTime )
     return( isSecondsZero && isFractionsZero );
 }
 
-#define FRACTIONS_TO_MS( fractions ) \
-    ( fractions / ( 1000U * SNTP_FRACTION_VALUE_PER_MICROSECOND ) )
+/**
+ * @brief Utility to convert the "fractions" part of an SNTP timestamp to milliseconds
+ * duration of time.
+ * @param[in] fractions The fractions value.
+ *
+ * @return The milliseconds equivalent of the @p fractions value.
+ */
+static uint32_t fractionsToMs( uint32_t fractions )
+{
+    return( fractions / ( 1000U * SNTP_FRACTION_VALUE_PER_MICROSECOND ) );
+}
 
 /**
  * @brief Utility to safely calculate difference between server and client timestamps and
@@ -263,8 +272,8 @@ static int64_t safeTimeDifference( const SntpTimestamp_t * pServerTime,
     int64_t eraAdjustedDiff = 0;
 
     /* Convert the timestamps into 64 bit signed integer values of milliseconds. */
-    int64_t serverTime = ( ( int64_t ) pServerTime->seconds * 1000 ) + ( int64_t ) FRACTIONS_TO_MS( pServerTime->fractions );
-    int64_t clientTime = ( ( int64_t ) pClientTime->seconds * 1000 ) + ( int64_t ) FRACTIONS_TO_MS( pClientTime->fractions );
+    int64_t serverTime = ( ( int64_t ) pServerTime->seconds * 1000 ) + ( int64_t ) fractionsToMs( pServerTime->fractions );
+    int64_t clientTime = ( ( int64_t ) pClientTime->seconds * 1000 ) + ( int64_t ) fractionsToMs( pClientTime->fractions );
 
     /* The difference between the 2 timestamps is calculated by determining the whether the timestamps
      * are present in the same NTP era or adjacent NTP eras (i.e. the NTP timestamp overflow case). */
