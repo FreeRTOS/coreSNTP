@@ -209,6 +209,12 @@ typedef enum SntpStatus
     SntpErrorAuthFailure,
 
     /**
+     * @brief A timeout occurred in sending time request packet over the network to a server through the
+     * @ref Sntp_SendTimeRequest API.
+     */
+    SntpErrorSendTimeout,
+
+    /**
      * @brief A timeout has occurred in receiving server response with the @ref Sntp_ReceiveTimeResponse
      * API.
      */

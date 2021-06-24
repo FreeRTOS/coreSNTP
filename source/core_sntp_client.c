@@ -256,8 +256,7 @@ static SntpStatus_t validateContext( const SntpContext_t * pContext )
  * transport interface until either:
  * 1. The requested number of bytes @p packetSize have been sent.
  *                    OR
- * 2. Any byte cannot be sent over the network for the
- * #SNTP_SEND_RETRY_TIMEOUT_MS duration.
+ * 2. Any byte cannot be sent over the network for the @p timeoutMs duration.
  *                    OR
  * 3. There is an error in sending data over the network.
  *
@@ -272,23 +271,28 @@ static SntpStatus_t validateContext( const SntpContext_t * pContext )
  * @param[in] pPacket The buffer containing the SNTP packet data
  * to send over the network.
  * @param[in] packetSize The size of data in the SNTP request packet.
+ * @param[in] timeoutMs The timeout period for retry attempts of sending
+ * SNTP request packet over the network.
  *
  * @return Returns #SntpSuccess on successful transmission of the entire
- * SNTP request packet over the network; otherwise #SntpErrorNetworkFailure
- * to indicate failure.
+ * SNTP request packet over the network; #SntpErrorNetworkFailure
+ * to indicate failure from transport interface; #SntpErrorSendTimeout if
+ * time request could not be sent over the network within the @p timeoutMs
+ * duration.
  */
 static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf,
                                     uint32_t timeServer,
                                     uint16_t serverPort,
                                     SntpGetTime_t getTimeFunc,
                                     const uint8_t * pPacket,
-                                    uint16_t packetSize )
+                                    uint16_t packetSize,
+                                    uint32_t timeoutMs )
 {
     const uint8_t * pIndex = pPacket;
     int32_t bytesSent = 0;
     SntpTimestamp_t lastSendTime;
-    uint64_t timeSinceLastSendMs;
-    bool sendError = false;
+    bool shouldRetry = false;
+    SntpStatus_t status = SntpErrorSendTimeout;
 
     assert( pPacket != NULL );
     assert( getTimeFunc != NULL );
@@ -300,8 +304,12 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
     getTimeFunc( &lastSendTime );
 
     /* Loop until the entire packet is sent. */
-    while( ( bytesSent != ( int32_t ) packetSize ) && ( sendError == false ) )
+    do
     {
+        /* Reset flag for retrying send operation for the iteration. If request packet cannot be
+         * sent and timeout has not occurred, the flag will be set later for the next iteration. */
+        shouldRetry = false;
+
         bytesSent = pNetworkIntf->sendTo( pNetworkIntf->pUserContext,
                                           timeServer,
                                           serverPort,
@@ -312,39 +320,50 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         {
             LogError( ( "Unable to send request packet: Transport send failed. "
                         "ErrorCode=%ld.", ( long int ) bytesSent ) );
-            sendError = true;
+            status = SntpErrorNetworkFailure;
         }
-
-        /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
-         * Thus, if the transport send function returns status representing partial send, it will be treated as failure. */
-        else if( ( bytesSent > 0 ) && ( bytesSent != ( int32_t ) packetSize ) )
-        {
-            LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
-                        "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );
-
-            sendError = true;
-        }
-        else
+        else if( bytesSent == 0 )
         {
             /* No bytes were sent over the network. Retry send if we have not timed out. */
+
             SntpTimestamp_t currentTime;
+            uint64_t elapsedTimeMs;
 
             getTimeFunc( &currentTime );
 
             /* Calculate time elapsed since last data was sent over network. */
-            timeSinceLastSendMs = calculateElapsedTimeMs( &currentTime, &lastSendTime );
+            elapsedTimeMs = calculateElapsedTimeMs( &currentTime, &lastSendTime );
 
             /* Check for timeout if we have been waiting to send any data over the network. */
-            if( timeSinceLastSendMs >= SNTP_SEND_RETRY_TIMEOUT_MS )
+            if( elapsedTimeMs >= timeoutMs )
             {
                 LogError( ( "Unable to send request packet: Timed out retrying send: "
-                            "SendRetryTimeout=%ums", SNTP_SEND_RETRY_TIMEOUT_MS ) );
-                sendError = true;
+                            "SendRetryTimeout=%ums", timeoutMs ) );
+                status = SntpErrorSendTimeout;
+            }
+            else
+            {
+                shouldRetry = true;
             }
         }
-    }
 
-    return ( sendError == false ) ? SntpSuccess : SntpErrorNetworkFailure;
+        /* Partial sends are not supported by UDP, which only supports sending the entire datagram as a whole.
+         * Thus, if the transport send function returns status representing partial send, it will be treated as failure. */
+        else if( bytesSent != ( int32_t ) packetSize )
+        {
+            LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
+                        "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );
+
+            status = SntpErrorNetworkFailure;
+        }
+        else
+        {
+            /* The time request packet has been sent over the network. */
+            status = SntpSuccess;
+        }
+    } while( shouldRetry == true );
+
+    return status;
 }
 
 /**
@@ -407,7 +426,8 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 }
 
 SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
-                                   uint32_t randomNumber )
+                                   uint32_t randomNumber,
+                                   uint32_t blockTimeMs )
 {
     SntpStatus_t status = SntpSuccess;
 
@@ -477,7 +497,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
                                      pContext->pTimeServers[ pContext->currentServerIndex ].port,
                                      pContext->getTimeFunc,
                                      pContext->pNetworkBuffer,
-                                     pContext->sntpPacketSize );
+                                     pContext->sntpPacketSize,
+                                     blockTimeMs );
         }
     }
 

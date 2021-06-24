@@ -26,9 +26,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/* POSIX include. */
-#include <arpa/inet.h>
-
 /* Unity include. */
 #include "unity.h"
 
@@ -49,8 +46,13 @@
 /* Test block time for calls to Sntp_ReceiveTimeResponse API. */
 #define TEST_RECV_BLOCK_TIME      ( TEST_RESPONSE_TIMEOUT / 2 )
 
+/* Test values for the "last request time" state of the SNTP context. */
 #define LAST_REQUEST_TIME_SECS    10
 #define LAST_REQUEST_TIME_MS      100
+
+/* Test block time for the Sntp_SendRequestTime API.
+ * This serves as the timeout value for send operations. */
+#define SEND_TIMEOUT_MS           10
 
 /* Utility to convert milliseconds to fractions value in
  * SNTP timestamp. */
@@ -248,17 +250,18 @@ enum SntpClientApiType
 /* Common function for testing all scenarios of invalid context. */
 static void testApiForInvalidContextCases( enum SntpClientApiType api )
 {
-#define SELECT_API_AND_TEST_INVALID_CONTEXT( api, context )                                                   \
-    do {                                                                                                      \
-        if( api == ApiSendTimeRequest )                                                                       \
-        {                                                                                                     \
-            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_SendTimeRequest( &context,                \
-                                                                                     rand() % UINT32_MAX ) ); \
-        }                                                                                                     \
-        else                                                                                                  \
-        {                                                                                                     \
-            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_ReceiveTimeResponse( &context, 0 ) );     \
-        }                                                                                                     \
+#define SELECT_API_AND_TEST_INVALID_CONTEXT( api, context )                                               \
+    do {                                                                                                  \
+        if( api == ApiSendTimeRequest )                                                                   \
+        {                                                                                                 \
+            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_SendTimeRequest( &context,            \
+                                                                                     rand() % UINT32_MAX, \
+                                                                                     SEND_TIMEOUT_MS ) ); \
+        }                                                                                                 \
+        else                                                                                              \
+        {                                                                                                 \
+            TEST_ASSERT_EQUAL( SntpErrorContextNotInitialized, Sntp_ReceiveTimeResponse( &context, 0 ) ); \
+        }                                                                                                 \
     } while( 0 )
 
 
@@ -688,7 +691,7 @@ void test_Sntp_SendTimeRequest_InvalidParams()
 {
     /* Test with NULL context parameter. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter,
-                       Sntp_SendTimeRequest( NULL, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( NULL, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 
     /* Test all cases of context with invalid members. */
     testApiForInvalidContextCases( ApiSendTimeRequest );
@@ -706,7 +709,7 @@ void test_Sntp_SendTimeRequest_Dns_Failure()
     /* Test case when DNS resolution of server fails. */
     dnsResolveRetCode = false;
     TEST_ASSERT_EQUAL( SntpErrorDnsFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -724,7 +727,7 @@ void test_Sntp_SendTimeRequest_Auth_Failure_BufferTooSmall()
      * fails. */
     generateClientAuthRetCode = SntpErrorBufferTooSmall;
     TEST_ASSERT_EQUAL( SntpErrorBufferTooSmall,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -740,7 +743,7 @@ void test_Sntp_SendTimeRequest_Auth_Failure_InternalError()
 
     generateClientAuthRetCode = SntpErrorAuthFailure;
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -759,7 +762,7 @@ void test_Sntp_SendTimeRequest_Auth_Failure_InvalidOutputParam()
     authCodeSize = sizeof( testBuffer ) - SNTP_PACKET_BASE_SIZE + 1; /* 1 byte more than buffer can
                                                                       * take for holding auth data. */
     TEST_ASSERT_EQUAL( SntpErrorAuthFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -776,7 +779,7 @@ void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnFirstTry()
      * call to transport interface send function. */
     udpSendRetCodes[ currentUdpSendCodeIndex ] = -2;
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -795,7 +798,7 @@ void test_Sntp_SendTimeRequest_Transport_Send_Failure_ErrorOnRetry()
     udpSendRetCodes[ 0 ] = 0;  /* 1st call sending 0 bytes.*/
     udpSendRetCodes[ 1 ] = -1; /* 2nd call returning error.*/
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 
     /* Reset the index in the current time list. */
     currentTimeIndex = 0;
@@ -813,14 +816,14 @@ void test_Sntp_SendTimeRequest_Transport_Send_Error_RetryTimeout()
     Sntp_SerializeRequest_IgnoreAndReturn( SntpSuccess );
 
     /* Test case when transport send operation times out due to no data being
-     * sent for #SNTP_SEND_RETRY_TIMEOUT_MS duration. */
+     * sent for #SEND_TIMEOUT_MS duration. */
     udpSendRetCodes[ 0 ] = 0;
     udpSendRetCodes[ 1 ] = 0;
-    currentTimeList[ 1 ].fractions = 0;                                                             /* SntpGetTime_t call before the loop in sendSntpPacket. */
-    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );     /* SntpGetTime_t call in 1st iteration of loop. */
-    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( ( SNTP_SEND_RETRY_TIMEOUT_MS + 1 ) ); /* SntpGetTime_t call in 2nd iteration of loop. */
-    TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+    currentTimeList[ 1 ].fractions = 0;                                                  /* SntpGetTime_t call before the loop in sendSntpPacket. */
+    currentTimeList[ 2 ].fractions = CONVERT_MS_TO_FRACTIONS( SEND_TIMEOUT_MS / 2 );     /* SntpGetTime_t call in 1st iteration of loop. */
+    currentTimeList[ 3 ].fractions = CONVERT_MS_TO_FRACTIONS( ( SEND_TIMEOUT_MS + 1 ) ); /* SntpGetTime_t call in 2nd iteration of loop. */
+    TEST_ASSERT_EQUAL( SntpErrorSendTimeout,
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -838,7 +841,7 @@ void test_Sntp_SendTimeRequest_Transport_Send_Error_PartialSend()
     udpSendRetCodes[ 0 ] = 0;                       /* 1st call sending 0 bytes.*/
     udpSendRetCodes[ 1 ] = expectedBytesToSend / 2; /* 2nd call returning partial bytes.*/
     TEST_ASSERT_EQUAL( SntpErrorNetworkFailure,
-                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX ) );
+                       Sntp_SendTimeRequest( &context, rand() % UINT32_MAX, SEND_TIMEOUT_MS ) );
 }
 
 /**
@@ -871,7 +874,7 @@ void test_SendTimeRequest_Nominal( void )
         currentTimeList[ 1 ].fractions = timeBeforeLoop.fractions;     /* Time call in before loop in sendSntpPacket loop. */   \
         currentTimeList[ 2 ].seconds = timeIn1stIteration.seconds;     /* Time call in 1st iteration of sendSntpPacket loop. */ \
         currentTimeList[ 2 ].fractions = timeIn1stIteration.fractions; /* Time call in 1st iteration of sendSntpPacket loop. */ \
-        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_SendTimeRequest( &context, randNum ) );                                            \
+        TEST_ASSERT_EQUAL( SntpSuccess, Sntp_SendTimeRequest( &context, randNum, SEND_TIMEOUT_MS ) );                           \
     } while( 0 )
 
     SntpTimestamp_t beforeLoopTime;
@@ -879,7 +882,7 @@ void test_SendTimeRequest_Nominal( void )
     beforeLoopTime.seconds = 0;
     beforeLoopTime.fractions = 0;
     inLoopTime.seconds = 0;
-    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
+    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SEND_TIMEOUT_MS / 2 );
 
     /* Test when no authentication interface is provided. */
     context.authIntf.generateClientAuth = NULL;
@@ -896,7 +899,7 @@ void test_SendTimeRequest_Nominal( void )
     beforeLoopTime.seconds = UINT32_MAX;
     beforeLoopTime.fractions = UINT32_MAX; /* Last time in SNTP era 0. */
     inLoopTime.seconds = 0;                /* Time in SNTP era 1. */
-    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SNTP_SEND_RETRY_TIMEOUT_MS / 2 );
+    inLoopTime.fractions = CONVERT_MS_TO_FRACTIONS( SEND_TIMEOUT_MS / 2 );
     /* Test when an authentication interface is provided. */
     TEST_SUCCESS_CASE( SNTP_PACKET_BASE_SIZE + authCodeSize, beforeLoopTime, inLoopTime );
 }
