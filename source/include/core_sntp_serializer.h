@@ -303,10 +303,15 @@ typedef struct SntpResponse
     uint32_t rejectedResponseCode;
 
     /**
-     * @brief The offset (in seconds) of the system clock relative to the
-     * server time calculated from timestamps in the client SNTP request and
-     * server SNTP response packets. This information can be used to synchronize
-     * the system clock with a "slew" or "step" correction approach.
+     * @brief The offset (in milliseconds) of the system clock relative to the server time
+     * calculated from timestamps in the client SNTP request and server SNTP response packets.
+     * If the the system time is BEHIND the server time, then the clock-offset value is > 0.
+     * If the system time is AHEAD of the server time, then the clock-offset value is < 0.
+     *
+     * @note This information can be used to synchronize the system clock with a "slew",
+     * "step" OR combination of the two clock correction methodologies depending on the degree
+     *  of system clock drift (represented by the clock-offset) and the application's
+     * tolerance for system clock error.
      *
      * @note The library calculates the clock-offset value using the On-Wire
      * protocol suggested by the NTPv4 specification. For more information,
@@ -321,7 +326,7 @@ typedef struct SntpResponse
      * seconds apart, the library ASSUMES that the server time is ahead of the client
      * time, and return the clock-offset value of INT32_MAX.
      */
-    int32_t clockOffsetSec;
+    int64_t clockOffsetMs;
 } SntpResponseData_t;
 
 
