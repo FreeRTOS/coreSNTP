@@ -202,7 +202,7 @@ typedef enum SntpStatus
     SntpServerNotAuthenticated,
 
     /**
-     * @brief Failure from the user-supplied authentication interface, @ref SntpAuthenticationIntf_t,
+     * @brief Failure from the user-supplied authentication interface, @ref SntpAuthenticationInterface_t,
      * in either generating authentication data for SNTP request OR validating the authentication
      * data in SNTP response from server.
      */

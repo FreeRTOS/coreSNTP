@@ -352,9 +352,6 @@ static int64_t safeTimeDifference( const SntpTimestamp_t * pServerTime,
  * For more information on on-wire protocol, refer to
  * [RFC 5905 Section 8](https://tools.ietf.org/html/rfc5905#section-8).
  *
- * If the clock offset will result in an overflow, this function sets
- * the clock offset, @p pClockOffset, as #SNTP_CLOCK_OFFSET_OVERFLOW.
- *
  * @note The following diagram explains the calculation of the clock
  * offset:
  *

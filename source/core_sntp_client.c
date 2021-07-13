@@ -375,10 +375,8 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
  * @return Returns one of the following:
  * - #SntpSuccess if the interface function successfully appends client
  * authentication data.
- * - #SntpErrorAuthError when the interface returns either an error OR an
+ * - #SntpErrorAuthFailure when the interface returns either an error OR an
  * incorrect size of the client authentication data.
- * - #SntpBufferTooSmall if the request packet buffer is too small to add client
- * authentication data.
  */
 static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 {
