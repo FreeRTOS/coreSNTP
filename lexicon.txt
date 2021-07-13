@@ -105,6 +105,7 @@ pauthintf
 pauthintf
 pbuffer
 pclientrxtime
+pclienttime
 pclienttxtime
 pclockoffset
 pcontext
