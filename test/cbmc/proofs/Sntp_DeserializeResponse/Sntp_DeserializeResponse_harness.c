@@ -21,40 +21,32 @@
  */
 
 /**
- * @file Sntp_Init_harness.c
- * @brief Implements the proof harness for Sntp_Init function.
+ * @file Sntp_DeserializeResponse_harness.c
+ * @brief Implements the proof harness for Sntp_DeserializeResponse function.
  */
 
-#include <stddef.h>
-#include "core_sntp_client.h"
+#include <stdint.h>
+#include "core_sntp_serializer.h"
 
 void harness()
 {
-    SntpContext_t * pContext;
-    SntpServerInfo_t * pTimeServers;
-    size_t numOfServers;
-    uint32_t serverResponseTimeoutMs;
-    uint8_t * pNetworkBuffer;
+    SntpTimestamp_t * pRequestTime;
+    SntpTimestamp_t * pResponseRxTime;
+    void * pResponseBuffer;
     size_t bufferSize;
-    SntpResolveDns_t resolveDnsFunc;
-    SntpGetTime_t getSystemTimeFunc;
-    SntpSetTime_t setSystemTimeFunc;
-    UdpTransportInterface_t * pTransportIntf;
-    SntpAuthenticationInterface_t * pAuthIntf;
+    SntpResponseData_t * pParsedResponse;
     SntpStatus_t sntpStatus;
-
-    pContext = malloc( sizeof( SntpContext_t ) );
-    pTimeServers = malloc( sizeof( SntpServerInfo_t ) );
 
     __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
 
-    pNetworkBuffer = malloc( bufferSize );
-    pTransportIntf = malloc( sizeof( UdpTransportInterface_t ) );
-    pAuthIntf = malloc( sizeof( SntpAuthenticationInterface_t ) );
+    pRequestTime = malloc( sizeof( SntpTimestamp_t ) );
+    pResponseRxTime = malloc( sizeof( SntpTimestamp_t ) );
+    pResponseBuffer = malloc( bufferSize );
+    pParsedResponse = malloc( sizeof( SntpResponseData_t ) );
 
-    sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
-                            bufferSize, resolveDnsFunc, getSystemTimeFunc, setSystemTimeFunc,
-                            pTransportIntf, pAuthIntf );
+    sntpStatus = Sntp_DeserializeResponse( pRequestTime, pResponseRxTime, pResponseBuffer, bufferSize, pParsedResponse );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpErrorBufferTooSmall ), "The return value is not a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter ) || ( sntpStatus == SntpErrorBufferTooSmall ) ||
+                      ( sntpStatus == SntpInvalidResponse ) || ( sntpStatus == SntpSuccess ) || ( sntpStatus == SntpRejectedResponseChangeServer ) ||
+                      ( sntpStatus == SntpRejectedResponseRetryWithBackoff ) || ( sntpStatus == SntpRejectedResponseOtherCode ), "This is a valid sntp return status" );
 }

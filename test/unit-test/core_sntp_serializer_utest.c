@@ -41,6 +41,12 @@
         .fractions = 1000      \
     }
 
+#define ZERO_TIMESTAMP \
+    {                  \
+        .seconds = 0,  \
+        .fractions = 0 \
+    }
+
 /* Bits 3-5 are used for Version in 1st byte of SNTP packet. */
 #define SNTP_PACKET_VERSION_VAL                    ( 4 /* Version */ << 3 /* Bits 3-5 used in byte */ )
 
@@ -72,7 +78,7 @@
 #define KOD_CODE_OTHER_EXAMPLE_2                   "CRYP"
 
 #define YEARS_20_IN_SECONDS                        ( ( 20 * 365 + 20 / 4 ) * 24 * 3600 )
-#define YEARS_40_IN_SECONDS                        ( ( 40 * 365 + 40 / 4 ) * 24 * 3600 )
+#define YEARS_68_IN_SECONDS                        ( ( 68 * 365 + 68 / 4 ) * 24 * 3600 )
 
 /* Macro utility to convert the fixed-size Kiss-o'-Death ASCII code
  * to integer.*/
@@ -87,7 +93,15 @@ static uint8_t testBuffer[ SNTP_PACKET_BASE_SIZE ];
 
 static SntpResponseData_t parsedData;
 
+static SntpTimestamp_t zeroTimestamp = ZERO_TIMESTAMP;
+
 /* ============================ Helper Functions ============================ */
+
+/* Utility macro to convert seconds to milliseconds. */
+static uint64_t TO_MS( uint64_t seconds )
+{
+    return( seconds * 1000 );
+}
 
 static void addTimestampToResponseBuffer( SntpTimestamp_t * pTime,
                                           uint8_t * pResponseBuffer,
@@ -122,6 +136,20 @@ static void fillValidSntpResponseData( uint8_t * pBuffer,
                                   pBuffer,
                                   SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
 
+    SntpTimestamp_t testTime = TEST_TIMESTAMP;
+
+    /* Set the SNTP response packet to contain the "receive" timestamp
+     * correctly, as matching the SNTP request timestamp. */
+    addTimestampToResponseBuffer( &testTime,
+                                  pBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+
+    /* Set the SNTP response packet to contain the "transmit" timestamp
+     * correctly, as matching the SNTP request timestamp. */
+    addTimestampToResponseBuffer( &testTime,
+                                  pBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+
     /* Set the "Stratum" byte in the response packet to represent a
      * secondary NTP server. */
     pBuffer[ SNTP_PACKET_STRATUM_BYTE_POS ] = SNTP_PACKET_STRATUM_SECONDARY_SERVER;
@@ -134,9 +162,12 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
                                         SntpTimestamp_t * serverTxTime,
                                         SntpTimestamp_t * clientRxTime,
                                         SntpStatus_t expectedStatus,
-                                        int32_t expectedClockOffset )
+                                        int64_t expectedClockOffsetMs )
 {
     /* Update the response packet with the server time. */
+    addTimestampToResponseBuffer( clientTxTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
     addTimestampToResponseBuffer( serverRxTime,
                                   testBuffer,
                                   SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
@@ -153,7 +184,7 @@ static void testClockOffsetCalculation( SntpTimestamp_t * clientTxTime,
 
     /* Make sure that the API has indicated in the output parameter that
      * clock-offset could not be calculated. */
-    TEST_ASSERT_EQUAL( expectedClockOffset, parsedData.clockOffsetSec );
+    TEST_ASSERT_EQUAL( expectedClockOffsetMs, parsedData.clockOffsetMs );
 
     /* Validate other fields in the output parameter. */
     TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, serverTxTime, sizeof( SntpTimestamp_t ) ) );
@@ -201,6 +232,13 @@ void test_SerializeRequest_InvalidParams( void )
                        Sntp_SerializeRequest( &testTime,
                                               ( rand() % UINT32_MAX ),
                                               NULL,
+                                              sizeof( testBuffer ) ) );
+
+    /* Pass zero timestamp for request time. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter,
+                       Sntp_SerializeRequest( &zeroTimestamp,
+                                              ( rand() % UINT32_MAX ),
+                                              testBuffer,
                                               sizeof( testBuffer ) ) );
 
     /* Pass a buffer size less than 48 bytes of minimum SNTP packet size. */
@@ -267,7 +305,6 @@ void test_SerializeRequest_NominalCase( void )
                                   sizeof( SntpTimestamp_t ) ) );
 }
 
-
 /**
  * @brief Test @ref Sntp_DeserializeResponse with invalid parameters.
  */
@@ -312,6 +349,14 @@ void test_DeserializeResponse_InvalidParams( void )
                                                  testBuffer,
                                                  sizeof( testBuffer ),
                                                  NULL ) );
+
+    /* Pass zero timestamp for request time. */
+    TEST_ASSERT_EQUAL( SntpErrorBadParameter,
+                       Sntp_DeserializeResponse( &zeroTimestamp,
+                                                 &testTime,
+                                                 testBuffer,
+                                                 sizeof( testBuffer ),
+                                                 &parsedData ) );
 }
 
 /**
@@ -335,14 +380,65 @@ void test_DeserializeResponse_Invalid_Responses( void )
                                                                       sizeof( testBuffer ),
                                                                       &parsedData ) );
 
-    /******** Test when SNTP response packet does not
-     *  have "originate" timestamp matching
-     * the "transmit" time sent by the client in the SNTP
-     * request. ************/
-    SntpTimestamp_t originateTime = TEST_TIMESTAMP;
 
     /* Set the Mode field to the correct value for Server. */
     testBuffer[ 0 ] = SNTP_PACKET_VERSION_VAL | SNTP_PACKET_MODE_SERVER;
+
+    /************** Test when "originate timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "originate timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_ORIGIN_TIME_FIRST_BYTE_POS );
+
+
+    /************** Test when "receive timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "receive timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_RX_TIMESTAMP_FIRST_BYTE_POS );
+
+
+    /************** Test when "transmit timestamp" is zero ***************/
+    addTimestampToResponseBuffer( &zeroTimestamp,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+    /* Call the API under test. */
+    TEST_ASSERT_EQUAL( SntpInvalidResponse, Sntp_DeserializeResponse( &clientTime,
+                                                                      &clientTime,
+                                                                      testBuffer,
+                                                                      sizeof( testBuffer ),
+                                                                      &parsedData ) );
+
+    /* Set the "transmit timestamp" to a non-zero value for the next test. */
+    addTimestampToResponseBuffer( &clientTime,
+                                  testBuffer,
+                                  SNTP_PACKET_TX_TIMESTAMP_FIRST_BYTE_POS );
+
+
+    /******** Test when SNTP response packet does not have "originate" timestamp matching
+     * the "transmit" time sent by the client in the SNTP request. ************/
+    SntpTimestamp_t originateTime = TEST_TIMESTAMP;
+
 
     /* Test when only the seconds part of the "originate" timestamp does not match
      * the client request time .*/
@@ -438,33 +534,132 @@ void test_DeserializeResponse_KoD_packets( void )
 
 /**
  * @brief Test that @ref Sntp_DeserializeResponse API can process an accepted
- * SNTP server response, and determine that the clock offset cannot be calculated
- * when the client clock is beyond 34 years from server.
+ * SNTP server response, and compute clock-offset when the server and client times
+ * are >= 68 years apart.
  */
-void test_DeserializeResponse_AcceptedResponse_Overflow_Case( void )
+void test_DeserializeResponse_AcceptedResponse_ClockOffset_Edge_Cases( void )
 {
     SntpTimestamp_t clientTime = TEST_TIMESTAMP;
 
     /* Fill buffer with general SNTP response data. */
     fillValidSntpResponseData( testBuffer, &clientTime );
 
-    /* Test when the client is 40 years ahead of server time .*/
+    /* Test when the client is 68 years ahead of server time .*/
     SntpTimestamp_t serverTime =
     {
-        clientTime.seconds - YEARS_40_IN_SECONDS,
+        clientTime.seconds - YEARS_68_IN_SECONDS,
         clientTime.fractions
     };
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+                                SntpSuccess,
+                                TO_MS( -YEARS_68_IN_SECONDS ) );
 
-    /* Now test when the client is 40 years ahead of server time .*/
-    serverTime.seconds = clientTime.seconds + YEARS_40_IN_SECONDS;
+    /* Now test when the client is 68 years ahead of server time .*/
+    serverTime.seconds = clientTime.seconds + YEARS_68_IN_SECONDS;
     testClockOffsetCalculation( &clientTime, &serverTime,
                                 &serverTime, &clientTime,
-                                SntpClockOffsetOverflow,
-                                SNTP_CLOCK_OFFSET_OVERFLOW );
+                                SntpSuccess,
+                                TO_MS( YEARS_68_IN_SECONDS ) );
+
+    /* Now test special cases when the server and client times are (INT32_MAX + 1) =
+     * 2^31 apart seconds apart. The library should ALWAYS think that server
+     * is ahead of the client in this special case, and thus return the maximum
+     * signed 32 bit integer as the clock-offset.
+     */
+    /* Case when "Server Time - Client Time" results in negative value. */
+    serverTime.seconds = clientTime.seconds + INT32_MAX + 1;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                TO_MS( ( int64_t ) INT32_MAX + 1 ) );
+    /* Test when "Server Time - Client Time" results in positive value. */
+    serverTime.seconds = UINT32_MAX;
+    clientTime.seconds = serverTime.seconds - INT32_MAX - 1;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                TO_MS( ( int64_t ) INT32_MAX + 1 ) );
+
+    /* Reset client time to UINT32_MAX */
+    clientTime.seconds = UINT32_MAX;
+
+    /* Now test cases when the server and client times are exactly
+     * INT32_MAX seconds apart. */
+    serverTime.seconds = clientTime.seconds - INT32_MAX;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                TO_MS( -INT32_MAX ) );
+    serverTime.seconds = clientTime.seconds + INT32_MAX;
+    testClockOffsetCalculation( &clientTime, &serverTime,
+                                &serverTime, &clientTime,
+                                SntpSuccess,
+                                TO_MS( INT32_MAX ) );
+
+    /* Reset client and server times to be 68 years apart. */
+    clientTime.seconds = UINT32_MAX;
+    serverTime.seconds = UINT32_MAX + YEARS_68_IN_SECONDS;
+
+    /* Now test the contrived case when only the send network path
+     * represents timestamps that overflow but the receive network path
+     * has timestamps that do not overflow.
+     * As only the single network path contains time difference of 68 years,
+     * the expected clock-offset, being an average of the network paths, is
+     * 34 years of duration. */
+    testClockOffsetCalculation( &clientTime, &serverTime,           /* Send Path times are 68 years apart */
+                                &serverTime, &serverTime,           /* Receive path times are the same. */
+                                SntpSuccess,
+                                TO_MS( YEARS_68_IN_SECONDS / 2 ) ); /* Expected offset of 34 years. */
+
+    /* Now test the contrived case when only the receive network path
+     * represents timestamps that overflow but the send network path
+     * has timestamps that do not overflow.
+     * As only the single network path contains time difference of 68 years,
+     * the expected clock-offset, being an average of the network paths, is
+     * 34 years of duration. */
+    testClockOffsetCalculation( &clientTime, &clientTime,           /* Send Path times are the same, i.e. don't overflow */
+                                &serverTime, &clientTime,           /* Receive path times are 68 years apart. */
+                                SntpSuccess,
+                                TO_MS( YEARS_68_IN_SECONDS / 2 ) ); /* Expected offset of 34 years. */
+}
+
+void test_Sntp_DeserializeResponse_ClockOffset_Milliseconds_Cases( void )
+{
+    SntpTimestamp_t clientTime =
+    {
+        .seconds   = 0,
+        /* 500 milliseconds. */
+        .fractions = 500 * 1000 * SNTP_FRACTION_VALUE_PER_MICROSECOND
+    };
+
+    /* Fill buffer with general SNTP response data. */
+    fillValidSntpResponseData( testBuffer, &clientTime );
+
+    SntpTimestamp_t serverTime =
+    {
+        .seconds   = clientTime.seconds,
+        .fractions = clientTime.fractions
+    };
+
+    /* Test when server is ahead of client time. */
+    serverTime.fractions = 700 * 1000 * SNTP_FRACTION_VALUE_PER_MICROSECOND; /* 700 milliseconds. */
+    testClockOffsetCalculation( &clientTime, &serverTime,                    /* Send Path times are 68 years apart */
+                                &serverTime, &clientTime,                    /* Receive path times are the same. */
+                                SntpSuccess, 200 );
+
+    /* Test when server is behind client time. */
+    serverTime.fractions = 100 * 1000 * SNTP_FRACTION_VALUE_PER_MICROSECOND; /* 100 milliseconds. */
+    testClockOffsetCalculation( &clientTime, &serverTime,                    /* Send Path times are 68 years apart */
+                                &serverTime, &clientTime,                    /* Receive path times are the same. */
+                                SntpSuccess, -400 );
+
+    /* Test when complex case of NTP time overflow with client being ahead of server by 3900 milliseconds. */
+    serverTime.seconds = UINT32_MAX - 3;                                     /* 4 seconds behind in "seconds" value. */
+    serverTime.fractions = 600 * 1000 * SNTP_FRACTION_VALUE_PER_MICROSECOND; /* 100 milliseconds ahead. */
+    testClockOffsetCalculation( &clientTime, &serverTime,                    /* Send Path times are 68 years apart */
+                                &serverTime, &clientTime,                    /* Receive path times are the same. */
+                                SntpSuccess, -3900 );
 }
 
 /**
@@ -482,6 +677,8 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
     /* Use the the same values for Rx and Tx times for server and client in the first couple
      * of tests for simplicity. */
 
+    /* ==================Test when client and server are in same NTP era.================ */
+
     /* Test when the client is 20 years ahead of server time to generate a negative offset
      * result.*/
     SntpTimestamp_t serverTxTime =
@@ -493,21 +690,43 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
 
     testClockOffsetCalculation( &clientTxTime, &serverTxTime,
                                 &serverTxTime, &clientTxTime,
-                                SntpSuccess, expectedOffset );
+                                SntpSuccess, TO_MS( expectedOffset ) );
 
     /* Now test for the client being 20 years behind server time to generate a positive
      * offset result.*/
-    serverTxTime.seconds = clientTxTime.seconds + YEARS_20_IN_SECONDS;
+    serverTxTime.seconds = UINT32_MAX;
+    clientTxTime.seconds = UINT32_MAX - YEARS_20_IN_SECONDS;
     expectedOffset = YEARS_20_IN_SECONDS;
 
     testClockOffsetCalculation( &clientTxTime, &serverTxTime,
                                 &serverTxTime, &clientTxTime,
-                                SntpSuccess, expectedOffset );
+                                SntpSuccess, TO_MS( expectedOffset ) );
+
+    /* ==================Test when client and server are in different NTP eras.================ */
+
+    /* Test when the server is ahead of client to generate a positive clock offset result.*/
+    clientTxTime.seconds = UINT32_MAX;                       /* Client is in NTP era 0. */
+    serverTxTime.seconds = UINT32_MAX + YEARS_20_IN_SECONDS; /* Server is in NTP era 1. */
+    expectedOffset = YEARS_20_IN_SECONDS;
+
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, TO_MS( expectedOffset ) );
+
+    /* Test when the client is ahead of server to generate a negative clock offset result.*/
+    clientTxTime.seconds = UINT32_MAX + YEARS_20_IN_SECONDS; /* Client is in NTP era 1. */
+    serverTxTime.seconds = UINT32_MAX;                       /* Server is in NTP era 0. */
+    expectedOffset = -YEARS_20_IN_SECONDS;
+
+    testClockOffsetCalculation( &clientTxTime, &serverTxTime,
+                                &serverTxTime, &clientTxTime,
+                                SntpSuccess, TO_MS( expectedOffset ) );
 
     /* Now test with different values for T1 (client Tx), T2 (server Rx), T3 (server Tx) and T4 (client Rx)
      * that are used in the clock-offset calculation.
      * The test case uses 2 seconds as network delay on both Client -> Server and Server -> Client path
      * and 2 seconds for server processing time between receiving SNTP request and sending SNTP response */
+    clientTxTime.seconds = UINT32_MAX;
     SntpTimestamp_t serverRxTime =
     {
         clientTxTime.seconds + YEARS_20_IN_SECONDS + 2,
@@ -524,7 +743,7 @@ void test_DeserializeResponse_AcceptedResponse_Nominal_Case( void )
 
     testClockOffsetCalculation( &clientTxTime, &serverRxTime,
                                 &serverTxTime, &clientRxTime,
-                                SntpSuccess, expectedOffset );
+                                SntpSuccess, TO_MS( expectedOffset ) );
 }
 
 /**
@@ -557,7 +776,7 @@ void test_DeserializeResponse_AcceptedResponse_LeapSecond( void )
                                                                   &parsedData ) );                        \
                                                                                                           \
         /* As the clock and server times are same, the clock offset, should be zero. */                   \
-        TEST_ASSERT_EQUAL( 0, parsedData.clockOffsetSec );                                                \
+        TEST_ASSERT_EQUAL( 0, parsedData.clockOffsetMs );                                                 \
                                                                                                           \
         /* Validate other fields in the output parameter. */                                              \
         TEST_ASSERT_EQUAL( 0, memcmp( &parsedData.serverTime, &serverTime, sizeof( SntpTimestamp_t ) ) ); \

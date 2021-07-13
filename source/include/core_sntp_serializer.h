@@ -117,26 +117,6 @@
 #define SNTP_KISS_OF_DEATH_CODE_NONE                  ( 0U )
 
 /**
- * @brief The value for clock offset that indicates inability to perform
- * arithmetic calculation of system clock offset relative to the server time
- * due to overflow.
- *
- * The application should use this macro against the the clock offset returned
- * through @ref SntpResponseData_t.clockOffsetSec. If the value is set to this
- * this macro, then the clock offset value is unusable.
- *
- * @note A clock offset overflow occurs if the system time is beyond 34 years
- * (in the past or future) of the server time.
- *
- * @note The clock offset is a value with 30 significant bits and 2 sign bits
- * in a 32 bit integer. This macro uses a value that cannot be a valid clock
- * offset value as a valid value will always have the 2 most significant
- * bits set as either zero (i.e. to represent positive offset) or one
- * (i.e. to represent negative offset).
- */
-#define SNTP_CLOCK_OFFSET_OVERFLOW                    ( 0x7FFFFFFF )
-
-/**
  * @ingroup core_sntp_enum_types
  * @brief Enumeration of status codes that can be returned
  * by the coreSNTP Library API.
@@ -189,12 +169,6 @@ typedef enum SntpStatus
     SntpInvalidResponse,
 
     /**
-     * @brief Calculation of system clock offset relative to server
-     * underwent overflow.
-     */
-    SntpClockOffsetOverflow,
-
-    /**
      * @brief Poll interval value is under 1 second which cannot be calculated
      *  by @ref Sntp_CalculatePollInterval.
      */
@@ -205,16 +179,6 @@ typedef enum SntpStatus
      * in time range supported by Sntp_ConvertToUnixTime.
      */
     SntpErrorTimeNotSupported,
-
-    /**
-     * @brief No server is available for requesting time as all servers configured in the
-     * SNTP context have rejected a time request in previous attempts. The application
-     * SHOULD change to a new server by re-initializing the context.
-     *
-     * @note This status is returned by either of @ref Sntp_SendTimeRequest OR
-     * @ref Sntp_ReceiveTimeResponse APIs.
-     */
-    SntpErrorChangeServer,
 
     /**
      * @brief The user-defined DNS resolution interface, @ref SntpResolveDns_t, failed to resolve
@@ -245,6 +209,12 @@ typedef enum SntpStatus
     SntpErrorAuthFailure,
 
     /**
+     * @brief A timeout occurred in sending time request packet over the network to a server through the
+     * @ref Sntp_SendTimeRequest API.
+     */
+    SntpErrorSendTimeout,
+
+    /**
      * @brief A timeout has occurred in receiving server response with the @ref Sntp_ReceiveTimeResponse
      * API.
      */
@@ -254,7 +224,13 @@ typedef enum SntpStatus
      * @brief No SNTP packet for server response is received from the network by the
      * @ref Sntp_ReceiveTimeResponse API.
      */
-    SntpNoResponseReceived
+    SntpNoResponseReceived,
+
+    /**
+     * @brief The SNTP context passed to @ref Sntp_SendTimeRequest or @ref Sntp_ReceiveTimeResponse APIs is
+     * is uninitialized.
+     */
+    SntpErrorContextNotInitialized
 } SntpStatus_t;
 
 /**
@@ -327,23 +303,30 @@ typedef struct SntpResponse
     uint32_t rejectedResponseCode;
 
     /**
-     * @brief The offset (in seconds) of the system clock relative to the
-     * server time calculated from client request and server response
-     * times. This information can be used to synchronize the system clock
-     * with a "slew" or "step" correction approach.
+     * @brief The offset (in milliseconds) of the system clock relative to the server time
+     * calculated from timestamps in the client SNTP request and server SNTP response packets.
+     * If the the system time is BEHIND the server time, then the clock-offset value is > 0.
+     * If the system time is AHEAD of the server time, then the clock-offset value is < 0.
+     *
+     * @note This information can be used to synchronize the system clock with a "slew",
+     * "step" OR combination of the two clock correction methodologies depending on the degree
+     *  of system clock drift (represented by the clock-offset) and the application's
+     * tolerance for system clock error.
      *
      * @note The library calculates the clock-offset value using the On-Wire
      * protocol suggested by the NTPv4 specification. For more information,
      * refer to https://tools.ietf.org/html/rfc5905#section-8.
      *
-     * @note The system clock MUST be within 34 years (in the past or future)
-     * of the server time for this calculation. This is a fundamental limitation
-     * of 64 bit integer arithmetic.
-     * If the system clock is beyond 34 years of server time, then this value
-     * will be set to #SNTP_CLOCK_OFFSET_OVERFLOW, and the @ref Sntp_DeserializeResponse
-     * API will return #SntpClockOffsetOverflow.
+     * @note The library ASSUMES that the server and client systems are within
+     * ~68 years of each other clock, whether in the same NTP era or across adjacent
+     * NTP eras. Thus, the client and system times MUST be within ~68 years (or
+     * 2^31 seconds exactly) of each other for correct calculation of clock-offset.
+     *
+     * @note When the server and client times are exactly 2^31 (or INT32_MAX + 1 )
+     * seconds apart, the library ASSUMES that the server time is ahead of the client
+     * time, and return the clock-offset value of INT32_MAX.
      */
-    int32_t clockOffsetSec;
+    int64_t clockOffsetMs;
 } SntpResponseData_t;
 
 
@@ -357,7 +340,8 @@ typedef struct SntpResponse
  * @param[in, out] pRequestTime The current time of the system, expressed as time
  * since the SNTP epoch (i.e. 0h of 1st Jan 1900 ). This time will be serialized
  * in the SNTP request packet. The function will use this parameter to return the
- * timestamp serialized in the SNTP request.
+ * timestamp serialized in the SNTP request. To protect against attacks spoofing
+ * server responses, the timestamp MUST NOT be zero in value.
  * @param[in] randomNumber A random number (generated by a True Random Generator)
  * for use in the SNTP request packet to protect against replay attacks as suggested
  * by SNTPv4 specification. For more information, refer to
@@ -404,14 +388,20 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  * @p pParsedResponse parameter to #SNTP_KISS_OF_DEATH_CODE_NONE.
  *
  * @note If the server has positively responded with its clock time, then this API
- * function will calculate the clock-offset ONLY if the system clock is within
- * 34 years of the server time mentioned in the response packet; otherwise the
- * the clock offset in @p pParsedResponse parameter will be set to #SNTP_CLOCK_OFFSET_OVERFLOW,
- * and the function will return #SntpClockOffsetOverflow.
+ * function will calculate the clock-offset. For the clock-offset to be correctly
+ * calculated, the system clock MUST be within ~68 years (or 2^31 seconds) of the server
+ * time mentioned. This function supports clock-offset calculation when server and client
+ * timestamps are in adjacent NTP eras, with one system is in NTP era 0 (i.e. before 7 Feb 2036
+ * 6h:28m:14s UTC) and another system in NTP era 1 (on or after 7 Feb 2036 6h:28m:14s UTC).
+ *
+ * @note In the special case when the server and client times are exactly 2^31 seconds apart,
+ * the library ASSUMES that the server time is ahead of the client time, and returns the
+ * positive clock-offset value of INT32_MAX seconds.
  *
  * @param[in] pRequestTime The system time used in the SNTP request packet
  * that is associated with the server response. This MUST be the same as the
- * time returned by the @ref Sntp_SerializeRequest API.
+ * time returned by the @ref Sntp_SerializeRequest API. To protect against attacks
+ * spoofing server responses, this timestamp MUST NOT be zero in value.
  * @param[in] pResponseRxTime The time of the system, expressed as time since the
  * SNTP epoch (i.e. 0h of 1st Jan 1900 ), at receiving SNTP response from server.
  * This time will be used to calculate system clock offset relative to server.
@@ -426,10 +416,8 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
  *
  * @return This function returns one of the following:
  * - #SntpSuccess if the de-serialization operation is successful.
- * - #SntpClockOffsetOverflow if the de-serialization operation is successful,
- * but clock-offset cannot be calculated due to overflow.
  * - #SntpErrorBadParameter if an invalid parameter is passed.
- * - #SntpBufferTooSmall if the buffer does not have the minimum size
+ * - #SntpErrorBufferTooSmall if the buffer does not have the minimum size
  * required for a valid SNTP response packet.
  * - #SntpInvalidResponse if the response fails sanity checks expected in an
  * SNTP response.

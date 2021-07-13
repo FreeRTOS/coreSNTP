@@ -21,40 +21,34 @@
  */
 
 /**
- * @file Sntp_Init_harness.c
- * @brief Implements the proof harness for Sntp_Init function.
+ * @file Sntp_SendTimeRequest_harness.c
+ * @brief Implements the proof harness for Sntp_SendTimeRequest function.
  */
 
 #include <stddef.h>
 #include "core_sntp_client.h"
+#include "core_sntp_cbmc_state.h"
 
 void harness()
 {
     SntpContext_t * pContext;
-    SntpServerInfo_t * pTimeServers;
-    size_t numOfServers;
-    uint32_t serverResponseTimeoutMs;
-    uint8_t * pNetworkBuffer;
-    size_t bufferSize;
-    SntpResolveDns_t resolveDnsFunc;
-    SntpGetTime_t getSystemTimeFunc;
-    SntpSetTime_t setSystemTimeFunc;
-    UdpTransportInterface_t * pTransportIntf;
-    SntpAuthenticationInterface_t * pAuthIntf;
+    uint32_t randomNumber;
     SntpStatus_t sntpStatus;
+    uint32_t blockTimeMs;
 
-    pContext = malloc( sizeof( SntpContext_t ) );
-    pTimeServers = malloc( sizeof( SntpServerInfo_t ) );
+    pContext = unconstrainedCoreSntpContext();
 
-    __CPROVER_assume( bufferSize < CBMC_MAX_OBJECT_SIZE );
+    /* The SNTP_SEND_TIMEOUT is used here to control the number of loops
+     * when sending data on the network. The default is used here because memory
+     * safety can be proven in only a few iterations. Please see this proof's
+     * Makefile for more information. */
+    __CPROVER_assume( blockTimeMs < SNTP_SEND_TIMEOUT );
 
-    pNetworkBuffer = malloc( bufferSize );
-    pTransportIntf = malloc( sizeof( UdpTransportInterface_t ) );
-    pAuthIntf = malloc( sizeof( SntpAuthenticationInterface_t ) );
+    sntpStatus = Sntp_SendTimeRequest( pContext, randomNumber, blockTimeMs );
 
-    sntpStatus = Sntp_Init( pContext, pTimeServers, numOfServers, serverResponseTimeoutMs, pNetworkBuffer,
-                            bufferSize, resolveDnsFunc, getSystemTimeFunc, setSystemTimeFunc,
-                            pTransportIntf, pAuthIntf );
-
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess || sntpStatus == SntpErrorBufferTooSmall ), "The return value is not a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ||
+                        sntpStatus == SntpErrorContextNotInitialized || sntpStatus == SntpErrorSendTimeout ||
+                        sntpStatus == SntpErrorBufferTooSmall || sntpStatus == SntpErrorDnsFailure ||
+                        sntpStatus == SntpErrorAuthFailure || sntpStatus == SntpErrorNetworkFailure ),
+                      "The return value is not a valid coreSNTP Status" );
 }

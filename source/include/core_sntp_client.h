@@ -116,8 +116,8 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  *
  * @param[in] pTimeServer The time server used to request time.
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
- * @param[in] clockOffSetSec The calculated clock offset of the system relative
- * to the server time.
+ * @param[in] clockOffSetMs The calculated clock offset (in milliseconds) of the
+ * system relative to the server time.
  * @param[in] leapSecondInfo Information about whether there is about an upcoming
  * leap second adjustment of insertion or deletion in the last minute before midnight
  * on the last day of the current month. For more information on leap seconds, refer
@@ -125,20 +125,21 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  * on the accuracy requirements of the system clock, the user can choose to account
  * for the leap second or ignore it in their system clock update logic.
  *
- * @note The user can use either a "step" or "slew" clock discipline methodology
- * depending on the application needs.
- * If the application requires a smooth time continuum of system time is required,
- * then the "slew" discipline methodology can be used with the clock offset value,
- * @p clockOffSetSec, to apply correction to the system clock with a "slew rate"
- * (that is higher than the SNTP polling rate).
+ * @note If the @p clockOffsetMs is positive, then the system time is BEHIND the server time,
+ * and if the @p clockOffsetMs, the system time is AHEAD of the server time. To correct the
+ * system time, the user can use either of "step", "slew" OR combination of the two clock
+ * discipline methodologies depending on the application needs.
+ * If the application requires a smooth time continuum of system time, then the "slew"
+ * discipline methodology can be used with the clock offset value, @p clockOffSetMs, to correct
+ * the system clock gradually with a "slew rate".
  * If the application can accept sudden jump in time (forward or backward), then
  * the "step" discipline methodology can be used to directly update the system
- * clock with the current server time, @p pServerTime, every time the coreSNTP
- * library calls the interface.
+ * clock with the current server time, @p pServerTime, every time the coreSNTP library
+ * calls the interface.
  */
 typedef void ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   const SntpTimestamp_t * pServerTime,
-                                  int32_t clockOffsetSec,
+                                  int64_t clockOffsetMs,
                                   SntpLeapSecondInfo_t leapSecondInfo );
 
 /**
@@ -154,8 +155,19 @@ typedef struct NetworkContext NetworkContext_t;
 
 /**
  * @ingroup core_sntp_callback_types
- * @brief Interface for user-defined function to send data to the network
- * over User Datagram Protocol (UDP).
+ * @brief Interface for user-defined function to send time request as a single datagram
+ * to server on the network over User Datagram Protocol (UDP).
+ *
+ * @note It is RECOMMENDED that the send operation is non-blocking, i.e. it
+ * SHOULD immediately return when the entire UDP data cannot be sent over the
+ * network. In such a case, the coreSNTP library will re-try send operation
+ * for a maximum period of blocking time passed to the @ref Sntp_SendTimeRequest API.
+ *
+ * @note If the size of the SNTP packet exceeds the Maximum Transmission Unit (MTU)
+ * supported by the network interface of the device, the user-defined implementation
+ * MAY either support fragmentation of UDP packets OR use a size for authentication data
+ * that allows the SNTP packet to fit within the MTU required size threshold. (Note that
+ * the size of SNTP packet is #SNTP_PACKET_BASE_SIZE + authentication data.)
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
@@ -167,8 +179,6 @@ typedef struct NetworkContext NetworkContext_t;
  * @return The function SHOULD return one of the following integer codes:
  * - @p bytesToSend when all requested data is successfully transmitted over the
  * network.
- * - > 0 value representing number of bytes sent when only partial data is sent
- * over the network.
  * - 0 when no data could be sent over the network (due to network buffer being
  * full, for example), and the send operation can be retried.
  * - < 0 when the send operation failed to send any data due to an internal error,
@@ -178,12 +188,25 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
                                             uint32_t serverAddr,
                                             uint16_t serverPort,
                                             const void * pBuffer,
-                                            size_t bytesToSend );
+                                            uint16_t bytesToSend );
 
 /**
  * @ingroup core_sntp_callback_types
- * @brief Interface for user-defined function to receive data from the network
- * over User Datagram Protocol (UDP).
+ * @brief Interface for user-defined function to receive the server response, to a time
+ * request (sent through the @ref UdpTransportSendTo_t function), from the network over
+ * User Datagram Protocol (UDP).
+ *
+ * @note It is RECOMMENDED that the read operation is non-blocking, i.e. it
+ * SHOULD immediately return when no data is available on the network.
+ * In such a case, the coreSNTP library will re-try send operation for a maximum period
+ * of blocking time passed through the @ref Sntp_ReceiveTimeResponse API.
+ *
+ * @note If the size of the SNTP response packet from the server exceeds the
+ * Maximum Transmission Unit (MTU) supported by the network interface of the device,
+ * the user-defined implementation of the interface MAY either support receiving and
+ * assembling fragmented UDP packets OR use an authentication data size that allows
+ * SNTP packet to fit within the MTU required packet size threshold. (Note that
+ * the size of SNTP packet is #SNTP_PACKET_BASE_SIZE + authentication data.)
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
@@ -196,8 +219,6 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  * @return The function SHOULD return one of the following integer codes:
  * - @p bytesToRecv value if all the requested number of bytes are received
  * from the network.
- * - > 0 value representing number of bytes received when partial data is
- * received from the network.
  * - ZERO when no data is available on the network, and the operation can be
  * retried.
  * - < 0 when the read operation failed due to internal error, and operation cannot
@@ -207,7 +228,7 @@ typedef int32_t ( * UdpTransportRecvFrom_t )( NetworkContext_t * pNetworkContext
                                               uint32_t serverAddr,
                                               uint16_t serverPort,
                                               void * pBuffer,
-                                              size_t bytesToRecv );
+                                              uint16_t bytesToRecv );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -275,7 +296,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
                                                   const SntpServerInfo_t * pTimeServer,
                                                   void * pBuffer,
                                                   size_t bufferSize,
-                                                  size_t * pAuthCodeSize );
+                                                  uint16_t * pAuthCodeSize );
 
 /**
  * @ingroup core_sntp_callback_types
@@ -313,7 +334,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
 typedef SntpStatus_t (* SntpValidateServerAuth_t )( SntpAuthContext_t * pContext,
                                                     const SntpServerInfo_t * pTimeServer,
                                                     const void * pResponseData,
-                                                    size_t responseSize );
+                                                    uint16_t responseSize );
 
 /**
  * @ingroup core_sntp_struct_types
@@ -339,7 +360,7 @@ typedef struct SntpAuthenticationIntf
     SntpGenerateAuthCode_t generateClientAuth;
 
     /**
-     * @brief The user-defined function to authenticating server from its SNTP
+     * @brief The user-defined function for authenticating server from its SNTP
      * response.
      */
     SntpValidateServerAuth_t validateServerAuth;
@@ -438,7 +459,7 @@ typedef struct SntpContext
      * This value is used for expecting the same size for an SNTP response
      * from the server.
      */
-    size_t sntpPacketSize;
+    uint16_t sntpPacketSize;
 
     /**
      * @brief The timeout duration (in milliseconds) for receiving a response, through
@@ -520,26 +541,37 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
  *
  * @param[in] pContext The context representing an SNTPv4 client.
  * @param[in] randomNumber A random number serializing the SNTP request packet
- * to protect against replay attacks as suggested by SNTPv4 specification in
- * [RFC 4330 Section 3](https://tools.ietf.org/html/rfc4330#section-3). It is
- * RECOMMENDED that a True Random Generator is used to generate the random number.
+ * to protect against spoofing attacks by attackers that are off the network path
+ * of the SNTP client-server communication. This mechanism is suggested by SNTPv4
+ * specification in [RFC 4330 Section 3](https://tools.ietf.org/html/rfc4330#section-3).
+ * @param[in] blockTimeMs The maximum duration of time (in milliseconds) the function will
+ * block on attempting to send time request to the server over the network. If a zero
+ * block time value is provided, then the function will attempt to send the packet ONLY
+ * once.
+ *
+ * @note It is RECOMMENDED that a True Random Number Generator is used to generate the
+ * random number by using a hardware module, like Hardware Security Module (HSM), Secure Element,
+ * etc, as the entropy source.
  *
  * @return The API function returns one of the following:
  *  - #SntpSuccess if a time request is successfully sent to the currently configured
  * time server in the context.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
- *  - #SntpErrorChangeServer if there is no server remaining in the list of configured
- * servers that has not rejected a prior time request.
+ *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
+ * to the function.
  *  - #SntpErrorDnsFailure if there is failure in the user-defined function for
  * DNS resolution of the time server.
  *  - #SntpErrorNetworkFailure if the SNTP request could not be sent over the network
  * through the user-defined transport interface.
  *  - #SntpErrorAuthFailure if there was a failure in generating the client
  * authentication code in the user-defined authentication interface.
+ *  - #SntpErrorSendTimeout if the time request packet could not be sent over the
+ * network for the entire @p blockTimeMs duration.
  */
 /* @[define_sntp_sendtimerequest] */
 SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
-                                   uint32_t randomNumber );
+                                   uint32_t randomNumber,
+                                   uint32_t blockTimeMs );
 /* @[define_sntp_sendtimerequest] */
 
 
@@ -556,19 +588,24 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  * @note On receiving a successful server response containing server time,
  * this API calculates the clock offset value of the system clock relative to the
  * server before calling the user-defined @ref SntpSetTime_t function for updating
- * the system time. To calculate the clock offset, the system clock SHOULD BE
- * within 34 years of the server time; otherwise, this function passes
- * #SNTP_CLOCK_OFFSET_OVERFLOW value as the clock offset to the @ref SntpSetTime_t function.
+ * the system time.
+ *
+ * @note For correct calculation of clock-offset, the server and client times MUST be within
+ * ~68 years (or 2^31 seconds) of each other. In the special case when the server and client
+ * times are exactly 2^31 seconds apart, the library ASSUMES that the server time is ahead
+ * of the client time, and returns the positive clock-offset value of INT32_MAX seconds.
  *
  * @note This API will rotate the server of use in the library for the next time request
  * (through the @ref Sntp_SendTimeRequest) if either of following events occur:
  *  - The server has responded with a rejection for the time request.
  *                         OR
  *  - The server response wait has timed out.
+ * If all the servers configured in the context have been used, the API will rotate server for
+ * time query back to the first server in the list which will be used in next time request.
  *
  * @param[in] pContext The context representing an SNTPv4 client.
- * @param[in] blockTimeMs The maximum duration of time the function will block on
- * receiving a response from the server unless either the response is received
+ * @param[in] blockTimeMs The maximum duration of time (in milliseconds) the function will
+ * block on receiving a response from the server unless either the response is received
  * OR a response timeout occurs.
  *
  * @note This function can be called multiple times with zero or small blocking times
@@ -577,10 +614,9 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  *
  * @return This API functions returns one of the following:
  *  - #SntpSuccess if a successful server response is received.
+ *  - #SntpErrorContextNotInitialized if an uninitialized or invalid context is passed
+ * to the function.
  *  - #SntpErrorBadParameter if an invalid context is passed to the function.
- *  - #SntpErrorChangeServer if all servers configured in the context have already
- * rejected time requests in previous attempts, and application SHOULD change server(s)
- * for future time requests with the @ref Sntp_Init API.
  *  - #SntpErrorNetworkFailure if there is a failure in the user-defined transport
  *  - #SntpErrorAuthFailure if an internal error occurs in the user-defined
  * authentication interface when validating the server response.
