@@ -196,7 +196,7 @@ typedef enum SntpStatus
 
     /**
      * @brief Poll interval value is under 1 second which cannot be calculated
-     *  by @ref Sntp_CalculatedPollInterval.
+     *  by @ref Sntp_CalculatePollInterval.
      */
     SntpZeroPollInterval,
 
@@ -212,7 +212,7 @@ typedef enum SntpStatus
      * SHOULD change to a new server by re-initializing the context.
      *
      * @note This status is returned by either of @ref Sntp_SendTimeRequest OR
-     * @ref Sntp_GetTimeResponse APIs.
+     * @ref Sntp_ReceiveTimeResponse APIs.
      */
     SntpErrorChangeServer,
 
@@ -225,7 +225,7 @@ typedef enum SntpStatus
     /**
      * @brief Networking operation of sending or receiving SNTP packet through the user-defined UDP
      * transport interface, @ref UdpTransportInterface_t, failed.
-     * This status is returned by either of @ref Sntp_SendTimeRequest OR @ref Sntp_GetTimeResponse
+     * This status is returned by either of @ref Sntp_SendTimeRequest OR @ref Sntp_ReceiveTimeResponse
      * APIs.
      */
     SntpErrorNetworkFailure,
