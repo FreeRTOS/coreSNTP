@@ -740,7 +740,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
 /**
  * @brief Determines whether a retry attempt should be made to receive server response packet from the network
  * depending on the timing constraints of server response timeout, @p responseTimeoutMs, and the block time
- * period, @blockTimeMs, passed. If neither of the time windows have expired, the function determines that the
+ * period, @p blockTimeMs, passed. If neither of the time windows have expired, the function determines that the
  * read operation can be re-tried.
  *
  * @param[in] pCurrentTime The current time in the system used for calculating elapsed time windows.

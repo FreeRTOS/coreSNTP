@@ -261,8 +261,8 @@ static uint32_t fractionsToMs( uint32_t fractions )
  * 2. server timestamp one era ahead, and 3. client timestamp being one era ahead), and determines
  * the NTP era configuration by choosing the difference value of the smallest absolute value.
  *
- * @param[in] serverTime The server timestamp.
- * @param[in] clientTime The client timestamp.
+ * @param[in] pServerTime The server timestamp.
+ * @param[in] pClientTime The client timestamp.
  *
  * @return The calculated difference between server and client times as a signed 64 bit integer.
  */
