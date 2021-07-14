@@ -31,11 +31,13 @@ com
 config
 configs
 const
+copydoc
 coresntp
 currenttimelist
 de
 deamon
 december
+defgroup
 deserialization
 deserialize
 deserializer
@@ -83,6 +85,7 @@ lastrequesttime
 leapsecondinfo
 leapversionmode
 lsb
+mainpage
 misra
 mtu
 networkinterfacereceivestub
