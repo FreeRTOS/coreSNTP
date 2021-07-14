@@ -504,10 +504,10 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  *  - #SntpErrorTimeNotSupported if the passed SNTP time does not lie in the
  * supported time range.
  */
-/* @[define_sntp_ConvertToUnixTime] */
+/* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      uint32_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
-/* @[define_sntp_ConvertToUnixTime] */
+/* @[define_sntp_converttounixtime] */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */
