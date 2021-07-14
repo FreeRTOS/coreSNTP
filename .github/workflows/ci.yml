@@ -156,12 +156,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-            submodules: 'recursive'
       - name: Install Python3
         uses: actions/setup-python@v2
         with:
-          python-version: '3.7.10'
+          python-version: '3.7.x'
       - name: Measure sizes
         uses: FreeRTOS/CI-CD-Github-Actions/memory_statistics@main
         with:
