@@ -144,17 +144,50 @@
  */
 typedef struct SntpPacket
 {
-    uint8_t leapVersionMode;      /** @brief Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
-    uint8_t stratum;              /** @brief stratum */
-    uint8_t poll;                 /** @brief poll interval */
-    uint8_t precision;            /** @brief precision */
-    uint32_t rootDelay;           /** @brief root delay */
-    uint32_t rootDispersion;      /** @brief root dispersion */
-    uint32_t refId;               /** @brief reference ID */
-    SntpTimestamp_t refTime;      /** @brief reference time */
-    SntpTimestamp_t originTime;   /** @brief origin timestamp */
-    SntpTimestamp_t receiveTime;  /** @brief receive timestamp */
-    SntpTimestamp_t transmitTime; /** @brief transmit timestamp */
+    /** 
+     * @brief Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode 
+     */
+    uint8_t leapVersionMode;
+    /**
+     * @brief stratum 
+     */      
+    uint8_t stratum;    
+    /**
+     * @brief poll interval 
+     */          
+    uint8_t poll;   
+    /**
+     * @brief precision 
+     */              
+    uint8_t precision;  
+    /**
+     * @brief root delay 
+     */          
+    uint32_t rootDelay;    
+    /**
+     * @brief root dispersion 
+     */      
+    uint32_t rootDispersion;   
+    /**
+     * @brief reference ID 
+     */   
+    uint32_t refId;
+    /**
+     * @brief reference time 
+     */               
+    SntpTimestamp_t refTime;  
+    /**
+     * @brief origin timestamp 
+     */   
+    SntpTimestamp_t originTime; 
+    /**
+     * @brief receive timestamp 
+     */  
+    SntpTimestamp_t receiveTime; 
+    /**
+     * @brief transmit timestamp
+     */
+    SntpTimestamp_t transmitTime; 
 } SntpPacket_t;
 
 /**

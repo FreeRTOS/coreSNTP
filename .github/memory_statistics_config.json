@@ -1,0 +1,10 @@
+{
+    "lib_name" : "coreSNTP",
+    "src": [
+        "source/core_sntp_client.c",
+        "source/core_sntp_serializer.c"
+    ],
+    "include": [
+        "source/include"
+    ]
+}

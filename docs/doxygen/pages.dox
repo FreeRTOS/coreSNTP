@@ -1,0 +1,77 @@
+/**
+@mainpage Overview
+@anchor sntp
+@brief coreSNTP Library
+
+<p>
+</p>
+
+@section sntp_memory_requirements Memory Requirements
+@brief Memory requirements of the coreSNTP library.
+
+@include{doc} size_table.html
+
+@section sntp_design Design
+@brief SNTP Library Design
+
+<h3>Memory Usage</h3>
+<p>
+</p>
+
+<h3>Parsing Strictness</h3>
+<p>
+</p>
+
+<h3>Compliance & Coverage</h3>
+<p>
+</p>
+*/
+
+/**
+@page sntp_functions Functions
+@brief Primary functions of the SNTP library:<br><br>
+@subpage sntp_init_function <br>
+@subpage sntp_sendtimerequest_function <br>
+@subpage sntp_receivetimeresponse_function <br>
+@subpage sntp_serializerequest_function <br>
+@subpage sntp_deserializeresponse_function <br>
+@subpage sntp_calculatepollinterval_function <br>
+@subpage sntp_converttounixtime_function <br>
+
+@page sntp_init_function Sntp_Init
+@snippet core_sntp_client.h declare_sntp_init
+@copydoc Sntp_Init
+
+@page sntp_sendtimerequest_function Sntp_SendTimeRequest
+@snippet core_sntp_client.h declare_sntp_sendtimerequest
+@copydoc Sntp_SendTimeRequest
+
+@page sntp_receivetimeresponse_function Sntp_ReceiveTimeResponse
+@snippet core_sntp_client.h declare_sntp_receivetimeresponse
+@copydoc Sntp_ReceiveTimeResponse
+
+@page sntp_serializerequest_function Sntp_SerializeRequest
+@snippet core_sntp_serializer.h declare_sntp_serializerequest
+@copydoc Sntp_SerializeRequest
+
+@page sntp_deserializeresponse_function Sntp_DeserializeResponse
+@snippet core_sntp_serializer.h declare_sntp_deserializeresponse
+@copydoc Sntp_DeserializeResponse
+
+@page sntp_calculatepollinterval_function Sntp_CalculatePollInterval
+@snippet core_sntp_serializer.h declare_sntp_calculatepollinterval
+@copydoc Sntp_CalculatePollInterval
+
+@page sntp_converttounixtime_function Sntp_ConvertToUnixTime
+@snippet core_sntp_serializer.h declare_sntp_converttounixtime
+@copydoc Sntp_ConvertToUnixTime
+*/
+
+<!-- We do not use doxygen ALIASes here because there have been issues in the past versions with "^^" newlines within the alias definition. -->
+/**
+@defgroup json_enum_types Enumerated Types
+@brief Enumerated types of the JSON library
+
+@defgroup json_struct_types Struct Types
+@brief Struct types of the JSON library
+*/
