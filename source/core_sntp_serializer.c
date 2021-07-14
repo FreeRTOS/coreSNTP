@@ -144,17 +144,60 @@
  */
 typedef struct SntpPacket
 {
-    uint8_t leapVersionMode;      /* Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode */
-    uint8_t stratum;              /* stratum */
-    uint8_t poll;                 /* poll interval */
-    uint8_t precision;            /* precision */
-    uint32_t rootDelay;           /* root delay */
-    uint32_t rootDispersion;      /* root dispersion */
-    uint32_t refId;               /* reference ID */
-    SntpTimestamp_t refTime;      /* reference time */
-    SntpTimestamp_t originTime;   /* origin timestamp */
-    SntpTimestamp_t receiveTime;  /* receive timestamp */
-    SntpTimestamp_t transmitTime; /* transmit timestamp */
+    /**
+     * @brief Bits 6-7 leap indicator, bits 3-5 are version number, bits 0-2 are mode
+     */
+    uint8_t leapVersionMode;
+
+    /**
+     * @brief stratum
+     */
+    uint8_t stratum;
+
+    /**
+     * @brief poll interval
+     */
+    uint8_t poll;
+
+    /**
+     * @brief precision
+     */
+    uint8_t precision;
+
+    /**
+     * @brief root delay
+     */
+    uint32_t rootDelay;
+
+    /**
+     * @brief root dispersion
+     */
+    uint32_t rootDispersion;
+
+    /**
+     * @brief reference ID
+     */
+    uint32_t refId;
+
+    /**
+     * @brief reference time
+     */
+    SntpTimestamp_t refTime;
+
+    /**
+     * @brief origin timestamp
+     */
+    SntpTimestamp_t originTime;
+
+    /**
+     * @brief receive timestamp
+     */
+    SntpTimestamp_t receiveTime;
+
+    /**
+     * @brief transmit timestamp
+     */
+    SntpTimestamp_t transmitTime;
 } SntpPacket_t;
 
 /**
@@ -261,8 +304,8 @@ static uint32_t fractionsToMs( uint32_t fractions )
  * 2. server timestamp one era ahead, and 3. client timestamp being one era ahead), and determines
  * the NTP era configuration by choosing the difference value of the smallest absolute value.
  *
- * @param[in] serverTime The server timestamp.
- * @param[in] clientTime The client timestamp.
+ * @param[in] pServerTime The server timestamp.
+ * @param[in] pClientTime The client timestamp.
  *
  * @return The calculated difference between server and client times as a signed 64 bit integer.
  */
@@ -351,9 +394,6 @@ static int64_t safeTimeDifference( const SntpTimestamp_t * pServerTime,
  * server using the on-wire protocol specified in the NTPv4 specification.
  * For more information on on-wire protocol, refer to
  * [RFC 5905 Section 8](https://tools.ietf.org/html/rfc5905#section-8).
- *
- * If the clock offset will result in an overflow, this function sets
- * the clock offset, @p pClockOffset, as #SNTP_CLOCK_OFFSET_OVERFLOW.
  *
  * @note The following diagram explains the calculation of the clock
  * offset:

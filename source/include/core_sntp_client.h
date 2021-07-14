@@ -496,7 +496,7 @@ typedef struct SntpContext
  * time.
  * @param[in] setSystemTimeFunc The user-defined function for correcting system
  * time for every successful time response received from a server.
- * @param[in] pUdpTransportIntf The user-defined function for performing network
+ * @param[in] pTransportIntf The user-defined function for performing network
  * send/recv operations over UDP.
  * @param[in] pAuthIntf The user-defined interface for generating client authentication
  * in SNTP requests and authenticating servers in SNTP responses, if security mechanism

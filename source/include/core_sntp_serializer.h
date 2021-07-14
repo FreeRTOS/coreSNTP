@@ -170,7 +170,7 @@ typedef enum SntpStatus
 
     /**
      * @brief Poll interval value is under 1 second which cannot be calculated
-     *  by @ref Sntp_CalculatedPollInterval.
+     *  by @ref Sntp_CalculatePollInterval.
      */
     SntpZeroPollInterval,
 
@@ -189,7 +189,7 @@ typedef enum SntpStatus
     /**
      * @brief Networking operation of sending or receiving SNTP packet through the user-defined UDP
      * transport interface, @ref UdpTransportInterface_t, failed.
-     * This status is returned by either of @ref Sntp_SendTimeRequest OR @ref Sntp_GetTimeResponse
+     * This status is returned by either of @ref Sntp_SendTimeRequest OR @ref Sntp_ReceiveTimeResponse
      * APIs.
      */
     SntpErrorNetworkFailure,
@@ -202,7 +202,7 @@ typedef enum SntpStatus
     SntpServerNotAuthenticated,
 
     /**
-     * @brief Failure from the user-supplied authentication interface, @ref SntpAuthenticationIntf_t,
+     * @brief Failure from the user-supplied authentication interface, @ref SntpAuthenticationInterface_t,
      * in either generating authentication data for SNTP request OR validating the authentication
      * data in SNTP response from server.
      */
@@ -504,10 +504,10 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  *  - #SntpErrorTimeNotSupported if the passed SNTP time does not lie in the
  * supported time range.
  */
-/* @[define_sntp_ConvertToUnixTime] */
+/* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      uint32_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
-/* @[define_sntp_ConvertToUnixTime] */
+/* @[define_sntp_converttounixtime] */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */

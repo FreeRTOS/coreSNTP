@@ -375,10 +375,8 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
  * @return Returns one of the following:
  * - #SntpSuccess if the interface function successfully appends client
  * authentication data.
- * - #SntpErrorAuthError when the interface returns either an error OR an
+ * - #SntpErrorAuthFailure when the interface returns either an error OR an
  * incorrect size of the client authentication data.
- * - #SntpBufferTooSmall if the request packet buffer is too small to add client
- * authentication data.
  */
 static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
 {
@@ -740,7 +738,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
 /**
  * @brief Determines whether a retry attempt should be made to receive server response packet from the network
  * depending on the timing constraints of server response timeout, @p responseTimeoutMs, and the block time
- * period, @blockTimeMs, passed. If neither of the time windows have expired, the function determines that the
+ * period, @p blockTimeMs, passed. If neither of the time windows have expired, the function determines that the
  * read operation can be re-tried.
  *
  * @param[in] pCurrentTime The current time in the system used for calculating elapsed time windows.
