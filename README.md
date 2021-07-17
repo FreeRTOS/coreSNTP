@@ -32,7 +32,7 @@ If using CMake, the [coreSntpFilePaths.cmake](coreSntpFilePaths.cmake) file cont
 ## Reference Example
 
 A reference example of using the coreSNTP library can be viewed in the `FreeRTOS/FreeRTOS` repository [here](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).
-The demo application showcases use of the library to create an SNTP client for periodic time synchronization of system clock.
+The demo application showcases use of the library in order to create an SNTP client for periodic time synchronization of the system clock.
 
 ## Building Unit Tests
 
