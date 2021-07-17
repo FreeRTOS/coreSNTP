@@ -120,6 +120,7 @@ pnetworkbuffer
 pnetworkcontext
 pnetworkcontext
 pnetworkintf
+png
 poldertime
 positivediff
 posix
