@@ -3,7 +3,7 @@
 @anchor sntp
 @brief <b>coreSNTP Library</b>
 
-The coreSNTP library provides a client for <b>Simple Time Network Protocol (SNTP)</b> to allow devices to synchronize their system clocks with internet time. This library implements the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
+The coreSNTP library provides a client for the <b>Simple Network Time Protocol (SNTP)</b> to allow devices to synchronize their system clocks with internet time. This library implements the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
 <p>
 An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, 
 > <i>To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable.</i>
@@ -12,10 +12,10 @@ An SNTP client can request time from both NTP and SNTP servers. According to the
 This library is optimized for resource constrained embedded devices. Features of this library include:
 - Fully synchronous API, to allow applications to completely manage their concurrency and multi-threading method.
 - Operations on fixed buffers, so that applications may control their memory allocation strategy.
-- Support for 2 sets of API to provide flexibility of developing an SNTP client application with either:
-    - The serializer/de-serializer API to have complete control over the operations of the SNTP client.      
-                                            OR
-    - The client API that handles operations of communicating over the network, performing authentication and handling rejected server responses.
+- Flexibility to develop an application with either:
+    - The serializer/de-serializer API to have complete control over the operations of the SNTP client. 
+    OR
+    - The client API that handles operations of communicating over the network, performing authentication, and handling rejected server responses.
 </p>
 
 @section sntp_memory_requirements Memory Requirements
@@ -28,9 +28,9 @@ This library is optimized for resource constrained embedded devices. Features of
 
 <p>
 
-The coreSNTP library provides 2 layers of API:
- 1. <b>Serializer/Deserializer and Utilities</b> - This layer provides functionality of serializing SNTP time requests, de-serializing SNTP response packets, and some utility functions helpful in setting up an SNTP client in application.
- 2. <b>Managed Client</b> - This layer provides **managed** functionality of network operations for DNS resolution, sending and receiving SNTP packets over UDP, authenticating server for security (if enabled) and handling of
+The coreSNTP library provides 2 API layers:
+ 1. <b>Serializer/Deserializer and Utilities</b> - This layer provides functionality for serializing SNTP time requests and deserializing SNTP response packets, as well as some utility functions helpful in setting up an SNTP client in an application.
+ 2. <b>Managed Client</b> - This layer provides **managed** functionality for network operations including DNS resolution, sending and receiving SNTP packets over UDP, authenticating servers for security (if enabled), and handling of
 server rejection of time requests. **Note**: This layer performs the network and authentication operations through user-defined implementation of interfaces exposed by the library.
 
 Following is the architecture diagram of the library. It showcases the 2 tiers of the library and the interfaces on which the **Managed Client** layer depends on.
@@ -107,4 +107,3 @@ As visible in the above architecture diagram, the <b>Managed Client</b> API laye
 @defgroup sntp_constants Constants
 @brief Constants defined in the coreSNTP library
 */
-
