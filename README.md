@@ -2,7 +2,7 @@
 
 This repository contains the coreSNTP library, a client library to use Simple Network Time Protocol (SNTP) to synchronize device clocks with internet time. This library implements the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
 
-An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, "_To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable._", thereby, allowing SNTP clients to request time from NTP servers. 
+An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, "_To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable._", thereby, allowing SNTP clients to request time from NTP servers.
 
 This library has gone through code quality checks including verification that no function has a [GNU Complexity](https://www.gnu.org/software/complexity/manual/complexity.html) score over 8, and checks against deviations from mandatory rules in the [MISRA coding standard](https://www.misra.org.uk). This library has also undergone both static code analysis from [Coverity static analysis](https://scan.coverity.com/), and validation of memory safety through the [CBMC automated reasoning tool](https://www.cprover.org/cbmc/).
 
@@ -36,7 +36,7 @@ The demo application showcases use of the library to create an SNTP client for p
 
 ## Building Unit Tests
 
-The unit tests for the library use CMock/Unity unit testing framework. 
+The unit tests for the library use CMock/Unity unit testing framework.
 
 ### Checkout CMock Submodule
 
