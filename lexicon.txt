@@ -42,6 +42,7 @@ deserialization
 deserialize
 deserializer
 deserializeresponse
+deserializing
 desiredaccuracy
 diff
 dns
@@ -86,6 +87,7 @@ leapsecondinfo
 leapversionmode
 lsb
 mainpage
+mdash
 misra
 mtu
 networkinterfacereceivestub
@@ -120,6 +122,7 @@ pnetworkbuffer
 pnetworkcontext
 pnetworkcontext
 pnetworkintf
+png
 poldertime
 positivediff
 posix

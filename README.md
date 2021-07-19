@@ -1,10 +1,10 @@
 ## coreSNTP Library
 
-**Note:** This library is under development.
-
 This repository contains the coreSNTP library, a client library to use Simple Network Time Protocol (SNTP) to synchronize device clocks with internet time. This library implements the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).
 
-An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, "_To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable._", thereby, allowing SNTP clients to request time from NTP servers. 
+An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, "_To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable._", thereby, allowing SNTP clients to request time from NTP servers.
+
+This library has gone through code quality checks including verification that no function has a [GNU Complexity](https://www.gnu.org/software/complexity/manual/complexity.html) score over 8, and checks against deviations from mandatory rules in the [MISRA coding standard](https://www.misra.org.uk). This library has also undergone both static code analysis from [Coverity static analysis](https://scan.coverity.com/), and validation of memory safety through the [CBMC automated reasoning tool](https://www.cprover.org/cbmc/).
 
 ## Cloning this repository
 This repo uses [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to bring in dependent components.
@@ -29,7 +29,14 @@ You can build the coreSNTP source files that are in the [source](source/) direct
 
 If using CMake, the [coreSntpFilePaths.cmake](coreSntpFilePaths.cmake) file contains the above information of the source files and the header include path from this repository.
 
+## Reference Example
+
+A reference example of using the coreSNTP library can be viewed in the `FreeRTOS/FreeRTOS` repository [here](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).
+The demo application showcases use of the library in order to create an SNTP client for periodic time synchronization of the system clock.
+
 ## Building Unit Tests
+
+The unit tests for the library use CMock/Unity unit testing framework.
 
 ### Checkout CMock Submodule
 
@@ -57,6 +64,15 @@ git submodule update --checkout --init --recursive test/unit-test/CMock
 1. The generated test executables will be present in `build/bin/tests` folder.
 
 1. Run `cd build && ctest` to execute all tests and view the test run summary.
+
+## Generating documentation
+
+The Doxygen references were created using Doxygen version 1.8.20. To generate the
+Doxygen pages, please run the following command from the root of this repository:
+
+```shell
+doxygen docs/doxygen/config.doxyfile
+```
 
 ## Contributing
 
