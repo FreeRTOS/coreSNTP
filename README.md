@@ -4,7 +4,7 @@ This repository contains the coreSNTP library, a client library to use Simple Ne
 
 An SNTP client can request time from both NTP and SNTP servers. According to the SNTPv4 specification, "_To an NTP or SNTP server, NTP and SNTP clients are indistinguishable; to an NTP or SNTP client, NTP and SNTP servers are indistinguishable._", thereby, allowing SNTP clients to request time from NTP servers.
 
-This library has gone through code quality checks including verification that no function has a [GNU Complexity](https://www.gnu.org/software/complexity/manual/complexity.html) score over 8, and checks against deviations from mandatory rules in the [MISRA coding standard](https://www.misra.org.uk). This library has also undergone both static code analysis from [Coverity static analysis](https://scan.coverity.com/), and validation of memory safety through the [CBMC automated reasoning tool](https://www.cprover.org/cbmc/).
+This library has gone through code quality checks including verification that no function has a [GNU Complexity](https://www.gnu.org/software/complexity/manual/complexity.html) score over 8, and checks against deviations from mandatory rules in the [MISRA coding standard](https://www.misra.org.uk). Deviations from the MISRA C:2012 guidelines are documented under [MISRA Deviations](MISRA.md). This library has also undergone both static code analysis from [Coverity static analysis](https://scan.coverity.com/), and validation of memory safety through the [CBMC automated reasoning tool](https://www.cprover.org/cbmc/).
 
 ## Cloning this repository
 This repo uses [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to bring in dependent components.
