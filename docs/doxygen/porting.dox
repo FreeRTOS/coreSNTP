@@ -61,8 +61,8 @@ durations as well as generating time request packet required by the SNTP protoco
 @see @ref SntpGetTime_t
 
 In the scenario that device platform does not have real-world time information (due to device boot-up for example), it is
-acceptable for this function to provide the system time information that does not match real-world time, because once a
-time information is receiving in SNTP communication with a time server, the system time can be corrected to match real-time.
+acceptable for this function to provide the system-time information that does not match real-world time, because once a
+time information is received in SNTP communication with a time server, the system time can be corrected to match real-time.
 Refer to the next section on how the interface exposed by coreSNTP library to correct system time.
 
 @section sntp_porting_settime Set Time Function
@@ -79,12 +79,12 @@ the clock accuracy needs of the application.
 in SNTP communication with time server(s) for security.
 
 @note It is RECOMMENDED to enable authentication in communication with your time server(s) of choice to protect against attacks
-that modify or spoof server responses. The SNTPv4 protocol is flexible to be used use with any symmetric-key or asymmetric key
+that modify or spoof server responses. The SNTPv4 protocol is flexible to be used with any symmetric-key or asymmetric key
 cryptographic algorithm depending on the support provided by time servers of your choice. For an example of using AES-128-CMAC
 as the authentication algorithm, please refer to [coreSNTP demo in FreeRTOS/FreeRTOS repository](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).
 
 @see @ref SntpAuthenticationInterface_t
-A port that uses authentication to communicate with time server must implement the following functions pointers exposed by the authentication interface:
+A port that uses authentication to communicate with time server must implement the following function pointers exposed by the authentication interface:
  - [Add client authentication code](@ref SntpGenerateAuthCode_t): A function to generate and append authentication data for client to be validated
  by the time server. The authentication data SHOULD be generated with the @ref SNTP_PACKET_BASE_SIZE on the SNTP request packet bytes serialized by the
  coreSNTP library and appended to the same buffer. This function should also indicate the number of authentication bytes appended to the library
