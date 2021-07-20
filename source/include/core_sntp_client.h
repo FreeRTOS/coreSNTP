@@ -53,6 +53,7 @@
 #include "core_sntp_config_defaults.h"
 
 /**
+ * @ingroup sntp_constants
  * @brief The default UDP port supported by SNTP/NTP servers for client-server
  * communication.
  *
@@ -64,7 +65,7 @@
 #define SNTP_DEFAULT_SERVER_PORT    ( 123U )
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Structure representing information for a time server.
  */
 typedef struct SntpServerInfo
@@ -76,7 +77,7 @@ typedef struct SntpServerInfo
 } SntpServerInfo_t;
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to resolve time server domain-name
  * to an IPv4 address.
  * The SNTP client library attempts to resolve the DNS of the time-server being
@@ -93,7 +94,7 @@ typedef bool ( * SntpResolveDns_t )( const SntpServerInfo_t * pServerAddr,
                                      uint32_t * pIpV4Addr );
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to obtain the current system time
  * in SNTP timestamp format.
  *
@@ -110,7 +111,7 @@ typedef bool ( * SntpResolveDns_t )( const SntpServerInfo_t * pServerAddr,
 typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to update the system clock time
  * so that it is synchronized the time server used for getting current time.
  *
@@ -143,7 +144,7 @@ typedef void ( * SntpSetTime_t )( const SntpServerInfo_t * pTimeServer,
                                   SntpLeapSecondInfo_t leapSecondInfo );
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @typedef NetworkContext_t
  * @brief A user-defined type for context that is passed to the transport interface functions.
  * It MUST be defined by the user to use the library.
@@ -154,7 +155,7 @@ struct NetworkContext;
 typedef struct NetworkContext NetworkContext_t;
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to send time request as a single datagram
  * to server on the network over User Datagram Protocol (UDP).
  *
@@ -191,7 +192,7 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
                                             uint16_t bytesToSend );
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to receive the server response, to a time
  * request (sent through the @ref UdpTransportSendTo_t function), from the network over
  * User Datagram Protocol (UDP).
@@ -231,7 +232,7 @@ typedef int32_t ( * UdpTransportRecvFrom_t )( NetworkContext_t * pNetworkContext
                                               uint16_t bytesToRecv );
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Struct representing the UDP transport interface for user-defined functions
  * that coreSNTP library depends on for performing read/write network operations.
  */
@@ -244,7 +245,7 @@ typedef struct UdpTransportIntf
 } UdpTransportInterface_t;
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @typedef SntpAuthContext_t
  * @brief A user-defined type for context that is passed to the authentication interface functions.
  * It MUST be defined by the user to use the library.
@@ -255,7 +256,7 @@ struct SntpAuthContext;
 typedef struct SntpAuthContext SntpAuthContext_t;
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to generate and append
  * authentication code in an SNTP request buffer for the SNTP client to be
  * authenticated by the time server, if a security mechanism is used.
@@ -299,7 +300,7 @@ typedef SntpStatus_t (* SntpGenerateAuthCode_t )( SntpAuthContext_t * pContext,
                                                   uint16_t * pAuthCodeSize );
 
 /**
- * @ingroup core_sntp_callback_types
+ * @ingroup sntp_callback_types
  * @brief Interface for user-defined function to authenticate server by validating
  * the authentication code present in its SNTP response to a time request, if
  * a security mechanism is supported by the server.
@@ -337,7 +338,7 @@ typedef SntpStatus_t (* SntpValidateServerAuth_t )( SntpAuthContext_t * pContext
                                                     uint16_t responseSize );
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Struct representing the authentication interface for securely
  * communicating with time servers.
  *
@@ -367,7 +368,7 @@ typedef struct SntpAuthenticationIntf
 } SntpAuthenticationInterface_t;
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Structure for a context that stores state for managing a long-running
  * SNTP client that periodically polls time and synchronizes system clock.
  */
