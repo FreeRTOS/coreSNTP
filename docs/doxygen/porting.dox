@@ -80,7 +80,7 @@ A port that uses authentication to communicate with time server must implement t
  - [Add client authentication code](@ref SntpGenerateAuthCode_t): A function to generate and append authentication data for client to be validated
  by the time server. The first @ref SNTP_PACKET_BASE_SIZE bytes in the buffer supplied to this function contains the SNTP request data which can be used to
  generate the authentication code. The generated authentication code SHOULD be written to the same buffer after the first @ref SNTP_PACKET_BASE_SIZE bytes.
- This function should also return the number of authentication bytes appended to the librarythrough an output parameter, so that the library knows about the 
+ This function should also return the number of authentication bytes appended to the library through an output parameter, so that the library knows about the
  total size of the SNTP packet.
 
  - [Validate server authentication](@ref SntpValidateServerAuth_t): A function to validate the authentication code in a received SNTP time response from the
