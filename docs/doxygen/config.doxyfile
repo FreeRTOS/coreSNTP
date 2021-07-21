@@ -1700,7 +1700,7 @@ SEARCH_INCLUDES        = YES
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             = IN_DOXYGEN
+PREDEFINED             = "DOXYGEN=1"
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES then doxygen's preprocessor will
 # remove all references to function-like macros that are alone on a line, have

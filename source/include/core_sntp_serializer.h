@@ -36,6 +36,7 @@
 #include <stddef.h>
 
 /**
+ * @ingroup sntp_constants
  * @brief The base packet size of request and response of the (S)NTP protocol.
  * @note This is the packet size without any authentication headers for security
  * mechanism. If the application uses a security mechanism for communicating with
@@ -45,6 +46,7 @@
 #define SNTP_PACKET_BASE_SIZE                         ( 48U )
 
 /**
+ * @ingroup sntp_constants
  * @brief Number of SNTP timestamp fractions in 1 microsecond.
  *
  * The fraction's part of an SNTP timestamp is 32-bits wide, thereby, giving a
@@ -58,6 +60,7 @@
 #define SNTP_FRACTION_VALUE_PER_MICROSECOND           ( 4295U )
 
 /**
+ * @ingroup sntp_constants
  * @brief The seconds part of SNTP time at the UNIX epoch time, which represents
  * an offset of 70 years (in seconds) between SNTP epoch and UNIX epoch time.
  * SNTP uses 1st Jan 1900 UTC as the epoch time, whereas UNIX standard uses
@@ -74,6 +77,7 @@
 #define SNTP_TIME_AT_UNIX_EPOCH_SECS                  ( 2208988800U )
 
 /**
+ * @ingroup sntp_constants
  * @brief The seconds value of SNTP timestamp for the largest UNIX time when
  * using signed 32-bit integer for seconds.
  * The largest time representable with a 32-bit signed integer in UNIX time
@@ -87,6 +91,7 @@
 #define SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS           ( 61505151U )
 
 /**
+ * @ingroup sntp_constants
  * @brief The UNIX time (in seconds) at the smallest SNTP time in era 1,
  * i.e. UNIX time at 7 Feb 2036 6:28:16 UTC/
  *
@@ -99,6 +104,7 @@
 #define UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME    ( 2085978496U )
 
 /**
+ * @ingroup sntp_constants
  * @brief The fixed-length of any Kiss-o'-Death message ASCII code sent
  * in an SNTP server response.
  * @note An SNTP server sends a Kiss-o'-Death message to reject a time request
@@ -108,6 +114,7 @@
 #define SNTP_KISS_OF_DEATH_CODE_LENGTH                ( 4U )
 
 /**
+ * @ingroup sntp_constants
  * @brief The value for the #SntpResponseData_t.rejectedResponseCode member
  * when that the server response packet does not contain a Kiss-o'-Death
  * message, and therefore, does not have a "kiss code".
@@ -117,7 +124,7 @@
 #define SNTP_KISS_OF_DEATH_CODE_NONE                  ( 0U )
 
 /**
- * @ingroup core_sntp_enum_types
+ * @ingroup sntp_enum_types
  * @brief Enumeration of status codes that can be returned
  * by the coreSNTP Library API.
  */
@@ -234,6 +241,7 @@ typedef enum SntpStatus
 } SntpStatus_t;
 
 /**
+ * @ingroup sntp_enum_types
  * @brief Enumeration for leap second information that an SNTP server can
  * send its response to a time request. An SNTP server sends information about
  * whether there is an upcoming leap second adjustment in the last day of the
@@ -255,7 +263,7 @@ typedef enum SntpLeapSecondInfo
 } SntpLeapSecondInfo_t;
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Structure representing an SNTP timestamp.
  *
  * @note The SNTP timestamp uses 1st January 1900 0h 0m 0s Coordinated Universal Time (UTC)
@@ -272,7 +280,7 @@ typedef struct SntpTimestamp
 } SntpTimestamp_t;
 
 /**
- * @ingroup core_sntp_struct_types
+ * @ingroup sntp_struct_types
  * @brief Structure representing data parsed from an SNTP response from server
  * as well as data of arithmetic calculations derived from the response.
  */

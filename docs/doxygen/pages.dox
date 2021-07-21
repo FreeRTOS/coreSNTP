@@ -38,14 +38,40 @@ Following is the architecture diagram of the library. It showcases the 2 tiers o
 
 \image html Dependency_Architecture_Diagram.png
 
+@section mqtt_interfaces Interfaces and Callbacks
+
 As visible in the above architecture diagram, the <b>Managed Client</b> API layer depends on the following interfaces that are user-defined for platform-specific operations:
-- <b>DNS Resolve Interface</b> - This allows library to resolve DNS addresses of time servers by the application.
-- <b>UDP Transport Interface</b> - This allows library to send and receive SNTP packets over network UDP layer to communicate with SNTP/NTP servers.
-- <b>Get Time Interface</b> - This allows library to obtain system time for tracking timeouts as well as creating SNTP time requests.
-- <b>Set Time Interface</b> - This allows library to notify application about updating system time with the latest time provided by server as well as the system clock drift calculated by library.
-- <b>Authentication Interface (Optional)</b> - This allows library to perform mutual authentication in communicating with time servers for security. It is RECOMMENDED that applications enable authentication when communicating with time servers.
+- <b>[DNS Resolve Interface](@ref SntpResolveDns_t) </b> - This allows library to resolve DNS addresses of time servers by the application.
+- <b>[UDP Transport Interface](@ref UdpTransportInterface_t) </b> - This allows library to send and receive SNTP packets over network UDP layer to communicate with SNTP/NTP servers.
+- <b>[Get Time Interface](@ref SntpGetTime_t)</b> - This allows library to obtain system time for tracking timeouts as well as creating SNTP time requests.
+- <b>[Set Time Interface](@ref SntpSetTime_t)</b> - This allows library to notify application about updating system time with the latest time provided by server as well as the system clock drift calculated by library.
+- <b>(Authentication Interface)[@ref SntpAuthenticationInterface_t] (Optional)</b> - This allows library to perform mutual authentication in communicating with time servers for security. It is RECOMMENDED that applications enable authentication when communicating with time servers.
 
 </p>
+*/
+
+/**
+@page core_sntp_config Configurations
+@brief Configurations of the coreSNTP Library.
+<!-- @par configpagestyle allows the @section titles to be styled according to style.css -->
+@par configpagestyle
+
+All the configurations settings for the coreSNTP library are function-like macros for logging. They can be set with a `\#define` in the config file (`core_sntp_config.h`) or by using a compiler option such as -D in gcc.
+
+@section SNTP_DO_NOT_USE_CUSTOM_CONFIG
+@copydoc SNTP_DO_NOT_USE_CUSTOM_CONFIG
+
+@section sntp_logerror LogError
+@copydoc LogError
+
+@section sntp_logwarn LogWarn
+@copydoc LogWarn
+
+@section sntp_loginfo LogInfo
+@copydoc LogInfo
+
+@section sntp_logdebug LogDebug
+@copydoc LogDebug
 */
 
 /**

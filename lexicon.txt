@@ -29,10 +29,12 @@ clockoffsetms
 cmac
 com
 config
+configpagestyle
 configs
 const
 copydoc
 coresntp
+css
 currenttimelist
 de
 deamon
@@ -47,6 +49,7 @@ desiredaccuracy
 diff
 dns
 doxygen
+endcode
 endian
 endif
 enum
@@ -59,6 +62,8 @@ firstorderdiff
 fracs
 fracsinnetorder
 fracsinnetorder
+freertos
+gcc
 getsystemtimefunc
 getsystemtimefunc
 gettimefunc
@@ -85,11 +90,16 @@ kod
 lastrequesttime
 leapsecondinfo
 leapversionmode
+logdebug
+logerror
+loginfo
+logwarn
 lsb
 mainpage
 mdash
 misra
 mtu
+networkcontext
 networkinterfacereceivestub
 networkinterfacesendstub
 nist
@@ -116,6 +126,7 @@ pclockoffset
 pcontext
 pcurrenttime
 phasresponsetimedout
+pkcs
 pml
 pnetworkbuffer
 pnetworkbuffer
@@ -192,6 +203,7 @@ signedfirstorderdiffrecv
 signedfirstorderdiffsend
 sizeof
 sntp
+sntpauthcontext
 sntpbuffertoosmall
 sntpclockoffsetoverflow
 sntperrorautherror
@@ -231,6 +243,7 @@ timeserver
 transmittime
 trng
 tx
+typename
 udp
 udprecvretcodes
 udpsendretcodes

@@ -251,14 +251,15 @@ static SntpStatus_t validateContext( const SntpContext_t * pContext )
  * @brief Sends SNTP request packet to the passed server over the network
  * using transport interface's send function.
  *
- * @note For the cases of partial or zero byte data transmissions over the
- * network, this function repeatedly retries the send operation by calling the
- * transport interface until either:
+ * @note For the case of zero byte transmissions over the network, this function
+ * repeatedly retries the send operation by calling the transport interface
+ * until either:
  * 1. The requested number of bytes @p packetSize have been sent.
  *                    OR
- * 2. Any byte cannot be sent over the network for the @p timeoutMs duration.
- *                    OR
- * 3. There is an error in sending data over the network.
+ * 2. There is an error in sending data over the network.
+ *
+ * @note This function treats partial data transmissions as error as UDP
+ * transport protocol does not support partial sends.
  *
  * @param[in] pNetworkIntf The UDP transport interface to use for
  * sending data over the network.
@@ -587,7 +588,6 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
     else if( bytesRead == 0 )
     {
         status = SntpNoResponseReceived;
-        LogDebug( ( "No server response received: Determining whether we should retry." ) );
     }
 
     /* Partial reads are not supported by UDP, which only supports receiving the entire datagram as a whole.
