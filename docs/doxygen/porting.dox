@@ -2,13 +2,13 @@
 @page sntp_porting Porting Guide
 @brief Guide for porting coreSNTP library to a new platform.
 
-A port to a new platform must provide the following components:
+A port of coreSNTP library for a new platform must provide the following components:
 1. [Configuration Macros](@ref sntp_porting_config)
 2. [Transport Interface](@ref sntp_porting_transport)
 3. [Time Function](@ref sntp_porting_time)
 
 @section sntp_porting_config Configuration Macros for Logging
-@brief Macros for enabling macros that can be defined through the config header `core_sntp_config.h`, or passed in as compiler options.
+@brief Macros for enabling logging that can be defined through the config header `core_sntp_config.h`, or passed in as compiler options.
 
 @note If a custom configuration header `core_sntp_config.h` is not provided, then the @ref SNTP_DO_NOT_USE_CUSTOM_CONFIG macro must be defined.
 
@@ -21,27 +21,19 @@ The following logging macros are used throughout the library:
  - @ref LogDebug
 
 @section sntp_porting_transport UDP Transport Interface
-@brief The coreSNTP library exposes a UDP transport interface API that must be implemented
+@brief The coreSNTP library requires a UDP transport interface that must be implemented
 in order to send and receive SNTP packets over the network.
 
 @see [UDP Transport Interface](@ref UdpTransportInterface_t)
 
 @note For security against unwanted server response packets, it is RECOMMENDED that the UDP socket that is used
-for implementing the UDP transport interface functions of performing network I/O is kept open ONLY during the
-duration of a request-response SNTP communication cycle instead of keeping the socket always open. One way to
-achieve this is to open a new UDP socket before calling @ref Sntp_SendTimeRequest API and closing the socket after
-receiving server response (or performing appropriate wait for response) with the @ref Sntp_ReceiveTimeResponse API.
+for implementing the UDP transport interface functions of performing network I/O is kept open ONLY during
+duration of an SNTP request-response iteration as opposed to keeping it always open across iterations. One way to achieve this is to open a new UDP socket before calling @ref Sntp_SendTimeRequest API and close it after receiving server response (or timeout) with the @ref Sntp_ReceiveTimeResponse API.
 
 A port must implement functions corresponding to the following functions pointers:
- - [UDP Transport Send](@ref UdpTransportSendTo_t): A function to send bytes on the network to the time server
- passed to it. It is RECOMMENDED that the function is implemented with non-blocking in behavior, so
- the total block time for send operation can be passed as runtime parameter to @ref Sntp_SendTimeRequest
- API.
+ - [UDP Transport Send](@ref UdpTransportSendTo_t): A function to send bytes on the network over UDP. It is RECOMMENDED to implement this function as non-blocking so the total block time can be managed by the @ref Sntp_SendTimeRequest API.
 
- - [UDP Transport Receive](@ref UdpTransportRecvFrom_t): A function to receive bytes over the network from the
- time server passed to it. It is RECOMMENDED that the function is implemented with non-blocking in behavior, so
- the total block time for receive operation can be passed as runtime parameter to @ref Sntp_ReceiveTimeResponse
- API.
+ - [UDP Transport Receive](@ref UdpTransportRecvFrom_t): A function to receive bytes from the network over UDP. It is RECOMMENDED to implement this function as non-blocking so the total block time can be managed by the @ref Sntp_ReceiveTimeResponse API.
 
 The above two functions take in a pointer to a @ref NetworkContext_t, the typename of a
 `struct NetworkContext`. The NetworkContext struct must also be defined by the port, and
@@ -55,15 +47,15 @@ struct NetworkContext {
 @endcode
 
 @section sntp_porting_gettime Get Time Function
-@brief The coreSNTP library relies on this function to obtain time from system for the operation of tracking timeout
-durations as well as generating time request packet required by the SNTP protocol.
+@brief The coreSNTP library uses this function to obtain time from system for tracking timeout
+durations as well as generating SNTP request packet.
 
 @see @ref SntpGetTime_t
 
-In the scenario that device platform does not have real-world time information (due to device boot-up for example), it is
-acceptable for this function to provide the system-time information that does not match real-world time, because once a
-time information is received in SNTP communication with a time server, the system time can be corrected to match real-time.
-Refer to the next section on how the interface exposed by coreSNTP library to correct system time.
+If the device does not have real-world time information (on device boot-up for example), it is
+acceptable for this function to provide the system-time that does not match the real-world time, because once a
+time information is received from a time server, the system time can be corrected to match the real-world time.
+Refer to the next section on how to correct the system time.
 
 @section sntp_porting_settime Set Time Function
 @brief The coreSNTP library exposes this interface function to notify the device platform about the latest time received
@@ -84,15 +76,14 @@ cryptographic algorithm depending on the support provided by time servers of you
 as the authentication algorithm, please refer to [coreSNTP demo in FreeRTOS/FreeRTOS repository](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).
 
 @see @ref SntpAuthenticationInterface_t
-A port that uses authentication to communicate with time server must implement the following function pointers exposed by the authentication interface:
+A port that uses authentication to communicate with time server must implement the following function pointers:
  - [Add client authentication code](@ref SntpGenerateAuthCode_t): A function to generate and append authentication data for client to be validated
  by the time server. The authentication data SHOULD be generated with the @ref SNTP_PACKET_BASE_SIZE on the SNTP request packet bytes serialized by the
- coreSNTP library and appended to the same buffer. This function should also indicate the number of authentication bytes appended to the library
- through an output parameter, so that the library knows about the total size of the SNTP packets that will be communicated with the time server
- that supports the chosen authentication.
+ coreSNTP library and appended to the same buffer. This function should also return the number of authentication bytes appended to the library
+ through an output parameter, so that the library knows about the total size of the SNTP packet.
 
  - [Validate server authentication](@ref SntpValidateServerAuth_t): A function to validate the authentication code in a received SNTP time response from the
- network to confirm that the expected server is the source of the server response and the timestamps in the packet are trustworthy to
+ network to confirm that the expected server is the sender of the response and the timestamps in the packet are trustworthy to
  update system time. This server authentication data is usually validated by checking that the data can be regenerated by the client from
  the first #SNTP_PACKET_BASE_SIZE bytes of the received SNTP packet from the network.
 

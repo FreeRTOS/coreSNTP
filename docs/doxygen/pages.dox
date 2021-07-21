@@ -56,7 +56,7 @@ As visible in the above architecture diagram, the <b>Managed Client</b> API laye
 <!-- @par configpagestyle allows the @section titles to be styled according to style.css -->
 @par configpagestyle
 
-All the configurations exposed by the coreSNTP library are function-like macros for logging. They can be defined through a **core_sntp_config.h** file. If logging is not required from the library, then the `SNTP_DO_NOT_USE_CUSTOM_CONFIG` compile-time option can be passed.
+All the configurations settings for the coreSNTP library are function-like macros for logging. They can be set with a `\#define` in the config file (`core_sntp_config.h`) or by using a compiler option such as -D in gcc.
 
 @section SNTP_DO_NOT_USE_CUSTOM_CONFIG
 @copydoc SNTP_DO_NOT_USE_CUSTOM_CONFIG
