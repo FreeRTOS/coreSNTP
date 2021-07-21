@@ -58,8 +58,8 @@ time information is received from a time server, the system time can be correcte
 Refer to the next section on how to correct the system time.
 
 @section sntp_porting_settime Set Time Function
-@brief The coreSNTP library exposes this interface function to notify the device platform about the latest time received
-from a time server as well as the clock drift that the library has calculated of the system time from the server time.
+@brief The coreSNTP library calls this function to notify the device about the latest time received
+from a time server as well as the clock drift of the system time from the server time.
 
 @see @ref SntpSetTime_t
 
@@ -78,9 +78,10 @@ as the authentication algorithm, please refer to [coreSNTP demo in FreeRTOS/Free
 @see @ref SntpAuthenticationInterface_t
 A port that uses authentication to communicate with time server must implement the following function pointers:
  - [Add client authentication code](@ref SntpGenerateAuthCode_t): A function to generate and append authentication data for client to be validated
- by the time server. The authentication data SHOULD be generated with the @ref SNTP_PACKET_BASE_SIZE on the SNTP request packet bytes serialized by the
- coreSNTP library and appended to the same buffer. This function should also return the number of authentication bytes appended to the library
- through an output parameter, so that the library knows about the total size of the SNTP packet.
+ by the time server. The first @ref SNTP_PACKET_BASE_SIZE bytes in the buffer supplied to this function contains the SNTP request data which can be used to
+ generate the authentication code. The generated authentication code SHOULD be written to the same buffer after the first @ref SNTP_PACKET_BASE_SIZE bytes.
+ This function should also return the number of authentication bytes appended to the librarythrough an output parameter, so that the library knows about the 
+ total size of the SNTP packet.
 
  - [Validate server authentication](@ref SntpValidateServerAuth_t): A function to validate the authentication code in a received SNTP time response from the
  network to confirm that the expected server is the sender of the response and the timestamps in the packet are trustworthy to

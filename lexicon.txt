@@ -63,6 +63,7 @@ fracs
 fracsinnetorder
 fracsinnetorder
 freertos
+gcc
 getsystemtimefunc
 getsystemtimefunc
 gettimefunc
