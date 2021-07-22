@@ -30,6 +30,7 @@
 /* Standard include. */
 #include <stdio.h>
 
+/* @[code_example_loggingmacros] */
 /************* Define Logging Macros using printf function ***********/
 
 #define PrintfError( ... )         printf( "Error: "__VA_ARGS__ );  printf( "\n" )
@@ -54,5 +55,6 @@
 #endif /* ifdef LOGGING_LEVEL_ERROR */
 
 /**************************************************/
+/* @[code_example_loggingmacros] */
 
 #endif /* ifndef CORE_SNTP_CONFIG_H_ */

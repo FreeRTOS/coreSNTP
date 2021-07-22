@@ -96,6 +96,7 @@ loginfo
 logwarn
 lsb
 mainpage
+md
 mdash
 misra
 mtu

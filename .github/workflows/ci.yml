@@ -16,7 +16,6 @@ jobs:
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_CLONE_SUBMODULES=ON \
           -DCMAKE_C_FLAGS='-O0 -Wall -Wextra -Werror -Wformat -Wformat-security -Warray-bounds'
           make -C build/ coverity_analysis -j8
       - name: Build Library in Release mode
@@ -24,9 +23,17 @@ jobs:
           rm -rf ./build
           cmake -S test -B build/ -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_CLONE_SUBMODULES=ON \
           -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG -Wformat -Wformat-security -Warray-bounds'
           make -C build/ coverity_analysis -j8
+  build-code-example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone This Repo
+        uses: actions/checkout@v2
+      - name: Build Code Example used in Doxygen
+        run: |
+          cmake -S test -B Build -DBUILD_CODE_EXAMPLE=ON
+          make -C Build code_example_posix -j8
   unittest-with-sanitizer:
     runs-on: ubuntu-latest
     steps:
@@ -48,7 +55,7 @@ jobs:
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_CLONE_SUBMODULES=ON \
+          -DBUILD_UNIT_TESTS=ON \
           -DCMAKE_C_FLAGS="${CFLAGS}"
           make -C build all -j8
       - name: Run unit tests with sanitizer
@@ -68,7 +75,7 @@ jobs:
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_CLONE_SUBMODULES=ON \
+          -DBUILD_UNIT_TESTS=ON \
           -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -Werror -DNDEBUG -Wno-error=pedantic -Wno-variadic-macros -DLOGGING_LEVEL_DEBUG=1'
           make -C build/ all
       - name: Test
@@ -164,4 +171,4 @@ jobs:
         uses: FreeRTOS/CI-CD-Github-Actions/memory_statistics@main
         with:
             config: .github/memory_statistics_config.json
-            check_against: docs/doxygen/include/size_table.html
+            check_against: docs/doxygen/include/size_table.md

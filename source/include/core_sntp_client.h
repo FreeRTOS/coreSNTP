@@ -621,14 +621,13 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
  *  - #SntpErrorNetworkFailure if there is a failure in the user-defined transport
  *  - #SntpErrorAuthFailure if an internal error occurs in the user-defined
  * authentication interface when validating the server response.
- * receive interface in receiving server response from the network.
  *  - #SntpServerNotAuthenticated when the server could not be authenticated from
  * its response with the user-defined authentication interface.
- * - #SntpInvalidResponse if the server response fails sanity checks expected in an
+ *  - #SntpInvalidResponse if the server response fails sanity checks expected in an
  * SNTP response packet.
- * - #SntpErrorResponseTimeout if a timeout has occurred in receiving response from
+ *  - #SntpErrorResponseTimeout if a timeout has occurred in receiving response from
  * the server.
- * - #SntpRejectedResponse if the server responded with a rejection for the time
+ *  - #SntpRejectedResponse if the server responded with a rejection for the time
  * request.
  */
 /* @[define_sntp_receivetimeresponse] */

@@ -1,6 +1,5 @@
 cmake_minimum_required( VERSION 3.13.0 )
 project( "coreSNTP unit test"
-         VERSION 1.0.0
          LANGUAGES C )
 
 # Allow the project to be organized into folders.
@@ -48,36 +47,47 @@ target_include_directories( coverity_analysis
 # Build SNTP library target without custom config dependency.
 target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
 
-#  ==================================== Unit Test Configuration ====================================
+#  ==================================== Code Example Build ====================================
 
-# Include CMock build configuration.
-include( unit-test/cmock_build.cmake )
+if(${BUILD_CODE_EXAMPLE})
+    # Target for Coverity analysis that builds the library.
+    add_executable( code_example_posix
+                    ${MODULE_ROOT_DIR}/docs/doxygen/code_examples/example_sntp_client_posix.c )
 
-# Check if the CMock source directory exists, and if not present, clone the submodule
-# if BUILD_CLONE_SUBMODULES configuration is enabled.
-if( NOT EXISTS ${CMOCK_DIR}/src )
-    # Attempt to clone CMock.
-    if( ${BUILD_CLONE_SUBMODULES} )
-        clone_cmock()
-    else()
-        message( FATAL_ERROR "The required submodule CMock does not exist. Either clone it manually, or set BUILD_CLONE_SUBMODULES to 1 to automatically clone it during build." )
-    endif()
+    # Add coreSNTP library public include path.
+    target_link_libraries( code_example_posix
+                            coverity_analysis )
+
 endif()
 
-# Add unit test and coverage configuration.
+#  ==================================== Unit Test Configuration ====================================
 
-# Use CTest utility for managing test runs. This has to be added BEFORE
-# defining test targets with add_test()
-enable_testing()
+if(${BUILD_UNIT_TESTS})
+    # Include CMock build configuration.
+    include( unit-test/cmock_build.cmake )
 
-# Add build targets for CMock, required for unit testing.
-add_cmock_targets()
+    # Check if the CMock source directory exists, and if not present, clone the submodule
+    # if BUILD_CLONE_SUBMODULES configuration is enabled.
+    if( NOT EXISTS ${CMOCK_DIR}/src )
+        # Attempt to clone CMock.
+            clone_cmock()
+    endif()
 
-# Add function to enable CMock/Unity based tests and coverage.
-include( ${MODULE_ROOT_DIR}/tools/cmock/create_test.cmake )
+    # Add unit test and coverage configuration.
 
-# Include build configuration for unit tests.
-add_subdirectory( unit-test )
+    # Use CTest utility for managing test runs. This has to be added BEFORE
+    # defining test targets with add_test()
+    enable_testing()
+
+    # Add build targets for CMock, required for unit testing.
+    add_cmock_targets()
+
+    # Add function to enable CMock/Unity based tests and coverage.
+    include( ${MODULE_ROOT_DIR}/tools/cmock/create_test.cmake )
+
+    # Include build configuration for unit tests.
+    add_subdirectory( unit-test )
+endif()
 
 #  ==================================== Coverage Analysis configuration ============================
 
