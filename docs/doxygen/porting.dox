@@ -3,9 +3,12 @@
 @brief Guide for porting coreSNTP library to a new platform.
 
 A port of coreSNTP library for a new platform must provide the following components:
-1. [Configuration Macros](@ref sntp_porting_config)
-2. [Transport Interface](@ref sntp_porting_transport)
-3. [Time Function](@ref sntp_porting_time)
+1. [Logging Configuration Macros](@ref sntp_porting_config)
+2. [DNS Resolve Function](@ref sntp_porting_dnsresolve)
+3. [UDP Transport Interface](@ref sntp_porting_transport)
+4. [Get Time Function](@ref sntp_porting_gettime)
+5. [Set Time Function](@ref sntp_porting_settime)
+6. [Authentication Interface](@ref sntp_porting_authentication)
 
 @section sntp_porting_config Configuration Macros for Logging
 @brief Macros for enabling logging that can be defined through the config header `core_sntp_config.h`, or passed in as compiler options.
@@ -20,6 +23,21 @@ The following logging macros are used throughout the library:
  - @ref LogInfo
  - @ref LogDebug
 
+Here is an example implementation of logging macros for POSIX platforms
+@snippet core_sntp_config.h code_example_loggingmacros
+
+@section sntp_porting_dnsresolve DNS Resolve Function
+@brief The coreSNTP library requires a DNS Resolve interface that must be implemented to obtain the latest IPv4
+address information of a time server before sending it a time request.
+
+@see [DNS Resolve Function](@ref SntpResolveDns_t)
+
+@note The coreSNTP library will re-resolve DNS name of a time server on every attempt of requesting time from it. 
+For efficiency of DNS resolution operations, your implementation can utilize DNS caching of resolved domains, if
+your platform supports it.
+
+@snippet example_sntp_client_posix.c code_example_sntpdnsresolve
+
 @section sntp_porting_transport UDP Transport Interface
 @brief The coreSNTP library requires a UDP transport interface that must be implemented
 in order to send and receive SNTP packets over the network.
@@ -33,18 +51,18 @@ duration of an SNTP request-response iteration as opposed to keeping it always o
 A port must implement functions corresponding to the following functions pointers:
  - [UDP Transport Send](@ref UdpTransportSendTo_t): A function to send bytes on the network over UDP. It is RECOMMENDED to implement this function as non-blocking so the total block time can be managed by the @ref Sntp_SendTimeRequest API.
 
+@snippet example_sntp_client_posix.c code_example_udptransport_sendto
+
  - [UDP Transport Receive](@ref UdpTransportRecvFrom_t): A function to receive bytes from the network over UDP. It is RECOMMENDED to implement this function as non-blocking so the total block time can be managed by the @ref Sntp_ReceiveTimeResponse API.
+
+@snippet example_sntp_client_posix.c code_example_udptransport_recvfrom
 
 The above two functions take in a pointer to a @ref NetworkContext_t, the typename of a
 `struct NetworkContext`. The NetworkContext struct must also be defined by the port, and
 ought to contain any information necessary to send and receive data with the @ref UdpTransportSendTo_t
 and @ref UdpTransportRecvFrom_t implementations, respectively:
-@code
-// Example definition of NetworkContext
-struct NetworkContext {
-    // Fields necessary for the transport implementations, e.g. a UDP socket descriptor.
-};
-@endcode
+
+@snippet example_sntp_client_posix.c code_example_networkcontext
 
 @section sntp_porting_gettime Get Time Function
 @brief The coreSNTP library uses this function to obtain time from system for tracking timeout
@@ -57,16 +75,20 @@ acceptable for this function to provide the system-time that does not match the 
 time information is received from a time server, the system time can be corrected to match the real-world time.
 Refer to the next section on how to correct the system time.
 
+@snippet example_sntp_client_posix.c code_example_sntpgettime
+
 @section sntp_porting_settime Set Time Function
 @brief The coreSNTP library calls this function to notify the device about the latest time received
 from a time server as well as the clock drift of the system time from the server time.
+
+@snippet example_sntp_client_posix.c code_example_sntpsettime
 
 @see @ref SntpSetTime_t
 
 Platforms should implement this function to perform clock disciple operation on the system clock, that is appropriate for
 the clock accuracy needs of the application.
 
-@section sntp_porting_time Authentication Interface
+@section sntp_porting_authentication Authentication Interface
 @brief The coreSNTP library exposes an authentication interface to allow customer-chosen authentication mechanism to be used
 in SNTP communication with time server(s) for security.
 
@@ -74,6 +96,7 @@ in SNTP communication with time server(s) for security.
 that modify or spoof server responses. The SNTPv4 protocol is flexible to be used with any symmetric-key or asymmetric key
 cryptographic algorithm depending on the support provided by time servers of your choice. For an example of using AES-128-CMAC
 as the authentication algorithm, please refer to [coreSNTP demo in FreeRTOS/FreeRTOS repository](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).
+
 
 @see @ref SntpAuthenticationInterface_t
 A port that uses authentication to communicate with time server must implement the following function pointers:

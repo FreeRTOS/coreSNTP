@@ -21,7 +21,7 @@ This library is optimized for resource constrained embedded devices. Features of
 @section sntp_memory_requirements Memory Requirements
 @brief Memory requirements of the coreSNTP library.
 
-@include{doc} size_table.html
+@include{doc} size_table.md
 
 @section sntp_design Design
 @brief <b>coreSNTP Library Design</b>
@@ -45,7 +45,7 @@ As visible in the above architecture diagram, the <b>Managed Client</b> API laye
 - <b>[UDP Transport Interface](@ref UdpTransportInterface_t) </b> - This allows library to send and receive SNTP packets over network UDP layer to communicate with SNTP/NTP servers.
 - <b>[Get Time Interface](@ref SntpGetTime_t)</b> - This allows library to obtain system time for tracking timeouts as well as creating SNTP time requests.
 - <b>[Set Time Interface](@ref SntpSetTime_t)</b> - This allows library to notify application about updating system time with the latest time provided by server as well as the system clock drift calculated by library.
-- <b>(Authentication Interface)[@ref SntpAuthenticationInterface_t] (Optional)</b> - This allows library to perform mutual authentication in communicating with time servers for security. It is RECOMMENDED that applications enable authentication when communicating with time servers.
+- <b>[Authentication Interface](@ref SntpAuthenticationInterface_t) (Optional)</b> - This allows library to perform mutual authentication in communicating with time servers for security. It is RECOMMENDED that applications enable authentication when communicating with time servers.
 
 </p>
 */
@@ -89,29 +89,50 @@ All the configurations settings for the coreSNTP library are function-like macro
 @snippet core_sntp_client.h define_sntp_init
 @copydoc Sntp_Init
 
+For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+Below is the part of the code example relevant to the @ref Sntp_Init API.
+@snippet example_sntp_client_posix.c code_example_sntp_init
+
 @page sntp_sendtimerequest_function Sntp_SendTimeRequest
-@snippet core_sntp_client.h define_sntp_sendtimerequest
 @copydoc Sntp_SendTimeRequest
 
+For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+Below is the part of the code example relevant to the @ref Sntp_ReceiveTimeResponse API.
+@snippet example_sntp_client_posix.c code_example_sntp_send_receive
+
 @page sntp_receivetimeresponse_function Sntp_ReceiveTimeResponse
-@snippet core_sntp_client.h define_sntp_receivetimeresponse
 @copydoc Sntp_ReceiveTimeResponse
 
+For an example POSIX application of the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+Below is the part of the example application relevant to the @ref Sntp_ReceiveTimeResponse API.
+@snippet example_sntp_client_posix.c code_example_sntp_send_receive
+
 @page sntp_serializerequest_function Sntp_SerializeRequest
-@snippet core_sntp_serializer.h define_sntp_serializerequest
 @copydoc Sntp_SerializeRequest
 
 @page sntp_deserializeresponse_function Sntp_DeserializeResponse
-@snippet core_sntp_serializer.h define_sntp_deserializeresponse
 @copydoc Sntp_DeserializeResponse
 
 @page sntp_calculatepollinterval_function Sntp_CalculatePollInterval
-@snippet core_sntp_serializer.h define_sntp_calculatepollinterval
 @copydoc Sntp_CalculatePollInterval
 
+Here is a code example of using the API.
+@snippet example_sntp_client_posix.c code_example_sntp_calculatepollinterval
+
 @page sntp_converttounixtime_function Sntp_ConvertToUnixTime
-@snippet core_sntp_serializer.h define_sntp_converttounixtime
 @copydoc Sntp_ConvertToUnixTime
+
+Here is a code example of using the API.
+@snippet example_sntp_client_posix.c code_example_sntp_converttounixtime
+*/
+
+/**
+@page code_example Example application of using coreSNTP APIs
+@brief Example application of setting up an SNTP client with coreSNTP Library on POSIX platforms.
+
+This code ONLY showcases how coreSNTP library APIs can be used. For best practices on running an SNTP client, 
+refer to the [FreeRTOS Demo on GitHub](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).<br>
+@include example_sntp_client_posix.c
 */
 
 <!-- We do not use doxygen ALIASes here because there have been issues in the past versions with "^^" newlines within the alias definition. -->

@@ -27,6 +27,15 @@ jobs:
           -DBUILD_CLONE_SUBMODULES=ON \
           -DCMAKE_C_FLAGS='-Wall -Wextra -Werror -DNDEBUG -Wformat -Wformat-security -Warray-bounds'
           make -C build/ coverity_analysis -j8
+  build-code-example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone This Repo
+        uses: actions/checkout@v2
+      - name: Build Code Example used in Doxygen
+        run: | 
+          cmake -S test -B Build
+          make code_example_posix -j8
   unittest-with-sanitizer:
     runs-on: ubuntu-latest
     steps:
