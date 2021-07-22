@@ -89,21 +89,21 @@ All the configurations settings for the coreSNTP library are function-like macro
 @snippet core_sntp_client.h define_sntp_init
 @copydoc Sntp_Init
 
-For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example.
 Below is the part of the code example relevant to the @ref Sntp_Init API.
 @snippet example_sntp_client_posix.c code_example_sntp_init
 
 @page sntp_sendtimerequest_function Sntp_SendTimeRequest
 @copydoc Sntp_SendTimeRequest
 
-For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+For an example POSIX application of using the coreSNTP library APIs to create an SNTP client, refer to @ref code_example.
 Below is the part of the code example relevant to the @ref Sntp_ReceiveTimeResponse API.
 @snippet example_sntp_client_posix.c code_example_sntp_send_receive
 
 @page sntp_receivetimeresponse_function Sntp_ReceiveTimeResponse
 @copydoc Sntp_ReceiveTimeResponse
 
-For an example POSIX application of the coreSNTP library APIs to create an SNTP client, refer to @ref code_example. 
+For an example POSIX application of the coreSNTP library APIs to create an SNTP client, refer to @ref code_example.
 Below is the part of the example application relevant to the @ref Sntp_ReceiveTimeResponse API.
 @snippet example_sntp_client_posix.c code_example_sntp_send_receive
 
@@ -130,7 +130,7 @@ Here is a code example of using the API.
 @page code_example Example application of using coreSNTP APIs
 @brief Example application of setting up an SNTP client with coreSNTP Library on POSIX platforms.
 
-This code ONLY showcases how coreSNTP library APIs can be used. For best practices on running an SNTP client, 
+This code ONLY showcases how coreSNTP library APIs can be used. For best practices on running an SNTP client,
 refer to the [FreeRTOS Demo on GitHub](https://github.com/FreeRTOS/FreeRTOS/tree/main/FreeRTOS-Plus/Demo/coreSNTP_Windows_Simulator).<br>
 @include example_sntp_client_posix.c
 */

@@ -32,7 +32,7 @@ address information of a time server before sending it a time request.
 
 @see [DNS Resolve Function](@ref SntpResolveDns_t)
 
-@note The coreSNTP library will re-resolve DNS name of a time server on every attempt of requesting time from it. 
+@note The coreSNTP library will re-resolve DNS name of a time server on every attempt of requesting time from it.
 For efficiency of DNS resolution operations, your implementation can utilize DNS caching of resolved domains, if
 your platform supports it.
 
