@@ -104,7 +104,7 @@ jobs:
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_UNIT_TESTS=ON \
-          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -Werror -DNDEBUG'
+          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -DNDEBUG'
           make -C build/ all
       - name: Test
         run: |
