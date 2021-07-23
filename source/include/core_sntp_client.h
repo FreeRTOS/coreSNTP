@@ -52,6 +52,12 @@
  * defined in core_sntp_config.h file. */
 #include "core_sntp_config_defaults.h"
 
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    extern "C" {
+#endif
+/* *INDENT-ON* */
+
 /**
  * @ingroup sntp_constants
  * @brief The default UDP port supported by SNTP/NTP servers for client-server
@@ -649,5 +655,11 @@ SntpStatus_t Sntp_ReceiveTimeResponse( SntpContext_t * pContext,
 /* @[define_sntp_statustostr] */
 const char * Sntp_StatusToStr( SntpStatus_t status );
 /* @[define_sntp_statustostr] */
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    }
+#endif
+/* *INDENT-ON* */
 
 #endif /* ifndef CORE_SNTP_CLIENT_H_ */
