@@ -35,6 +35,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    extern "C" {
+#endif
+/* *INDENT-ON* */
+
 /**
  * @ingroup sntp_constants
  * @brief The base packet size of request and response of the (S)NTP protocol.
@@ -517,5 +523,11 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      uint32_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
 /* @[define_sntp_converttounixtime] */
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    }
+#endif
+/* *INDENT-ON* */
 
 #endif /* ifndef CORE_SNTP_SERIALIZER_H_ */
