@@ -152,6 +152,7 @@ presponsedata
 presponsepacket
 presponserxtime
 printf
+pserveraddr
 pservername
 pserverrxtime
 pservertime

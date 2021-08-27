@@ -89,7 +89,7 @@ typedef struct SntpServerInfo
  * The SNTP client library attempts to resolve the DNS of the time-server being
  * used every time the @ref Sntp_SendTimeRequest API is called.
  *
- * @param[in] pTimeServer The time-server whose IPv4 address is to be resolved.
+ * @param[in] pServerAddr The time-server whose IPv4 address is to be resolved.
  * @param[out] pIpV4Addr This should be filled with the resolved IPv4 address.
  * of @p pTimeServer.
  *
@@ -123,7 +123,7 @@ typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
  *
  * @param[in] pTimeServer The time server used to request time.
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
- * @param[in] clockOffSetMs The calculated clock offset (in milliseconds) of the
+ * @param[in] clockOffsetMs The calculated clock offset (in milliseconds) of the
  * system relative to the server time.
  * @param[in] leapSecondInfo Information about whether there is about an upcoming
  * leap second adjustment of insertion or deletion in the last minute before midnight
@@ -217,7 +217,7 @@ typedef int32_t ( * UdpTransportSendTo_t )( NetworkContext_t * pNetworkContext,
  *
  * @param[in,out] pNetworkContext The user defined NetworkContext_t which
  * is opaque to the coreSNTP library.
- * @param[in] pTimeServer The IPv4 address of the time server to receive data from.
+ * @param[in] serverAddr The IPv4 address of the time server to receive data from.
  * @param[in] serverPort The port of the server to receive data from.
  * @param[out] pBuffer This SHOULD be filled with data received from the network.
  * @param[in] bytesToRecv The expected number of bytes to receive from the
