@@ -170,6 +170,10 @@ static void sntpClient_GetTime( SntpTimestamp_t * pCurrentTime )
 /* @[code_example_sntpgettime] */
 
 /* Configuration constants for the example SNTP client. */
+
+/* Following Time Servers are used for illustrating the usage of library API.
+ * The library can be configured to use ANY time server, whether publicly available
+ * time service like NTP Pool or a privately owned NTP server. */
 #define TEST_TIME_SERVER_1                      "0.pool.ntp.org"
 #define TEST_TIME_SERVER_2                      "1.pool.ntp.org"
 
@@ -208,6 +212,7 @@ int main( void )
 
     /* Set the UDP transport interface object. */
     UdpTransportInterface_t udpTransportIntf;
+
     udpTransportIntf.pUserContext = &udpContext;
     udpTransportIntf.sendTo = UdpTransport_Send;
     udpTransportIntf.recvFrom = UdpTransport_Recv;
@@ -227,12 +232,14 @@ int main( void )
                                      sntpClient_SetTime,
                                      &udpTransportIntf,
                                      NULL );
+
     assert( status == SntpSuccess );
     /* @[code_example_sntp_init] */
 
     /* Calculate the polling interval period for the SNTP client. */
     /* @[code_example_sntp_calculatepollinterval] */
     uint32_t pollingIntervalPeriod;
+
     status = Sntp_CalculatePollInterval( SYSTEM_CLOCK_FREQUENCY_TOLERANCE_PPM,
                                          SYSTEM_CLOCK_DESIRED_ACCURACY_MS,
                                          &pollingIntervalPeriod );
