@@ -34,6 +34,7 @@ list(APPEND real_source_files
 list(APPEND real_include_directories
                 ${CORE_SNTP_INCLUDE_PUBLIC_DIRS}
                 ${CMAKE_CURRENT_LIST_DIR}
+                "${CMAKE_CURRENT_LIST_DIR}/../include" 
         )
 
 # =====================  Create UnitTest Code here   =====================

@@ -28,6 +28,7 @@ COMPILE_FLAGS += -std=gnu90
 #
 INCLUDES += -I$(SRCDIR)/test/cbmc/include
 INCLUDES += -I$(SRCDIR)/source/include
+INCLUDES += -I$(SRCDIR)/test/include
 
 # Preprocessor definitions -D...
 # DEFINES =
