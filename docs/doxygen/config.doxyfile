@@ -956,7 +956,8 @@ EXCLUDE_SYMBOLS        =
 EXAMPLE_PATH           = source/include \
                          docs/doxygen/include \
                          docs/doxygen/code_examples \
-                         test/unit-test
+                         test/unit-test \
+                         test/include
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
