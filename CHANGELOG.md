@@ -1,4 +1,9 @@
 # Changelog for coreSNTP Library
+## v1.1.0 (November 2021)
+
+### Changes
+ - [#52](https://github.com/FreeRTOS/coreSNTP/pull/52) Change license from MIT-0 to MIT.
+ - [#47](https://github.com/FreeRTOS/coreSNTP/pull/47) Update doxygen version used for documentation to 1.9.2.
 
 ## v1.0.0 (July 2021)
 
