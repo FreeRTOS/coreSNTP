@@ -47,6 +47,9 @@ target_include_directories( coverity_analysis
 # Build SNTP library target without custom config dependency.
 target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
 
+# Build without debug enabled when performing static analysis
+target_compile_options(coverity_analysis PUBLIC -DNDEBUG )
+
 #  ==================================== Code Example Build ====================================
 
 if(${BUILD_CODE_EXAMPLE})

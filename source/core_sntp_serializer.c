@@ -628,6 +628,9 @@ SntpStatus_t Sntp_SerializeRequest( SntpTimestamp_t * pRequestTime,
     }
     else
     {
+        /* MISRA Ref 11.5.1 [Void pointer assignment] */
+        /* More details at: https://github.com/FreeRTOS/coreSNTP/blob/main/MISRA.md#rule-115 */
+        /* coverity[misra_c_2012_rule_11_5_violation] */
         SntpPacket_t * pRequestPacket = ( SntpPacket_t * ) pBuffer;
 
         /* Fill the buffer with zero as most fields are zero for a standard SNTP
@@ -670,6 +673,9 @@ SntpStatus_t Sntp_DeserializeResponse( const SntpTimestamp_t * pRequestTime,
                                        SntpResponseData_t * pParsedResponse )
 {
     SntpStatus_t status = SntpSuccess;
+    /* MISRA Ref 11.5.1 [Void pointer assignment] */
+    /* More details at: https://github.com/FreeRTOS/coreSNTP/blob/main/MISRA.md#rule-115 */
+    /* coverity[misra_c_2012_rule_11_5_violation] */
     const SntpPacket_t * pResponsePacket = ( const SntpPacket_t * ) pResponseBuffer;
 
     if( ( pRequestTime == NULL ) || ( pResponseRxTime == NULL ) ||
