@@ -1,5 +1,5 @@
 /*
- * coreSNTP v1.0.0
+ * coreSNTP v1.1.1
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of

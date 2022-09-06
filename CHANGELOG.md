@@ -1,4 +1,12 @@
 # Changelog for coreSNTP Library
+
+## v1.1.1 (August 2022)
+
+### Changes
+ - [#61](https://github.com/FreeRTOS/coreSNTP/pull/61) MISRA C:2012 compliance update
+ - [#60](https://github.com/FreeRTOS/coreSNTP/pull/60) Update CBMC Starter kit
+ - [#57](https://github.com/FreeRTOS/coreSNTP/pull/57) Loop Invariant Update
+
 ## v1.1.0 (November 2021)
 
 ### Changes
