@@ -136,7 +136,7 @@ jobs:
           git-secrets --register-aws
           git-secrets --scan
   link-verifier:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python for link verifier action
