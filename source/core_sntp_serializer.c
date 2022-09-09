@@ -33,6 +33,8 @@
 /* Include API header. */
 #include "core_sntp_serializer.h"
 
+#include "core_sntp_config_defaults.h"
+
 /**
  * @brief The version of SNTP supported by the coreSNTP library by complying
  * with the SNTPv4 specification defined in [RFC 4330](https://tools.ietf.org/html/rfc4330).

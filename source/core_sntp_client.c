@@ -32,6 +32,8 @@
 /* SNTP client library API include. */
 #include "core_sntp_client.h"
 
+#include "core_sntp_config_defaults.h"
+
 /**
  * @brief Utility to convert fractions part of SNTP timestamp to milliseconds.
  *

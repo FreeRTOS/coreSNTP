@@ -52,6 +52,13 @@
     #define SNTP_DO_NOT_USE_CUSTOM_CONFIG
 #endif
 
+/* SNTP_DO_NOT_USE_CUSTOM_CONFIG allows building the SNTP library
+ * without a custom config. If a custom config is provided, the
+ * SNTP_DO_NOT_USE_CUSTOM_CONFIG macro should not be defined. */
+#ifndef SNTP_DO_NOT_USE_CUSTOM_CONFIG
+    #include "core_sntp_config.h"
+#endif
+
 /**
  * @brief Macro that is called in the SNTP library for logging "Error" level
  * messages.
