@@ -1,9 +1,9 @@
 # Changelog for coreSNTP Library
 
-## v1.1.1 (September 2022)
+## v1.2.0 (September 2022)
 
 ### Changes
- - #[63](https://github.com/FreeRTOS/coreSNTP/pull/63) Move user config includes from header to C files.
+ - [#63](https://github.com/FreeRTOS/coreSNTP/pull/63) Move user config includes from header to C files.
  - [#61](https://github.com/FreeRTOS/coreSNTP/pull/61) MISRA C:2012 compliance update
  - [#60](https://github.com/FreeRTOS/coreSNTP/pull/60) Update CBMC Starter kit
  - [#57](https://github.com/FreeRTOS/coreSNTP/pull/57) Loop Invariant Update
