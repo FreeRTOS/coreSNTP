@@ -8,6 +8,8 @@ This library has gone through code quality checks including verification that no
 
 See memory requirements for this library [here](./docs/doxygen/include/size_table.md).
 
+**coreSNTP v1.2.0 [source code](https://github.com/FreeRTOS/coreSNTP/tree/v1.2.0/source) is part of the [FreeRTOS 202210.00 LTS](https://github.com/FreeRTOS/FreeRTOS-LTS/tree/202210.00-LTS) release.**
+
 ### Documentation
 
 The API reference documentation for the coreSNTP library version released in [FreeRTOS/FreeRTOS](https://github.com/FreeRTOS/FreeRTOS) can be viewed from the [freertos.org website](https://freertos.org/coresntp/index.html).
