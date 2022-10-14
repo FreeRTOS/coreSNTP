@@ -68,7 +68,7 @@ jobs:
           git push -u origin ${{ github.event.inputs.version_number }}
       - name: Tag Commit and Push to remote
         run: |
-          git tag ${{ github.event.inputs.version_number }} -a -m "coreHTTP Library ${{ github.event.inputs.version_number }}"
+          git tag ${{ github.event.inputs.version_number }} -a -m "coreSNTP Library ${{ github.event.inputs.version_number }}"
           git push origin --tags
       - name: Verify tag on remote
         run: |
