@@ -25,11 +25,7 @@
 var NAVTREE =
 [
   [ "coreSNTP", "index.html", [
-    [ "Overview", "index.html", [
-      [ "Memory Requirements", "index.html#sntp_memory_requirements", null ],
-      [ "Design", "index.html#sntp_design", null ],
-      [ "Interfaces and Callbacks", "index.html#mqtt_interfaces", null ]
-    ] ],
+    [ "Overview", "index.html", "index" ],
     [ "Configurations", "core_sntp_config.html", [
       [ "SNTP_DO_NOT_USE_CUSTOM_CONFIG", "core_sntp_config.html#SNTP_DO_NOT_USE_CUSTOM_CONFIG", null ],
       [ "LogError", "core_sntp_config.html#sntp_logerror", null ],
@@ -47,8 +43,7 @@ var NAVTREE =
       [ "Set Time Function", "sntp_porting.html#sntp_porting_settime", null ],
       [ "Authentication Interface", "sntp_porting.html#sntp_porting_authentication", null ]
     ] ],
-    [ "Data types and Constants", "modules.html", "modules" ],
-    [ "Files", "files.html", "files" ]
+    [ "Data types and Constants", "modules.html", "modules" ]
   ] ]
 ];
 
