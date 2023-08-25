@@ -6,6 +6,8 @@ CRYP
 Cbmc
 Cmock
 Coverity
+DCMOCK
+DNDEBUG
 MISRA
 Misra
 RSTR
@@ -22,4 +24,5 @@ lums
 misra
 sinclude
 sntp
+utest
 xlarge
