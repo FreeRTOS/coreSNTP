@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Build Library in Debug mode
         run: |
           cmake -S test -B build/ \
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Build Code Example used in Doxygen
         run: |
           cmake -S test -B Build -DBUILD_CODE_EXAMPLE=ON
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Build Library and Unit Tests with Sanitizer
         run: |
           CFLAGS="-O0 -Wall -Wexta -Werror"
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Build
         run: |
           sudo apt-get install -y lcov sed
@@ -92,39 +92,42 @@ jobs:
       - name: Check Coverage
         uses: FreeRTOS/CI-CD-Github-Actions/coverage-cop@main
         with:
-          path: ./build/coverage.info
+          coverage-file: ./build/coverage.info
   complexity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Check complexity
         uses: FreeRTOS/CI-CD-Github-Actions/complexity@main
         with:
           path: ./
+
   spell-check:
     runs-on: ubuntu-latest
     steps:
       - name: Clone This Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run spellings check
         uses: FreeRTOS/CI-CD-Github-Actions/spellings@main
         with:
           path: ./
+
   formatting:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Check formatting
         uses: FreeRTOS/CI-CD-Github-Actions/formatting@main
         with:
           path: ./
           exclude-dirs: .git
+
   git-secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Checkout awslabs/git-secrets
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: awslabs/git-secrets
           ref: master
@@ -135,26 +138,34 @@ jobs:
         run: |
           git-secrets --register-aws
           git-secrets --scan
+
   link-verifier:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python for link verifier action
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
+      - uses: actions/checkout@v3
       - name: Check Links
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: FreeRTOS/CI-CD-GitHub-Actions/link-verifier@main
+        uses: FreeRTOS/CI-CD-Github-Actions/link-verifier@main
+
+  verify-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Run manifest verifier
+        uses: FreeRTOS/CI-CD-GitHub-Actions/manifest-verifier@main
         with:
           path: ./
-          exclude-dirs: cbmc
-          include-file-types: .c,.h,.dox
+          fail-on-incorrect-version: true
+
   doxygen:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run doxygen build
         uses: FreeRTOS/CI-CD-Github-Actions/doxygen@main
         with:
@@ -162,17 +173,18 @@ jobs:
   memory_statistics:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Python3
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.7.x'
+          python-version: "3.7.x"
       - name: Measure sizes
         uses: FreeRTOS/CI-CD-Github-Actions/memory_statistics@main
         with:
-            config: .github/memory_statistics_config.json
-            check_against: docs/doxygen/include/size_table.md
+          config: .github/memory_statistics_config.json
+          check_against: docs/doxygen/include/size_table.md
   proof_ci:
+    if: ${{ github.event.pull_request }}
     runs-on: cbmc_ubuntu-latest_16-core
     steps:
       - name: Set up CBMC runner
