@@ -165,7 +165,7 @@ static void sntpClient_GetTime( SntpTimestamp_t * pCurrentTime )
     ( void ) clock_gettime( CLOCK_REALTIME, &currTime );
 
     pCurrentTime->seconds = currTime.tv_sec;
-    pCurrentTime->fractions = ( currTime.tv_sec / 1000 ) * SNTP_FRACTION_VALUE_PER_MICROSECOND;
+    pCurrentTime->fractions = ( currTime.tv_nsec / 1000 ) * SNTP_FRACTION_VALUE_PER_MICROSECOND;
 }
 /* @[code_example_sntpgettime] */
 
