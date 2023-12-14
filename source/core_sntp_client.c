@@ -467,7 +467,7 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
         }
         else
         {
-            LogDebug( ( "Server DNS resolved: Address=0x%08X",
+            LogDebug( ( "Server DNS resolved: Address=0x%08lx",
                         ( unsigned long ) pContext->currentServerAddr ) );
         }
 
@@ -810,17 +810,18 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         *pHasResponseTimedOut = true;
 
         LogError( ( "Unable to receive response: Server response has timed out: "
-                    "RequestTime=%lus %ums, TimeoutDuration=%lums, ElapsedTime=%ld",
-                    ( unsigned long ) parsedResponse.serverTime.seconds,
-                    ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                    ( signed long ) parsedResponse.clockOffsetMs ) );
+                    "RequestTime=%lus %lums, TimeoutDuration=%lums, ElapsedTime=%ld",
+                    ( unsigned long ) pRequestTime->seconds,
+                    ( unsigned long ) FRACTIONS_TO_MS( pRequestTime->fractions ),
+                    ( unsigned long ) responseTimeoutMs,
+                    ( unsigned long ) timeSinceRequestMs ) );
     }
     /* Check whether the block time window has expired to determine whether read can be retried. */
     else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
     {
         shouldRetry = false;
         LogDebug( ( "Did not receive server response: Read block time has expired: "
-                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums",
+                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums",
                     ( unsigned long ) blockTimeMs,
                     ( unsigned long ) timeSinceRequestMs ) );
     }
