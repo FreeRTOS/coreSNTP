@@ -92,8 +92,10 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
     }
     else if( bufferSize < SNTP_PACKET_BASE_SIZE )
     {
-        LogError( ( "Cannot initialize context: Passed network buffer size is less than %u bytes: "
-                    "bufferSize=%lu", SNTP_PACKET_BASE_SIZE, ( unsigned long ) bufferSize ) );
+        LogError( ( "Cannot initialize context: Passed network buffer size is less than %lu bytes: "
+                    "bufferSize=%lu",
+                    ( unsigned long )SNTP_PACKET_BASE_SIZE,
+                    ( unsigned long ) bufferSize ) );
         status = SntpErrorBufferTooSmall;
     }
     else
@@ -324,7 +326,8 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         if( bytesSent < 0 )
         {
             LogError( ( "Unable to send request packet: Transport send failed. "
-                        "ErrorCode=%ld.", ( long int ) bytesSent ) );
+                        "ErrorCode=%ld.",
+                        ( long int ) bytesSent ) );
             status = SntpErrorNetworkFailure;
         }
         else if( bytesSent == 0 )
@@ -343,7 +346,8 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
             if( elapsedTimeMs >= timeoutMs )
             {
                 LogError( ( "Unable to send request packet: Timed out retrying send: "
-                            "SendRetryTimeout=%ums", timeoutMs ) );
+                            "SendRetryTimeout=%lums",
+                            ( unsigned long ) timeoutMs ) );
                 status = SntpErrorSendTimeout;
             }
             else
@@ -357,7 +361,9 @@ static SntpStatus_t sendSntpPacket( const UdpTransportInterface_t * pNetworkIntf
         else if( bytesSent != ( int32_t ) packetSize )
         {
             LogError( ( "Unable to send request packet: Transport send returned unexpected bytes sent. "
-                        "ReturnCode=%ld, ExpectedCode=%u", ( long int ) bytesSent, packetSize ) );
+                        "ReturnCode=%ld, ExpectedCode=%u",
+                        ( long int ) bytesSent,
+                        ( unsigned int ) packetSize ) );
 
             status = SntpErrorNetworkFailure;
         }
@@ -401,7 +407,8 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
     if( status != SntpSuccess )
     {
         LogError( ( "Unable to send time request: Client authentication function failed: "
-                    "RetStatus=%s", Sntp_StatusToStr( status ) ) );
+                    "RetStatus=%s",
+                    Sntp_StatusToStr( status ) ) );
     }
 
     /* Sanity check that the returned authentication data size fits in the remaining space
@@ -410,7 +417,8 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
     {
         LogError( ( "Unable to send time request: Invalid authentication code size: "
                     "AuthCodeSize=%lu, NetworkBufferSize=%lu",
-                    ( unsigned long ) authDataSize, ( unsigned long ) pContext->bufferSize ) );
+                    ( unsigned long ) authDataSize,
+                    ( unsigned long ) pContext->bufferSize ) );
         status = SntpErrorAuthFailure;
     }
     else
@@ -445,20 +453,24 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
          * query. */
         pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
 
-        LogDebug( ( "Using server %.*s for time query", ( int ) pServer->serverNameLen, pServer->pServerName ) );
+        LogDebug( ( "Using server %.*s for time query",
+                    ( int ) pServer->serverNameLen,
+                    pServer->pServerName ) );
 
         /* Perform DNS resolution of the currently indexed server in the list
          * of configured servers. */
         if( pContext->resolveDnsFunc( pServer, &pContext->currentServerAddr ) == false )
         {
             LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
-                        ( int ) pServer->serverNameLen, pServer->pServerName ) );
+                        ( int ) pServer->serverNameLen,
+                        pServer->pServerName ) );
 
             status = SntpErrorDnsFailure;
         }
         else
         {
-            LogDebug( ( "Server DNS resolved: Address=0x%08X", pContext->currentServerAddr ) );
+            LogDebug( ( "Server DNS resolved: Address=0x%08X",
+                        ( unsigned long ) pContext->currentServerAddr ) );
         }
 
         if( status == SntpSuccess )
@@ -466,8 +478,9 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
 
-            LogDebug( ( "Obtained current time for SNTP request packet: Time=%us %ums",
-                        pContext->lastRequestTime.seconds, FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ) ) );
+            LogDebug( ( "Obtained current time for SNTP request packet: Time=%lus %llums",
+                        ( unsigned long ) pContext->lastRequestTime.seconds,
+                        ( unsigned long long ) FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ) ) );
 
             /* Generate SNTP request packet with the current system time and
              * the passed random number. */
@@ -490,8 +503,8 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
 
         if( status == SntpSuccess )
         {
-            LogInfo( ( "Sending serialized SNTP request packet to the server: Addr=%u, Port=%u",
-                       pContext->currentServerAddr,
+            LogInfo( ( "Sending serialized SNTP request packet to the server: Addr=%lu, Port=%u",
+                       ( unsigned long ) pContext->currentServerAddr,
                        pContext->pTimeServers[ pContext->currentServerIndex ].port ) );
 
             /* Send the request packet over the network to the time server. */
@@ -599,7 +612,9 @@ static SntpStatus_t receiveSntpResponse( const UdpTransportInterface_t * pTransp
     else if( bytesRead != ( int32_t ) responseSize )
     {
         LogError( ( "Failed to receive server response: Transport recv returned less than expected bytes."
-                    "ExpectedBytes=%u, ReadBytes=%ld", responseSize, ( long int ) bytesRead ) );
+                    "ExpectedBytes=%u, ReadBytes=%ld",
+                    responseSize,
+                    ( long int ) bytesRead ) );
         status = SntpErrorNetworkFailure;
     }
     else
@@ -652,11 +667,14 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         if( status != SntpSuccess )
         {
             LogError( ( "Unable to use server response: Server authentication function failed: "
-                        "ReturnStatus=%s", Sntp_StatusToStr( status ) ) );
+                        "ReturnStatus=%s",
+                        Sntp_StatusToStr( status ) ) );
         }
         else
         {
-            LogDebug( ( "Server response has been validated: Server=%.*s", ( int ) pServer->serverNameLen, pServer->pServerName ) );
+            LogDebug( ( "Server response has been validated: Server=%.*s",
+                        ( int ) pServer->serverNameLen,
+                        pServer->pServerName ) );
         }
     }
 
@@ -687,7 +705,9 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
             rotateServerForNextTimeQuery( pContext );
 
             LogError( ( "Unable to use server response: Server has rejected request for time: RejectionCode=%.*s",
-                        ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH, ( char * ) &parsedResponse.rejectedResponseCode ) );
+                        ( int ) SNTP_KISS_OF_DEATH_CODE_LENGTH,
+                        ( char * ) &parsedResponse.rejectedResponseCode ) );
+
             status = SntpRejectedResponse;
         }
         else if( status == SntpInvalidResponse )
@@ -698,9 +718,10 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         {
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
-            LogDebug( ( "Updating system time: ServerTime=%u %ums ClockOffset=%lums",
-                        parsedResponse.serverTime.seconds, FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                        parsedResponse.clockOffsetMs ) );
+            LogDebug( ( "Updating system time: ServerTime=%lu %llums ClockOffset=%lldms",
+                        ( unsigned long ) parsedResponse.serverTime.seconds,
+                        ( unsigned long long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                        ( long long ) parsedResponse.clockOffsetMs ) );
 
             /* Update the system clock with the calculated offset. */
             pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
@@ -793,24 +814,28 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         *pHasResponseTimedOut = true;
 
         LogError( ( "Unable to receive response: Server response has timed out: "
-                    "RequestTime=%us %ums, TimeoutDuration=%ums, ElapsedTime=%lu",
-                    pRequestTime->seconds, FRACTIONS_TO_MS( pRequestTime->fractions ),
-                    responseTimeoutMs, timeSinceRequestMs ) );
+                    "RequestTime=%lus %ums, TimeoutDuration=%lums, ElapsedTime=%lld",
+                    ( unsigned long ) parsedResponse.serverTime.seconds,
+                    ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                    ( signed long long ) parsedResponse.clockOffsetMs ) );
     }
     /* Check whether the block time window has expired to determine whether read can be retried. */
     else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
     {
         shouldRetry = false;
         LogDebug( ( "Did not receive server response: Read block time has expired: "
-                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums",
-                    blockTimeMs, timeSinceRequestMs ) );
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%llums",
+                    ( unsigned long ) blockTimeMs,
+                    ( unsigned long long )timeSinceRequestMs ) );
     }
     else
     {
         shouldRetry = true;
         LogDebug( ( "Did not receive server response: Retrying read: "
-                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%u",
-                    blockTimeMs, timeSinceRequestMs, responseTimeoutMs ) );
+                    "BlockTime=%lums, ResponseWaitElapsedTime=%llums, ResponseTimeout=%lu",
+                    ( unsigned long ) blockTimeMs,
+                    ( unsigned long long ) timeSinceRequestMs,
+                    ( unsigned long ) responseTimeoutMs ) );
     }
 
     return shouldRetry;
