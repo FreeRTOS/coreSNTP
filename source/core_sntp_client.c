@@ -454,16 +454,14 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
         pServer = &pContext->pTimeServers[ pContext->currentServerIndex ];
 
         LogDebug( ( "Using server %.*s for time query",
-                    ( int ) pServer->serverNameLen,
-                    pServer->pServerName ) );
+                    ( int ) pServer->serverNameLen, pServer->pServerName ) );
 
         /* Perform DNS resolution of the currently indexed server in the list
          * of configured servers. */
         if( pContext->resolveDnsFunc( pServer, &pContext->currentServerAddr ) == false )
         {
             LogError( ( "Unable to send time request: DNS resolution failed: Server=%.*s",
-                        ( int ) pServer->serverNameLen,
-                        pServer->pServerName ) );
+                        ( int ) pServer->serverNameLen, pServer->pServerName ) );
 
             status = SntpErrorDnsFailure;
         }
@@ -478,9 +476,9 @@ SntpStatus_t Sntp_SendTimeRequest( SntpContext_t * pContext,
             /* Obtain current system time to generate SNTP request packet. */
             pContext->getTimeFunc( &pContext->lastRequestTime );
 
-            LogDebug( ( "Obtained current time for SNTP request packet: Time=%lus %llums",
+            LogDebug( ( "Obtained current time for SNTP request packet: Time=%lus %lums",
                         ( unsigned long ) pContext->lastRequestTime.seconds,
-                        ( unsigned long long ) FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ) ) );
+                        ( unsigned long ) FRACTIONS_TO_MS( pContext->lastRequestTime.fractions ) ) );
 
             /* Generate SNTP request packet with the current system time and
              * the passed random number. */
@@ -667,14 +665,12 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         if( status != SntpSuccess )
         {
             LogError( ( "Unable to use server response: Server authentication function failed: "
-                        "ReturnStatus=%s",
-                        Sntp_StatusToStr( status ) ) );
+                        "ReturnStatus=%s", Sntp_StatusToStr( status ) ) );
         }
         else
         {
             LogDebug( ( "Server response has been validated: Server=%.*s",
-                        ( int ) pServer->serverNameLen,
-                        pServer->pServerName ) );
+                        ( int ) pServer->serverNameLen, pServer->pServerName ) );
         }
     }
 
@@ -718,10 +714,10 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         {
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
-            LogDebug( ( "Updating system time: ServerTime=%lu %llums ClockOffset=%lldms",
+            LogDebug( ( "Updating system time: ServerTime=%lu %lums ClockOffset=%ldms",
                         ( unsigned long ) parsedResponse.serverTime.seconds,
-                        ( unsigned long long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                        ( long long ) parsedResponse.clockOffsetMs ) );
+                        ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                        ( long ) parsedResponse.clockOffsetMs ) );
 
             /* Update the system clock with the calculated offset. */
             pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
@@ -814,27 +810,27 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         *pHasResponseTimedOut = true;
 
         LogError( ( "Unable to receive response: Server response has timed out: "
-                    "RequestTime=%lus %ums, TimeoutDuration=%lums, ElapsedTime=%lld",
+                    "RequestTime=%lus %ums, TimeoutDuration=%lums, ElapsedTime=%ld",
                     ( unsigned long ) parsedResponse.serverTime.seconds,
                     ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                    ( signed long long ) parsedResponse.clockOffsetMs ) );
+                    ( signed long ) parsedResponse.clockOffsetMs ) );
     }
     /* Check whether the block time window has expired to determine whether read can be retried. */
     else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
     {
         shouldRetry = false;
         LogDebug( ( "Did not receive server response: Read block time has expired: "
-                    "BlockTime=%ums, ResponseWaitElapsedTime=%llums",
+                    "BlockTime=%ums, ResponseWaitElapsedTime=%lums",
                     ( unsigned long ) blockTimeMs,
-                    ( unsigned long long ) timeSinceRequestMs ) );
+                    ( unsigned long ) timeSinceRequestMs ) );
     }
     else
     {
         shouldRetry = true;
         LogDebug( ( "Did not receive server response: Retrying read: "
-                    "BlockTime=%lums, ResponseWaitElapsedTime=%llums, ResponseTimeout=%lu",
+                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%lu",
                     ( unsigned long ) blockTimeMs,
-                    ( unsigned long long ) timeSinceRequestMs,
+                    ( unsigned long ) timeSinceRequestMs,
                     ( unsigned long ) responseTimeoutMs ) );
     }
 
