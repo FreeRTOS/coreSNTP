@@ -94,7 +94,7 @@ SntpStatus_t Sntp_Init( SntpContext_t * pContext,
     {
         LogError( ( "Cannot initialize context: Passed network buffer size is less than %lu bytes: "
                     "bufferSize=%lu",
-                    ( unsigned long )SNTP_PACKET_BASE_SIZE,
+                    ( unsigned long ) SNTP_PACKET_BASE_SIZE,
                     ( unsigned long ) bufferSize ) );
         status = SntpErrorBufferTooSmall;
     }
@@ -826,7 +826,7 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         LogDebug( ( "Did not receive server response: Read block time has expired: "
                     "BlockTime=%ums, ResponseWaitElapsedTime=%llums",
                     ( unsigned long ) blockTimeMs,
-                    ( unsigned long long )timeSinceRequestMs ) );
+                    ( unsigned long long ) timeSinceRequestMs ) );
     }
     else
     {
