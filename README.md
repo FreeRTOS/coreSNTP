@@ -16,7 +16,7 @@ servers.
 This library has gone through code quality checks including verification that no
 function has a
 [GNU Complexity](https://www.gnu.org/software/complexity/manual/complexity.html)
-score over 8, and checks against deviations from mandatory rules in the
+score over 10, and checks against deviations from mandatory rules in the
 [MISRA coding standard](https://www.misra.org.uk). Deviations from the MISRA
 C:2012 guidelines are documented under [MISRA Deviations](MISRA.md). This
 library has also undergone both static code analysis from
@@ -47,20 +47,20 @@ in dependent components.
 
 To clone using HTTPS:
 
-```
+```sh
 git clone https://github.com/FreeRTOS/coreSNTP.git --recurse-submodules
 ```
 
 Using SSH:
 
-```
+```sh
 git clone git@github.com:FreeRTOS/coreSNTP.git --recurse-submodules
 ```
 
 If you have downloaded the repo without using the `--recurse-submodules`
 argument, you need to run:
 
-```
+```sh
 git submodule update --init --recursive
 ```
 
@@ -135,7 +135,7 @@ The Doxygen references were created using Doxygen version 1.9.2. To generate the
 Doxygen pages, please run the following command from the root of this
 repository:
 
-```shell
+```sh
 doxygen docs/doxygen/config.doxyfile
 ```
 

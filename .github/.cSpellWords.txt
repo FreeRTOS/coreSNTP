@@ -20,6 +20,7 @@ coverity
 ctest
 fracs
 lcov
+ldms
 lums
 misra
 sinclude
