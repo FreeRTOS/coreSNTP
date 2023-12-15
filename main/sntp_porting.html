@@ -287,7 +287,7 @@ Get Time Function</h1>
 <div class="line">    ( void ) clock_gettime( CLOCK_REALTIME, &amp;currTime );</div>
 <div class="line"> </div>
 <div class="line">    pCurrentTime-&gt;<a class="code hl_variable" href="struct_sntp_timestamp__t.html#a747c002d1a619beef24932a2703a579c">seconds</a> = currTime.tv_sec;</div>
-<div class="line">    pCurrentTime-&gt;<a class="code hl_variable" href="struct_sntp_timestamp__t.html#a31fd5b20451f4c23534322b4eaa8d29f">fractions</a> = ( currTime.tv_sec / 1000 ) * <a class="code hl_define" href="group__sntp__constants.html#ga1baca7c2b918d398acbc5f9412c01ebd">SNTP_FRACTION_VALUE_PER_MICROSECOND</a>;</div>
+<div class="line">    pCurrentTime-&gt;<a class="code hl_variable" href="struct_sntp_timestamp__t.html#a31fd5b20451f4c23534322b4eaa8d29f">fractions</a> = ( currTime.tv_nsec / 1000 ) * <a class="code hl_define" href="group__sntp__constants.html#ga1baca7c2b918d398acbc5f9412c01ebd">SNTP_FRACTION_VALUE_PER_MICROSECOND</a>;</div>
 <div class="line">}</div>
 <div class="ttc" id="agroup__sntp__constants_html_ga1baca7c2b918d398acbc5f9412c01ebd"><div class="ttname"><a href="group__sntp__constants.html#ga1baca7c2b918d398acbc5f9412c01ebd">SNTP_FRACTION_VALUE_PER_MICROSECOND</a></div><div class="ttdeci">#define SNTP_FRACTION_VALUE_PER_MICROSECOND</div><div class="ttdoc">Number of SNTP timestamp fractions in 1 microsecond.</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.h:68</div></div>
 <div class="ttc" id="astruct_sntp_timestamp__t_html"><div class="ttname"><a href="struct_sntp_timestamp__t.html">SntpTimestamp_t</a></div><div class="ttdoc">Structure representing an SNTP timestamp.</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.h:284</div></div>
