@@ -407,8 +407,7 @@ static SntpStatus_t addClientAuthentication( SntpContext_t * pContext )
     if( status != SntpSuccess )
     {
         LogError( ( "Unable to send time request: Client authentication function failed: "
-                    "RetStatus=%s",
-                    Sntp_StatusToStr( status ) ) );
+                    "RetStatus=%s", Sntp_StatusToStr( status ) ) );
     }
 
     /* Sanity check that the returned authentication data size fits in the remaining space
@@ -714,10 +713,11 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
         {
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
-            LogDebug( ( "Updating system time: ServerTime=%lu %lums ClockOffset=%ldms",
-                        ( unsigned long ) parsedResponse.serverTime.seconds,
-                        ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                        ( long ) parsedResponse.clockOffsetMs ) );
+            LogDebug( ( "Updating system time: ServerTime=%lu %lums ClockOffset=%lds",
+                    ( unsigned long ) parsedResponse.serverTime.seconds,
+                    ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                    /* Print out in seconds instead of Ms to account for C90 lack of %lld */
+                    ( long ) parsedResponse.clockOffsetMs / 1000 ) );
 
             /* Update the system clock with the calculated offset. */
             pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
@@ -810,28 +810,31 @@ static bool decideAboutReadRetry( const SntpTimestamp_t * pCurrentTime,
         *pHasResponseTimedOut = true;
 
         LogError( ( "Unable to receive response: Server response has timed out: "
-                    "RequestTime=%lus %lums, TimeoutDuration=%lums, ElapsedTime=%ld",
+                    "RequestTime=%lus %lums, TimeoutDuration=%lums, ElapsedTime=%lus",
                     ( unsigned long ) pRequestTime->seconds,
                     ( unsigned long ) FRACTIONS_TO_MS( pRequestTime->fractions ),
                     ( unsigned long ) responseTimeoutMs,
-                    ( unsigned long ) timeSinceRequestMs ) );
+                    /* Print out in seconds instead of Ms to account for C90 lack of %llu */
+                    ( unsigned long ) ( ( timeSinceRequestMs + 500UL ) / 1000UL ) ) );
     }
     /* Check whether the block time window has expired to determine whether read can be retried. */
     else if( timeElapsedInReadAttempts >= ( uint64_t ) blockTimeMs )
     {
         shouldRetry = false;
         LogDebug( ( "Did not receive server response: Read block time has expired: "
-                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums",
+                    "BlockTime=%lums, ResponseWaitElapsedTime=%lus",
                     ( unsigned long ) blockTimeMs,
-                    ( unsigned long ) timeSinceRequestMs ) );
+                    /* Print out in seconds instead of Ms to account for C90 lack of %llu */
+                    ( unsigned long ) ( ( timeSinceRequestMs + 500UL ) / 1000UL ) ) );
     }
     else
     {
         shouldRetry = true;
         LogDebug( ( "Did not receive server response: Retrying read: "
-                    "BlockTime=%lums, ResponseWaitElapsedTime=%lums, ResponseTimeout=%lu",
+                    "BlockTime=%lums, ResponseWaitElapsedTime=%lus, ResponseTimeout=%lums",
                     ( unsigned long ) blockTimeMs,
-                    ( unsigned long ) timeSinceRequestMs,
+                    /* Print out in seconds instead of Ms to account for C90 lack of %llu */
+                    ( unsigned long ) ( ( timeSinceRequestMs + 500UL ) / 1000UL ),
                     ( unsigned long ) responseTimeoutMs ) );
     }
 
