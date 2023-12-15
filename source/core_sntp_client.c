@@ -714,10 +714,10 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
             /* Server has responded successfully with time, and we have calculated the clock offset
              * of system clock relative to the server.*/
             LogDebug( ( "Updating system time: ServerTime=%lu %lums ClockOffset=%lds",
-                    ( unsigned long ) parsedResponse.serverTime.seconds,
-                    ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
-                    /* Print out in seconds instead of Ms to account for C90 lack of %lld */
-                    ( long ) parsedResponse.clockOffsetMs / 1000 ) );
+                        ( unsigned long ) parsedResponse.serverTime.seconds,
+                        ( unsigned long ) FRACTIONS_TO_MS( parsedResponse.serverTime.fractions ),
+                        /* Print out in seconds instead of Ms to account for C90 lack of %lld */
+                        ( long ) parsedResponse.clockOffsetMs / 1000 ) );
 
             /* Update the system clock with the calculated offset. */
             pContext->setTimeFunc( pServer, &parsedResponse.serverTime,
