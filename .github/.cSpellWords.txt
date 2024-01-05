@@ -23,6 +23,7 @@ lcov
 ldms
 lums
 misra
+nondet
 sinclude
 sntp
 utest
