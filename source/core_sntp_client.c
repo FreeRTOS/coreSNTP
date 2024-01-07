@@ -931,6 +931,10 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
             pString = "SntpErrorBadParameter";
             break;
 
+        case SntpRejectedResponse:
+            pString = "SntpRejectedResponse";
+            break;
+
         case SntpRejectedResponseChangeServer:
             pString = "SntpRejectedResponseChangeServer";
             break;
@@ -973,6 +977,22 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
 
         case SntpErrorAuthFailure:
             pString = "SntpErrorAuthFailure";
+            break;
+
+        case SntpErrorSendTimeout:
+            pString = "SntpErrorSendTimeout";
+            break;
+
+        case SntpErrorResponseTimeout:
+            pString = "SntpErrorResponseTimeout";
+            break;
+
+        case SntpNoResponseReceived:
+            pString = "SntpNoResponseReceived";
+            break;
+
+        case SntpErrorContextNotInitialized:
+            pString = "SntpErrorContextNotInitialized";
             break;
 
         default:
