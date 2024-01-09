@@ -25,6 +25,7 @@ fracs
 getpacketid
 isystem
 lcov
+ldms
 lums
 misra
 Misra

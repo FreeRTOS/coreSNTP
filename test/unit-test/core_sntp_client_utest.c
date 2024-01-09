@@ -1367,6 +1367,7 @@ void test_StatusToStr( void )
 {
     TEST_ASSERT_EQUAL_STRING( "SntpSuccess", Sntp_StatusToStr( SntpSuccess ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorBadParameter", Sntp_StatusToStr( SntpErrorBadParameter ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponse", Sntp_StatusToStr( SntpRejectedResponse ) );
     TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseChangeServer", Sntp_StatusToStr( SntpRejectedResponseChangeServer ) );
     TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseRetryWithBackoff", Sntp_StatusToStr( SntpRejectedResponseRetryWithBackoff ) );
     TEST_ASSERT_EQUAL_STRING( "SntpRejectedResponseOtherCode", Sntp_StatusToStr( SntpRejectedResponseOtherCode ) );
@@ -1378,5 +1379,10 @@ void test_StatusToStr( void )
     TEST_ASSERT_EQUAL_STRING( "SntpErrorNetworkFailure", Sntp_StatusToStr( SntpErrorNetworkFailure ) );
     TEST_ASSERT_EQUAL_STRING( "SntpServerNotAuthenticated", Sntp_StatusToStr( SntpServerNotAuthenticated ) );
     TEST_ASSERT_EQUAL_STRING( "SntpErrorAuthFailure", Sntp_StatusToStr( SntpErrorAuthFailure ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorSendTimeout", Sntp_StatusToStr( SntpErrorSendTimeout ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorResponseTimeout", Sntp_StatusToStr( SntpErrorResponseTimeout ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpNoResponseReceived", Sntp_StatusToStr( SntpNoResponseReceived ) );
+    TEST_ASSERT_EQUAL_STRING( "SntpErrorContextNotInitialized", Sntp_StatusToStr( SntpErrorContextNotInitialized ) );
+
     TEST_ASSERT_EQUAL_STRING( "Invalid status code!", Sntp_StatusToStr( 100 ) );
 }
