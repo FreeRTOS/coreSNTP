@@ -675,7 +675,7 @@ static SntpStatus_t processServerResponse( SntpContext_t * pContext,
 
     if( status == SntpSuccess )
     {
-        SntpResponseData_t parsedResponse;
+        SntpResponseData_t parsedResponse = { 0 };
 
         /* De-serialize response packet to determine whether the server accepted or rejected
          * the request for time. Also, calculate the system clock offset if the server responded
