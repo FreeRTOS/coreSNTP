@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.13.0 )
-project( "coreSNTP unit test"
+project( "coreSNTP tests"
          LANGUAGES C )
 
 # Allow the project to be organized into folders.
@@ -8,6 +8,13 @@ set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 # Use C90.
 set( CMAKE_C_STANDARD 90 )
 set( CMAKE_C_STANDARD_REQUIRED ON )
+
+# If no configuration is defined, turn everything on.
+if( NOT DEFINED COV_ANALYSIS AND NOT DEFINED UNITTEST AND NOT DEFINED BUILD_CODE_EXAMPLE )
+    set( COV_ANALYSIS ON )
+    set( UNITTEST ON )
+    set( BUILD_CODE_EXAMPLE ON )
+endif()
 
 # Do not allow in-source build.
 if( ${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR} )
@@ -30,42 +37,51 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 
-# ================================ Coverity Analysis Configuration =================================
-
 # Include filepaths for source and include.
 include( ${MODULE_ROOT_DIR}/coreSntpFilePaths.cmake )
 
-# Target for Coverity analysis that builds the library.
-add_library( coverity_analysis
-             ${CORE_SNTP_SOURCES} )
+# ================================ Coverity Analysis Configuration =================================
 
-# Add coreSNTP library public include path.
-target_include_directories( coverity_analysis
-                            PUBLIC
-                             ${CORE_SNTP_INCLUDE_PUBLIC_DIRS} )
+if( COV_ANALYSIS )
 
-# Build SNTP library target without custom config dependency.
-target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
+    # Target for Coverity analysis that builds the library.
+    add_library( coverity_analysis
+                 ${CORE_SNTP_SOURCES} )
 
-# Build without debug enabled when performing static analysis
-target_compile_options(coverity_analysis PUBLIC -DNDEBUG )
+    # Add coreSNTP library public include path.
+    target_include_directories( coverity_analysis
+                                PUBLIC
+                                ${CORE_SNTP_INCLUDE_PUBLIC_DIRS} )
+
+    # Build SNTP library target without custom config dependency.
+    target_compile_definitions( coverity_analysis PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
+
+    # Build without debug enabled when performing static analysis
+    target_compile_options(coverity_analysis PUBLIC -DNDEBUG )
+endif()
 
 #  ==================================== Code Example Build ====================================
 
-if(${BUILD_CODE_EXAMPLE})
+if( BUILD_CODE_EXAMPLE )
     # Target for Coverity analysis that builds the library.
     add_executable( code_example_posix
+                    ${CORE_SNTP_SOURCES}
                     ${MODULE_ROOT_DIR}/docs/doxygen/code_examples/example_sntp_client_posix.c )
 
-    # Add coreSNTP library public include path.
-    target_link_libraries( code_example_posix
-                            coverity_analysis )
+    target_include_directories( code_example_posix
+                                PUBLIC
+                                ${CORE_SNTP_INCLUDE_PUBLIC_DIRS} )
 
+    # Build SNTP library target without custom config dependency.
+    target_compile_definitions( code_example_posix PUBLIC SNTP_DO_NOT_USE_CUSTOM_CONFIG=1 )
+
+    # Build without debug enabled when performing static analysis
+    target_compile_options( code_example_posix PUBLIC -DNDEBUG )
 endif()
 
 #  ==================================== Unit Test Configuration ====================================
 
-if(${BUILD_UNIT_TESTS})
+if( UNITTEST )
     # Include CMock build configuration.
     include( unit-test/cmock_build.cmake )
 
