@@ -246,9 +246,9 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
 
     assert( ptr != NULL );
 
-    return ( uint32_t ) ( ( ( uint32_t ) pMemStartByte[ 0 ] << 24 ) |
-                          ( 0x00FF0000U & ( ( uint32_t ) pMemStartByte[ 1 ] << 16 ) ) |
-                          ( 0x0000FF00U & ( ( uint32_t ) pMemStartByte[ 2 ] << 8 ) ) |
+    return ( uint32_t ) ( ( ( ( uint32_t ) pMemStartByte[ 0 ] ) << 24 ) |
+                          ( 0x00FF0000U & ( ( ( uint32_t ) pMemStartByte[ 1 ] ) << 16 ) ) |
+                          ( 0x0000FF00U & ( ( ( uint32_t ) pMemStartByte[ 2 ] ) << 8 ) ) |
                           ( ( uint32_t ) pMemStartByte[ 3 ] ) );
 }
 
