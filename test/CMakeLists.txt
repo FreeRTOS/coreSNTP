@@ -1,5 +1,6 @@
 cmake_minimum_required( VERSION 3.13.0 )
 project( "coreSNTP tests"
+         VERSION 1.2.0
          LANGUAGES C )
 
 # Allow the project to be organized into folders.
