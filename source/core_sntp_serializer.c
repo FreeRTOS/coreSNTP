@@ -221,12 +221,14 @@ typedef struct SntpPacket
 static void fillWordMemoryInNetworkOrder( uint32_t * pWordMemory,
                                           uint32_t data )
 {
+    uint8_t * pByteMemory = ( uint8_t * ) pWordMemory;
+
     assert( pWordMemory != NULL );
 
-    *( ( uint8_t * ) pWordMemory ) = ( uint8_t ) ( data >> 24 );
-    *( ( uint8_t * ) pWordMemory + 1 ) = ( uint8_t ) ( ( data >> 16 ) & 0x000000FFU );
-    *( ( uint8_t * ) pWordMemory + 2 ) = ( uint8_t ) ( ( data >> 8 ) & 0x000000FFU );
-    *( ( uint8_t * ) pWordMemory + 3 ) = ( uint8_t ) ( ( data ) & 0x000000FFU );
+    pByteMemory[ 0 ] = ( uint8_t ) ( data >> 24 );
+    pByteMemory[ 1 ] = ( uint8_t ) ( ( data >> 16 ) & 0x000000FFU );
+    pByteMemory[ 2 ] = ( uint8_t ) ( ( data >> 8 ) & 0x000000FFU );
+    pByteMemory[ 3 ] = ( uint8_t ) ( ( data ) & 0x000000FFU );
 }
 
 /**
@@ -244,10 +246,10 @@ static uint32_t readWordFromNetworkByteOrderMemory( const uint32_t * ptr )
 
     assert( ptr != NULL );
 
-    return ( uint32_t ) ( ( ( uint32_t ) *( pMemStartByte ) << 24 ) |
-                          ( 0x00FF0000U & ( ( uint32_t ) *( pMemStartByte + 1 ) << 16 ) ) |
-                          ( 0x0000FF00U & ( ( uint32_t ) *( pMemStartByte + 2 ) << 8 ) ) |
-                          ( ( uint32_t ) *( pMemStartByte + 3 ) ) );
+    return ( uint32_t ) ( ( ( ( uint32_t ) pMemStartByte[ 0 ] ) << 24 ) |
+                          ( 0x00FF0000U & ( ( ( uint32_t ) pMemStartByte[ 1 ] ) << 16 ) ) |
+                          ( 0x0000FF00U & ( ( ( uint32_t ) pMemStartByte[ 2 ] ) << 8 ) ) |
+                          ( ( uint32_t ) pMemStartByte[ 3 ] ) );
 }
 
 /**
