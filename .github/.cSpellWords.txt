@@ -8,6 +8,7 @@ Cmock
 Coverity
 DCMOCK
 DNDEBUG
+DUNITTEST
 MISRA
 Misra
 RSTR
