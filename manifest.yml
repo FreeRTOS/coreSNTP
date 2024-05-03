@@ -11,4 +11,4 @@ dependencies:
     repository:
       type: "git"
       url: "https://github.com/ThrowTheSwitch/CMock.git"
-      path: test/unit-test/CMock   
+      path: test/unit-test/CMock
