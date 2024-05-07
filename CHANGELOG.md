@@ -1,6 +1,6 @@
 # Changelog for coreSNTP Library
 
-## v1.2.1 (May 2024)
+## v1.3.0 (May 2024)
 
 ### Changes
  - [#85](https://github.com/FreeRTOS/coreSNTP/pull/85) Fix MISRA C 2012 deviations.
