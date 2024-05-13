@@ -21,6 +21,7 @@ var group__sntp__enum__types =
       [ "SntpErrorContextNotInitialized", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798afc6ed7e8936aa676762523ba8a308e24", null ]
     ] ],
     [ "SntpLeapSecondInfo_t", "group__sntp__enum__types.html#ga69e2cb17ab4e253491602ccfe48b141f", [
+      [ "NoLeapSecond", "group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fab04ffa25889b359ef8ab9a56bbe62fe2", null ],
       [ "LastMinuteHas61Seconds", "group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf", null ],
       [ "LastMinuteHas59Seconds", "group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8", null ],
       [ "AlarmServerNotSynchronized", "group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9", null ]

@@ -135,7 +135,7 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:gaef7b22d8008bbfbbc7bbea5a7a30e798"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enumeration of status codes that can be returned by the coreSNTP Library API.  <a href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">More...</a><br /></td></tr>
 <tr class="separator:gaef7b22d8008bbfbbc7bbea5a7a30e798"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga69e2cb17ab4e253491602ccfe48b141f"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__sntp__enum__types.html#ga69e2cb17ab4e253491602ccfe48b141f">SntpLeapSecondInfo_t</a> { <b>NoLeapSecond</b> = 0x00
+<tr class="memitem:ga69e2cb17ab4e253491602ccfe48b141f"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__sntp__enum__types.html#ga69e2cb17ab4e253491602ccfe48b141f">SntpLeapSecondInfo_t</a> { <a class="el" href="group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fab04ffa25889b359ef8ab9a56bbe62fe2">NoLeapSecond</a> = 0x00
 , <a class="el" href="group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf">LastMinuteHas61Seconds</a> = 0x01
 , <a class="el" href="group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8">LastMinuteHas59Seconds</a> = 0x02
 , <a class="el" href="group__sntp__enum__types.html#gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9">AlarmServerNotSynchronized</a> = 0x03
@@ -215,14 +215,13 @@ Enumerations</h2></td></tr>
 <p>Enumeration for leap second information that an SNTP server can send its response to a time request. An SNTP server sends information about whether there is an upcoming leap second adjustment in the last day of the current month. </p>
 <dl class="section note"><dt>Note</dt><dd>A leap second is an adjustment made in atomic clock time because Earth's rotation can be inconsistent. Leap seconds are usually incorporated as an extra second insertion or second deletion in the last minute before midnight i.e. in the minute of 23h:59m UTC on the last day of June or December. For more information on leap seconds, refer to <a href="https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs">https://www.nist.gov/pml/time-and-frequency-division/leap-seconds-faqs</a>. </dd></dl>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf" name="gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf"></a>LastMinuteHas61Seconds&#160;</td><td class="fielddoc"><p>There is no upcoming leap second adjustment. </p>
-<p>&lt; </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fab04ffa25889b359ef8ab9a56bbe62fe2" name="gga69e2cb17ab4e253491602ccfe48b141fab04ffa25889b359ef8ab9a56bbe62fe2"></a>NoLeapSecond&#160;</td><td class="fielddoc"><p>There is no upcoming leap second adjustment. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8" name="gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8"></a>LastMinuteHas59Seconds&#160;</td><td class="fielddoc"><p>A leap second should be inserted in the last minute before midnight. </p>
-<p>&lt; </p>
+<tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf" name="gga69e2cb17ab4e253491602ccfe48b141fa78ff5bb8a6ba0fdafe4fa9aaf001ccbf"></a>LastMinuteHas61Seconds&#160;</td><td class="fielddoc"><p>A leap second should be inserted in the last minute before midnight. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9" name="gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9"></a>AlarmServerNotSynchronized&#160;</td><td class="fielddoc"><p>A leap second should be deleted from the last minute before midnight. </p>
-<p>&lt; </p>
+<tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8" name="gga69e2cb17ab4e253491602ccfe48b141fa207adf1efe110b46607b7520fc05e1a8"></a>LastMinuteHas59Seconds&#160;</td><td class="fielddoc"><p>A leap second should be deleted from the last minute before midnight. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9" name="gga69e2cb17ab4e253491602ccfe48b141fae2f7a16e8450c21718a098660423f6a9"></a>AlarmServerNotSynchronized&#160;</td><td class="fielddoc"><p>An alarm condition meaning that server's time is not synchronized to an upstream NTP (or SNTP) server. </p>
 </td></tr>
 </table>
 
