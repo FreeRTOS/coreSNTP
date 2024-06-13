@@ -145,9 +145,12 @@ void GetTimeFuncStub( SntpTimestamp_t * pCurrentTime );
  * @param[in] pServerTime The current time returned by the @p pTimeServer.
  * @param[in] clockOffSetMs The calculated clock offset of the system relative
  * to the server time.
+ * @param[in] leapSecondInfo Information about whether there is about an upcoming
+ * leap second adjustment.
  */
 void SetTimeFuncStub( const SntpServerInfo_t * pTimeServer,
                       const SntpTimestamp_t * pServerTime,
-                      int64_t clockOffsetMs );
+                      int64_t clockOffsetMs,
+                      SntpLeapSecondInfo_t leapSecondInfo );
 
 #endif /* ifndef CORE_SNTP_CBMC_STUBS_H_ */
