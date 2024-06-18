@@ -1,5 +1,5 @@
 /*
- * coreSNTP v1.3.0
+ * coreSNTP v1.3.1
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
