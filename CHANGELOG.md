@@ -3,7 +3,7 @@
 ## v1.3.1 (June 2024)
 
 ### Changes
-- Fix doxygen deployment on Github.
+ - Fix doxygen deployment on Github.
 
 ## v1.3.0 (May 2024)
 
