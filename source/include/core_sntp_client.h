@@ -100,9 +100,6 @@ typedef bool ( * SntpResolveDns_t )( const SntpServerInfo_t * pServerAddr,
  *
  * @param[out] pCurrentTime This should be filled with the current system time
  * in SNTP timestamp format.
- *
- * @return `true` if obtaining system time is successful; otherwise `false` to
- * represent failure.
  */
 typedef void ( * SntpGetTime_t )( SntpTimestamp_t * pCurrentTime );
 
