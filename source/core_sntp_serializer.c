@@ -812,7 +812,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 }
 
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
-                                     uint32_t * pUnixTimeSecs,
+                                     UnixTime_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs )
 {
     SntpStatus_t status = SntpSuccess;
@@ -821,33 +821,17 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
     {
         status = SntpErrorBadParameter;
     }
-    /* Check if passed time does not lie in the [UNIX epoch in 1970, UNIX time overflow in 2038] time range. */
-    else if( ( pSntpTime->seconds > SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS ) &&
-             ( pSntpTime->seconds < SNTP_TIME_AT_UNIX_EPOCH_SECS ) )
-    {
-        /* The SNTP timestamp is outside the supported time range for conversion. */
-        status = SntpErrorTimeNotSupported;
-    }
     else
     {
-        /* Handle case when timestamp represents date in SNTP era 1
-         * (i.e. time from 7 Feb 2036 6:28:16 UTC onwards). */
         if( pSntpTime->seconds <= SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS )
         {
-            /* Unix Time ( seconds ) = Seconds Duration in
-             *                         [UNIX epoch, SNTP Era 1 Epoch Time]
-             *                                        +
-             *                           Sntp Time since Era 1 Epoch
-             */
-            *pUnixTimeSecs = UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + pSntpTime->seconds;
+            *pUnixTimeSecs = ( UnixTime_t ) ( UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + pSntpTime->seconds );
         }
-        /* Handle case when SNTP timestamp is in SNTP era 1 time range. */
         else
         {
-            *pUnixTimeSecs = pSntpTime->seconds - SNTP_TIME_AT_UNIX_EPOCH_SECS;
+            *pUnixTimeSecs = ( UnixTime_t ) ( pSntpTime->seconds - SNTP_TIME_AT_UNIX_EPOCH_SECS );
         }
 
-        /* Convert SNTP fractions to microseconds for UNIX time. */
         *pUnixTimeMicrosecs = pSntpTime->fractions / SNTP_FRACTION_VALUE_PER_MICROSECOND;
     }
 

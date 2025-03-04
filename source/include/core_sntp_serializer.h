@@ -43,6 +43,12 @@
 #endif
 /* *INDENT-ON* */
 
+#ifdef USE_LEGACY_TIME_API
+    typedef uint32_t UnixTime_t;
+#else
+    typedef uint64_t UnixTime_t;
+#endif
+
 /**
  * @ingroup sntp_constants
  * @brief The base packet size of request and response of the (S)NTP protocol.
@@ -522,7 +528,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  */
 /* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
-                                     uint32_t * pUnixTimeSecs,
+                                     UnixTime_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
 /* @[define_sntp_converttounixtime] */
 
