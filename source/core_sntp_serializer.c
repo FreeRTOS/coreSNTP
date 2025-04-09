@@ -827,7 +827,7 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
         {
             *pUnixTimeSecs = ( UnixTime_t ) ( UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + pSntpTime->seconds );
         }
-        else
+        if( pSntpTime->seconds >= SNTP_TIME_AT_UNIX_EPOCH_SECS )
         {
             *pUnixTimeSecs = ( UnixTime_t ) ( pSntpTime->seconds - SNTP_TIME_AT_UNIX_EPOCH_SECS );
         }
