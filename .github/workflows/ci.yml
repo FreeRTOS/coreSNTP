@@ -198,7 +198,7 @@ jobs:
       - name: Install Python3
         uses: actions/setup-python@v3
         with:
-          python-version: "3.7"
+          python-version: "3.8"
       - name: Measure sizes
         uses: FreeRTOS/CI-CD-Github-Actions/memory_statistics@main
         with:
