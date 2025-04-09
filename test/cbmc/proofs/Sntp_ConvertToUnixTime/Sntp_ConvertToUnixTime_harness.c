@@ -42,5 +42,5 @@ void harness()
 
     sntpStatus = Sntp_ConvertToUnixTime( pSntpTime, pUnixTimeSecs, pUnixTimeMicrosecs );
 
-    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpErrorTimeNotSupported || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
+    __CPROVER_assert( ( sntpStatus == SntpErrorBadParameter || sntpStatus == SntpSuccess ), "The return value is not a valid SNTP Status" );
 }

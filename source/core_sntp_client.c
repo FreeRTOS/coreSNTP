@@ -959,10 +959,6 @@ const char * Sntp_StatusToStr( SntpStatus_t status )
             pString = "SntpZeroPollInterval";
             break;
 
-        case SntpErrorTimeNotSupported:
-            pString = "SntpErrorTimeNotSupported";
-            break;
-
         case SntpErrorDnsFailure:
             pString = "SntpErrorDnsFailure";
             break;

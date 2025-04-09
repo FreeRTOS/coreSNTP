@@ -43,10 +43,18 @@
 #endif
 /* *INDENT-ON* */
 
+/**
+ * @brief Type representing seconds since Unix epoch (January 1, 1970 UTC).
+ *
+ * The width of this type depends on the configuration macro USE_LEGACY_TIME_API:
+ * - If USE_LEGACY_TIME_API is defined, a 32-bit unsigned integer is used.
+ *   This limits date representation to the year 2038 (Y2038 limitation).
+ * - Otherwise, a 64-bit unsigned integer is used for Y2038 compliance.
+ */
 #ifdef USE_LEGACY_TIME_API
-    typedef uint32_t UnixTime_t;
+    typedef uint32_t   UnixTime_t; /**< 32-bit Unix time for legacy systems. */
 #else
-    typedef uint64_t UnixTime_t;
+    typedef uint64_t   UnixTime_t; /**< 64-bit Unix time for Y2038 compliance. */
 #endif
 
 /**
@@ -194,12 +202,6 @@ typedef enum SntpStatus
      *  by @ref Sntp_CalculatePollInterval.
      */
     SntpZeroPollInterval,
-
-    /**
-     * @brief SNTP timestamp cannot be converted to UNIX time as time does not lie
-     * in time range supported by Sntp_ConvertToUnixTime.
-     */
-    SntpErrorTimeNotSupported,
 
     /**
      * @brief The user-defined DNS resolution interface, @ref SntpResolveDns_t, failed to resolve
@@ -523,8 +525,6 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  * @return Returns one of the following:
  *  - #SntpSuccess if conversion to UNIX time is successful
  *  - #SntpErrorBadParameter if any of the passed parameters are NULL.
- *  - #SntpErrorTimeNotSupported if the passed SNTP time does not lie in the
- * supported time range.
  */
 /* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
