@@ -10,7 +10,7 @@
     <tr>
         <td>core_sntp_client.c</td>
         <td><center>1.7K</center></td>
-        <td><center>1.4K</center></td>
+        <td><center>1.3K</center></td>
     </tr>
     <tr>
         <td>core_sntp_serializer.c</td>
@@ -20,6 +20,6 @@
     <tr>
         <td><b>Total estimates</b></td>
         <td><b><center>2.7K</center></b></td>
-        <td><b><center>2.2K</center></b></td>
+        <td><b><center>2.1K</center></b></td>
     </tr>
 </table>
