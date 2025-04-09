@@ -32,12 +32,12 @@
 void harness()
 {
     SntpTimestamp_t * pSntpTime;
-    uint32_t * pUnixTimeSecs;
+    UnixTime_t * pUnixTimeSecs;
     uint32_t * pUnixTimeMicrosecs;
     SntpStatus_t sntpStatus;
 
     pSntpTime = malloc( sizeof( SntpTimestamp_t ) );
-    pUnixTimeSecs = malloc( sizeof( uint32_t ) );
+    pUnixTimeSecs = malloc( sizeof( UnixTime_t ) );
     pUnixTimeMicrosecs = malloc( sizeof( uint32_t ) );
 
     sntpStatus = Sntp_ConvertToUnixTime( pSntpTime, pUnixTimeSecs, pUnixTimeMicrosecs );
