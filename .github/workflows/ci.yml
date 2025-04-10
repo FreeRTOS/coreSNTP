@@ -100,8 +100,10 @@ jobs:
           make -C build/ coverage
           # Install perl dependency for lcov 2.3.1
           sudo apt-get update
-          sudo apt-get install -y \
-              libcapture-tiny-perl \
+          sudo apt-get install -y   \
+              cmake                 \
+              ruby                  \
+              libcapture-tiny-perl  \
               libdatetime-perl
           declare -a EXCLUDE=("\*test\*" "\*CMakeCCompilerId\*" "\*mocks\*")
           echo ${EXCLUDE[@]} | xargs ./lcov-2.3.1/bin/lcov --rc branch_coverage=1 -r build/coverage.info -o build/coverage.info
