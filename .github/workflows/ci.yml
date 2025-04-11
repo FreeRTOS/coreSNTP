@@ -97,7 +97,7 @@ jobs:
       - name: Run Coverage
         run: |
           make -C build/ coverage
-          declare -a EXCLUDE=("\*test\*" "\*CMakeCCompilerId\*" "\*mocks\*")
+          declare -a EXCLUDE=("\*test\*" "\*CMakeCCompilerId.c")
           echo ${EXCLUDE[@]} | xargs lcov --rc  branch_coverage=1 --ignore-errors empty  --ignore-errors source -r build/coverage.info -o build/coverage.info
           lcov --rc  branch_coverage=1 --ignore-errors empty --ignore-errors source --list build/coverage.info
 
