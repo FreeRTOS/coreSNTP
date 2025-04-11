@@ -504,17 +504,18 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  * @brief Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to
  * UNIX timestamp (that uses 1st Jan 1970 as the epoch).
  *
- * @note This function can ONLY handle conversions of SNTP timestamps that lie in the
- * range from 1st Jan 1970 0h 0m 0s, the UNIX epoch time, to 19th Jan 2038 3h 14m 7s,
- * the maximum UNIX time that can be represented in a signed 32 bit integer. (The
- * limitation is to support systems that use signed 32-bit integer to represent the
- * seconds part of the UNIX time.)
+ * @note This function converts SNTP timestamps to UNIX time supporting both 32-bit and
+ * 64-bit representations based on the configuration macro USE_LEGACY_TIME_API.
  *
- * @note This function supports overflow of the SNTP timestamp (from the 7 Feb 2036
- * 6h 28m 16s time, i.e. SNTP era 1) by treating the timestamps with seconds part
- * in the range [0, 61,505,152] seconds where the upper limit represents the UNIX
- * overflow time (i.e. 19 Jan 2038 3h 14m 7s) for systems that use signed 32-bit
- * integer to represent time.
+ * - If USE_LEGACY_TIME_API is defined, the conversion is limited to the date range
+ *   from 1st Jan 1970 0h 0m 0s (UNIX epoch) to 19th Jan 2038 3h 14m 7s, due to the
+ *   32-bit width limitation.
+ *
+ * - If USE_LEGACY_TIME_API is not defined, 64-bit UNIX time representation is used,
+ *   allowing conversion of SNTP timestamps beyond the year 2038 (Y2038 problem mitigated).
+ *
+ * @note The function also correctly handles SNTP era overflow (from 7 Feb 2036 6h 28m 16s,
+ * i.e., SNTP era 1) to ensure accurate conversion across SNTP eras.
  *
  * @param[in] pSntpTime The SNTP timestamp to convert to UNIX time.
  * @param[out] pUnixTimeSecs This will be filled with the seconds part of the
@@ -525,12 +526,14 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  * @return Returns one of the following:
  *  - #SntpSuccess if conversion to UNIX time is successful
  *  - #SntpErrorBadParameter if any of the passed parameters are NULL.
+ *  - #SntpErrorTimeNotSupported if the SNTP time lies outside the supported conversion range.
  */
 /* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
                                      UnixTime_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
 /* @[define_sntp_converttounixtime] */
+
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

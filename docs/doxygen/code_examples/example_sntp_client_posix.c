@@ -139,7 +139,7 @@ static void sntpClient_SetTime( const SntpServerInfo_t * pTimeServer,
                                 SntpLeapSecondInfo_t leapSecondInfo )
 {
     /* @[code_example_sntp_converttounixtime] */
-    uint32_t unixSecs;
+    UnixTime_t unixSecs;
     uint32_t unixMs;
     SntpStatus_t status = Sntp_ConvertToUnixTime( pServerTime, &unixSecs, &unixMs );
 
