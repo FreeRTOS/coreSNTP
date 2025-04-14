@@ -832,13 +832,13 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
              *                                        +
              *                           Sntp Time since Era 1 Epoch
              */
-            *pUnixTimeSecs = ( UnixTime_t ) ( UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + pSntpTime->seconds );
+            *pUnixTimeSecs = ( UnixTime_t ) ( UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + ( UnixTime_t ) ( pSntpTime->seconds ) );
         }
 
         /* Handle case when SNTP timestamp is in SNTP era 1 time range. */
         if( pSntpTime->seconds >= SNTP_TIME_AT_UNIX_EPOCH_SECS )
         {
-            *pUnixTimeSecs = ( UnixTime_t ) ( pSntpTime->seconds - SNTP_TIME_AT_UNIX_EPOCH_SECS );
+            *pUnixTimeSecs = ( UnixTime_t ) ( ( UnixTime_t ) ( pSntpTime->seconds ) - SNTP_TIME_AT_UNIX_EPOCH_SECS );
         }
 
         /* Convert SNTP fractions to microseconds for UNIX time. */
