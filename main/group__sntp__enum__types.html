@@ -120,17 +120,16 @@ Enumerations</h2></td></tr>
 , <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a4a4f61809052a98c2877cf5035ccc62c">SntpInvalidResponse</a>
 , <br />
 &#160;&#160;<a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a2b694f63eaa4d94d08e1bbc80f6fd992">SntpZeroPollInterval</a>
-, <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798afba7203b8ee0322999adf1edcca6e0cf">SntpErrorTimeNotSupported</a>
 , <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a71c91750cf5069fc4223e4aaf0a5d4f0">SntpErrorDnsFailure</a>
 , <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a6dd0fee9073c6d7c55be89f1bc58b843">SntpErrorNetworkFailure</a>
+, <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798acbefde33f8de7f9fac2c31d6a6008397">SntpServerNotAuthenticated</a>
 , <br />
-&#160;&#160;<a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798acbefde33f8de7f9fac2c31d6a6008397">SntpServerNotAuthenticated</a>
-, <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a6db2603ebf3153c9472d3867694aa787">SntpErrorAuthFailure</a>
+&#160;&#160;<a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a6db2603ebf3153c9472d3867694aa787">SntpErrorAuthFailure</a>
 , <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a0e41141d4e0b0f1bf945830f7f2c6be9">SntpErrorSendTimeout</a>
 , <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a379667af0482f651b5630fcc149d9952">SntpErrorResponseTimeout</a>
+, <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a473ea25a626b0ab1067a9887e49d113e">SntpNoResponseReceived</a>
 , <br />
-&#160;&#160;<a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a473ea25a626b0ab1067a9887e49d113e">SntpNoResponseReceived</a>
-, <a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798afc6ed7e8936aa676762523ba8a308e24">SntpErrorContextNotInitialized</a>
+&#160;&#160;<a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798afc6ed7e8936aa676762523ba8a308e24">SntpErrorContextNotInitialized</a>
 <br />
  }</td></tr>
 <tr class="memdesc:gaef7b22d8008bbfbbc7bbea5a7a30e798"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enumeration of status codes that can be returned by the coreSNTP Library API.  <a href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">More...</a><br /></td></tr>
@@ -177,8 +176,6 @@ Enumerations</h2></td></tr>
 <tr><td class="fieldname"><a id="ggaef7b22d8008bbfbbc7bbea5a7a30e798a4a4f61809052a98c2877cf5035ccc62c" name="ggaef7b22d8008bbfbbc7bbea5a7a30e798a4a4f61809052a98c2877cf5035ccc62c"></a>SntpInvalidResponse&#160;</td><td class="fielddoc"><p>Server response failed validation checks for expected data in SNTP packet. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggaef7b22d8008bbfbbc7bbea5a7a30e798a2b694f63eaa4d94d08e1bbc80f6fd992" name="ggaef7b22d8008bbfbbc7bbea5a7a30e798a2b694f63eaa4d94d08e1bbc80f6fd992"></a>SntpZeroPollInterval&#160;</td><td class="fielddoc"><p>Poll interval value is under 1 second which cannot be calculated by <a class="el" href="core__sntp__serializer_8h.html#a48dc19a11eb31d6077a2ca8964a1c6a9">Sntp_CalculatePollInterval</a>. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="ggaef7b22d8008bbfbbc7bbea5a7a30e798afba7203b8ee0322999adf1edcca6e0cf" name="ggaef7b22d8008bbfbbc7bbea5a7a30e798afba7203b8ee0322999adf1edcca6e0cf"></a>SntpErrorTimeNotSupported&#160;</td><td class="fielddoc"><p>SNTP timestamp cannot be converted to UNIX time as time does not lie in time range supported by Sntp_ConvertToUnixTime. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggaef7b22d8008bbfbbc7bbea5a7a30e798a71c91750cf5069fc4223e4aaf0a5d4f0" name="ggaef7b22d8008bbfbbc7bbea5a7a30e798a71c91750cf5069fc4223e4aaf0a5d4f0"></a>SntpErrorDnsFailure&#160;</td><td class="fielddoc"><p>The user-defined DNS resolution interface, <a class="el" href="group__sntp__callback__types.html#gaef268b4cc2cf00e3e573b637cde7c09e">SntpResolveDns_t</a>, failed to resolve address for a time server. This status is returned by the <a class="el" href="core__sntp__client_8h.html#ae6cb1fe85cff973b2cfa73751adb4062">Sntp_SendTimeRequest</a> API. </p>
 </td></tr>

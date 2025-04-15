@@ -10,7 +10,6 @@ var group__sntp__enum__types =
       [ "SntpErrorBufferTooSmall", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a23891833ba2ad8634832cbbb9d47bd9c", null ],
       [ "SntpInvalidResponse", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a4a4f61809052a98c2877cf5035ccc62c", null ],
       [ "SntpZeroPollInterval", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a2b694f63eaa4d94d08e1bbc80f6fd992", null ],
-      [ "SntpErrorTimeNotSupported", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798afba7203b8ee0322999adf1edcca6e0cf", null ],
       [ "SntpErrorDnsFailure", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a71c91750cf5069fc4223e4aaf0a5d4f0", null ],
       [ "SntpErrorNetworkFailure", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a6dd0fee9073c6d7c55be89f1bc58b843", null ],
       [ "SntpServerNotAuthenticated", "group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798acbefde33f8de7f9fac2c31d6a6008397", null ],
