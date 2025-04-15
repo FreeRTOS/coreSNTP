@@ -79,8 +79,8 @@ jobs:
 
       - name: Build
         run: |
-          sudo apt-get install -y lcov sed
           # Build with logging enabled.
+          sudo apt-get install -y lcov
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
@@ -97,9 +97,9 @@ jobs:
       - name: Run Coverage
         run: |
           make -C build/ coverage
-          declare -a EXCLUDE=("\*test\*" "\*CMakeCCompilerId\*" "\*mocks\*")
-          echo ${EXCLUDE[@]} | xargs lcov --rc lcov_branch_coverage=1 -r build/coverage.info -o build/coverage.info
-          lcov --rc lcov_branch_coverage=1 --list build/coverage.info
+          declare -a EXCLUDE=("\*test\*" "\*CMakeCCompilerId.c")
+          echo ${EXCLUDE[@]} | xargs lcov --rc  branch_coverage=1 --ignore-errors empty  --ignore-errors source -r build/coverage.info -o build/coverage.info
+          lcov --rc  branch_coverage=1 --ignore-errors empty --ignore-errors source --list build/coverage.info
 
       - name: Check Coverage
         uses: FreeRTOS/CI-CD-Github-Actions/coverage-cop@main
@@ -198,7 +198,7 @@ jobs:
       - name: Install Python3
         uses: actions/setup-python@v3
         with:
-          python-version: "3.7.x"
+          python-version: "3.8"
       - name: Measure sizes
         uses: FreeRTOS/CI-CD-Github-Actions/memory_statistics@main
         with:

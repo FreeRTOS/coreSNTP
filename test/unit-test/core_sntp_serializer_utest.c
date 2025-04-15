@@ -877,32 +877,20 @@ void test_ConvertToUnixTime_InvalidParams( void )
 
     /* Use same memory for UNIX seconds and microseconds as we are not
      * testing those values. */
-    uint32_t unixTime;
+    UnixTime_t unixTime;
+    uint32_t unixTimeMs;
 
     /* Test with NULL SNTP time. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( NULL,
                                                                       &unixTime,
-                                                                      &unixTime ) );
+                                                                      &unixTimeMs ) );
     /* Test with NULL output parameters. */
     TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( &sntpTime,
                                                                       NULL,
-                                                                      &unixTime ) );
+                                                                      &unixTimeMs ) );
     TEST_ASSERT_EQUAL( SntpErrorBadParameter, Sntp_ConvertToUnixTime( &sntpTime,
                                                                       &unixTime,
                                                                       NULL ) );
-
-    /* Test with time before UNIX epoch or 1st Jan 1970 .*/
-    sntpTime.seconds = SNTP_TIME_AT_UNIX_EPOCH_SECS - 5;
-    TEST_ASSERT_EQUAL( SntpErrorTimeNotSupported, Sntp_ConvertToUnixTime( &sntpTime,
-                                                                          &unixTime,
-                                                                          &unixTime ) );
-
-    /* Test with timestamp that after largest UNIX time for signed 32-bit integer systems
-     * (i.e. after 18 Jan 2036 3:14:07) */
-    sntpTime.seconds = SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS + 5;
-    TEST_ASSERT_EQUAL( SntpErrorTimeNotSupported, Sntp_ConvertToUnixTime( &sntpTime,
-                                                                          &unixTime,
-                                                                          &unixTime ) );
 }
 
 /**
@@ -912,7 +900,7 @@ void test_ConvertToUnixTime_InvalidParams( void )
 void test_ConvertToUnixTime_Nominal( void )
 {
     SntpTimestamp_t sntpTime = TEST_TIMESTAMP;
-    uint32_t unixTimeSecs;
+    UnixTime_t unixTimeSecs;
     uint32_t unixTimeMs;
 
 #define TEST_SNTP_TO_UNIX_CONVERSION( sntpTimeSecs, sntpTimeFracs,               \
