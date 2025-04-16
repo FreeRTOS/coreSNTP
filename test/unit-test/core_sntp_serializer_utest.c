@@ -877,7 +877,7 @@ void test_ConvertToUnixTime_InvalidParams( void )
 
     /* Use same memory for UNIX seconds and microseconds as we are not
      * testing those values. */
-    UnixTime_t unixTime;
+    uint32_t unixTime;
     uint32_t unixTimeMs;
 
     /* Test with NULL SNTP time. */
@@ -900,7 +900,7 @@ void test_ConvertToUnixTime_InvalidParams( void )
 void test_ConvertToUnixTime_Nominal( void )
 {
     SntpTimestamp_t sntpTime = TEST_TIMESTAMP;
-    UnixTime_t unixTimeSecs;
+    uint32_t unixTimeSecs;
     uint32_t unixTimeMs;
 
 #define TEST_SNTP_TO_UNIX_CONVERSION( sntpTimeSecs, sntpTimeFracs,               \
