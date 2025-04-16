@@ -44,20 +44,6 @@
 /* *INDENT-ON* */
 
 /**
- * @brief Type representing seconds since Unix epoch (January 1, 1970 UTC).
- *
- * The width of this type depends on the configuration macro USE_LEGACY_TIME_API:
- * - If USE_LEGACY_TIME_API is defined, a 32-bit unsigned integer is used.
- *   This limits date representation to the year 2038 (Y2038 limitation).
- * - Otherwise, a 64-bit unsigned integer is used for Y2038 compliance.
- */
-#ifdef USE_LEGACY_TIME_API
-    typedef uint32_t   UnixTime_t; /**< 32-bit Unix time for legacy systems. */
-#else
-    typedef uint64_t   UnixTime_t; /**< 64-bit Unix time for Y2038 compliance. */
-#endif
-
-/**
  * @ingroup sntp_constants
  * @brief The base packet size of request and response of the (S)NTP protocol.
  * @note This is the packet size without any authentication headers for security
@@ -504,15 +490,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  * @brief Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to
  * UNIX timestamp (that uses 1st Jan 1970 as the epoch).
  *
- * @note This function converts SNTP timestamps to UNIX time supporting both 32-bit and
- * 64-bit representations based on the configuration macro USE_LEGACY_TIME_API.
- *
- * - If USE_LEGACY_TIME_API is defined, the conversion is limited to the date range
- *   from 1st Jan 1970 0h 0m 0s (UNIX epoch) to 19th Jan 2038 3h 14m 7s, due to the
- *   32-bit width limitation.
- *
- * - If USE_LEGACY_TIME_API is not defined, 64-bit UNIX time representation is used,
- *   allowing conversion of SNTP timestamps beyond the year 2038 (Y2038 problem mitigated).
+ * Refer to (this image)[docs/doxygen/images/Ntp_To_Unix_Time.png].
  *
  * @note The function also correctly handles SNTP era overflow (from 7 Feb 2036 6h 28m 16s,
  * i.e., SNTP era 1) to ensure accurate conversion across SNTP eras.
@@ -529,7 +507,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
  */
 /* @[define_sntp_converttounixtime] */
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
-                                     UnixTime_t * pUnixTimeSecs,
+                                     uint32_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs );
 /* @[define_sntp_converttounixtime] */
 

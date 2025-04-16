@@ -812,7 +812,7 @@ SntpStatus_t Sntp_CalculatePollInterval( uint16_t clockFreqTolerance,
 }
 
 SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
-                                     UnixTime_t * pUnixTimeSecs,
+                                     uint32_t * pUnixTimeSecs,
                                      uint32_t * pUnixTimeMicrosecs )
 {
     SntpStatus_t status = SntpSuccess;
@@ -821,24 +821,20 @@ SntpStatus_t Sntp_ConvertToUnixTime( const SntpTimestamp_t * pSntpTime,
     {
         status = SntpErrorBadParameter;
     }
-    else
-    {
-        /* Handle case when timestamp represents date in SNTP era 1
-         * (i.e. time from 7 Feb 2036 6:28:16 UTC onwards). */
-        if( pSntpTime->seconds <= SNTP_TIME_AT_LARGEST_UNIX_TIME_SECS )
-        {
-            /* Unix Time ( seconds ) = Seconds Duration in
-             *                         [UNIX epoch, SNTP Era 1 Epoch Time]
-             *                                        +
-             *                           Sntp Time since Era 1 Epoch
-             */
-            *pUnixTimeSecs = ( UnixTime_t ) ( UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + ( UnixTime_t ) ( pSntpTime->seconds ) );
-        }
 
-        /* Handle case when SNTP timestamp is in SNTP era 1 time range. */
+    if( status == SntpSuccess )
+    {
+        /* Handle case when SNTP timestamp is in SNTP era 0 time range
+         * (i.e. time before 7 Feb 2036 6:28:15 UTC). */
         if( pSntpTime->seconds >= SNTP_TIME_AT_UNIX_EPOCH_SECS )
         {
-            *pUnixTimeSecs = ( UnixTime_t ) ( ( UnixTime_t ) ( pSntpTime->seconds ) - SNTP_TIME_AT_UNIX_EPOCH_SECS );
+            *pUnixTimeSecs = pSntpTime->seconds - SNTP_TIME_AT_UNIX_EPOCH_SECS;
+        }
+        else
+        {
+            /* Handle case when timestamp represents date in SNTP era 1
+             * (i.e. time from 7 Feb 2036 6:28:16 UTC onwards). */
+            *pUnixTimeSecs = UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME + pSntpTime->seconds;
         }
 
         /* Convert SNTP fractions to microseconds for UNIX time. */

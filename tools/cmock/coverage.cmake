@@ -15,11 +15,9 @@ execute_process( COMMAND lcov --directory ${CMAKE_BINARY_DIR}
                          --initial
                          --capture
                          --rc branch_coverage=1
-                         --ignore-errors empty
-                         --ignore-errors source
                          --rc genhtml_branch_coverage=1
                          --output-file=${CMAKE_BINARY_DIR}/base_coverage.info
-                         --quiet
+                         --include "*source*"
         )
 file(GLOB files "${CMAKE_BINARY_DIR}/bin/tests/*")
 
@@ -49,13 +47,11 @@ execute_process(COMMAND ruby
 execute_process(
             COMMAND lcov --capture
                          --rc branch_coverage=1
-                         --ignore-errors empty
-                         --ignore-errors source
                          --rc genhtml_branch_coverage=1
                          --base-directory ${CMAKE_BINARY_DIR}
                          --directory ${CMAKE_BINARY_DIR}
                          --output-file ${CMAKE_BINARY_DIR}/second_coverage.info
-                         --quiet
+                         --include "*source*"
         )
 
 # combile baseline results (zeros) with the one after running the tests
@@ -67,16 +63,10 @@ execute_process(
                          --output-file ${CMAKE_BINARY_DIR}/coverage.info
                          --no-external
                          --rc branch_coverage=1
-                         --ignore-errors empty
-                         --ignore-errors source
-                         --quiet
         )
 execute_process(
             COMMAND genhtml --rc branch_coverage=1
-                            --ignore-errors empty
-                            --ignore-errors source
                             --branch-coverage
                             --output-directory ${CMAKE_BINARY_DIR}/coverage
                                 ${CMAKE_BINARY_DIR}/coverage.info
-                            --quiet
-        )
+         )
