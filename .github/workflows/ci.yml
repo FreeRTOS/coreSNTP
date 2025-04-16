@@ -206,7 +206,7 @@ jobs:
 
   proof_ci:
     if: ${{ github.event.pull_request }} || ${{ github.event.workflow }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set up CBMC runner
         uses: FreeRTOS/CI-CD-Github-Actions/set_up_cbmc_runner@main
