@@ -100,7 +100,6 @@ $(document).ready(function(){initNavTree('core__sntp__serializer_8h.html',''); i
   <div class="summary">
 <a href="#nested-classes">Data Structures</a> &#124;
 <a href="#define-members">Macros</a> &#124;
-<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">core_sntp_serializer.h File Reference</div></div>
@@ -147,12 +146,6 @@ Macros</h2></td></tr>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>SNTP_KISS_OF_DEATH_CODE_NONE</b>&#160;&#160;&#160;( 0U )</td></tr>
 <tr class="memdesc:ga2f15147fd62ad044b87f8da1cd3f9f7a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The value for the <a class="el" href="struct_sntp_response_data__t.html#a6ce5c37cac67aea775f9578fa4d95e1a" title="If a server responded with Kiss-o&#39;-Death message to reject time request, this is the fixed length ASC...">SntpResponseData_t.rejectedResponseCode</a> member when that the server response packet does not contain a Kiss-o'-Death message, and therefore, does not have a "kiss code". The server sends a "kiss-code" only when it rejects an SNTP request with a Kiss-o'-Death message. <br /></td></tr>
 <tr class="separator:ga2f15147fd62ad044b87f8da1cd3f9f7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr class="memitem:a8877fd3eea1a90efdd3cea1024d5282d"><td class="memItemLeft" align="right" valign="top">typedef uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a></td></tr>
-<tr class="memdesc:a8877fd3eea1a90efdd3cea1024d5282d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type representing seconds since Unix epoch (January 1, 1970 UTC).  <br /></td></tr>
-<tr class="separator:a8877fd3eea1a90efdd3cea1024d5282d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -201,34 +194,13 @@ Functions</h2></td></tr>
 <tr class="memitem:a48dc19a11eb31d6077a2ca8964a1c6a9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="core__sntp__serializer_8h.html#a48dc19a11eb31d6077a2ca8964a1c6a9">Sntp_CalculatePollInterval</a> (uint16_t clockFreqTolerance, uint16_t desiredAccuracy, uint32_t *pPollInterval)</td></tr>
 <tr class="memdesc:a48dc19a11eb31d6077a2ca8964a1c6a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Utility to calculate the poll interval of sending periodic time queries to servers to achieve a desired system clock accuracy for a given frequency tolerance of the system clock.  <br /></td></tr>
 <tr class="separator:a48dc19a11eb31d6077a2ca8964a1c6a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d07377dd8efc162dcd33a53403f8d9a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="core__sntp__serializer_8h.html#a9d07377dd8efc162dcd33a53403f8d9a">Sntp_ConvertToUnixTime</a> (const <a class="el" href="struct_sntp_timestamp__t.html">SntpTimestamp_t</a> *pSntpTime, <a class="el" href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a> *pUnixTimeSecs, uint32_t *pUnixTimeMicrosecs)</td></tr>
-<tr class="memdesc:a9d07377dd8efc162dcd33a53403f8d9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses 1st Jan 1970 as the epoch).  <br /></td></tr>
-<tr class="separator:a9d07377dd8efc162dcd33a53403f8d9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2e96d3bc60bb30db3107a2bc1d69121"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="core__sntp__serializer_8h.html#ae2e96d3bc60bb30db3107a2bc1d69121">Sntp_ConvertToUnixTime</a> (const <a class="el" href="struct_sntp_timestamp__t.html">SntpTimestamp_t</a> *pSntpTime, uint32_t *pUnixTimeSecs, uint32_t *pUnixTimeMicrosecs)</td></tr>
+<tr class="memdesc:ae2e96d3bc60bb30db3107a2bc1d69121"><td class="mdescLeft">&#160;</td><td class="mdescRight">Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses 1st Jan 1970 as the epoch).  <br /></td></tr>
+<tr class="separator:ae2e96d3bc60bb30db3107a2bc1d69121"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>API for serializing SNTP request packets and, and de-serializing SNTP response packets. This API layer adheres to the SNTPv4 specification defined in <a href="https://tools.ietf.org/html/rfc4330">RFC 4330</a>. </p>
-</div><h2 class="groupheader">Typedef Documentation</h2>
-<a id="a8877fd3eea1a90efdd3cea1024d5282d" name="a8877fd3eea1a90efdd3cea1024d5282d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8877fd3eea1a90efdd3cea1024d5282d">&#9670;&#160;</a></span>UnixTime_t</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef uint64_t <a class="el" href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Type representing seconds since Unix epoch (January 1, 1970 UTC). </p>
-<p>The width of this type depends on the configuration macro USE_LEGACY_TIME_API:</p><ul>
-<li>If USE_LEGACY_TIME_API is defined, a 32-bit unsigned integer is used. This limits date representation to the year 2038 (Y2038 limitation).</li>
-<li>Otherwise, a 64-bit unsigned integer is used for Y2038 compliance. 64-bit Unix time for Y2038 compliance. </li>
-</ul>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Function Documentation</h2>
 <a id="ae3aba893e20b6129984062d1b7bf2fa3" name="ae3aba893e20b6129984062d1b7bf2fa3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae3aba893e20b6129984062d1b7bf2fa3">&#9670;&#160;</a></span>Sntp_SerializeRequest()</h2>
 
@@ -418,8 +390,8 @@ the maximum timeout is about 3.5 days". In this example, the system clock freque
 
 </div>
 </div>
-<a id="a9d07377dd8efc162dcd33a53403f8d9a" name="a9d07377dd8efc162dcd33a53403f8d9a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9d07377dd8efc162dcd33a53403f8d9a">&#9670;&#160;</a></span>Sntp_ConvertToUnixTime()</h2>
+<a id="ae2e96d3bc60bb30db3107a2bc1d69121" name="ae2e96d3bc60bb30db3107a2bc1d69121"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2e96d3bc60bb30db3107a2bc1d69121">&#9670;&#160;</a></span>Sntp_ConvertToUnixTime()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -433,7 +405,7 @@ the maximum timeout is about 3.5 days". In this example, the system clock freque
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a> *&#160;</td>
+          <td class="paramtype">uint32_t *&#160;</td>
           <td class="paramname"><em>pUnixTimeSecs</em>, </td>
         </tr>
         <tr>
@@ -451,11 +423,7 @@ the maximum timeout is about 3.5 days". In this example, the system clock freque
 </div><div class="memdoc">
 
 <p>Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses 1st Jan 1970 as the epoch). </p>
-<dl class="section note"><dt>Note</dt><dd>This function converts SNTP timestamps to UNIX time supporting both 32-bit and 64-bit representations based on the configuration macro USE_LEGACY_TIME_API.</dd></dl>
-<ul>
-<li>If USE_LEGACY_TIME_API is defined, the conversion is limited to the date range from 1st Jan 1970 0h 0m 0s (UNIX epoch) to 19th Jan 2038 3h 14m 7s, due to the 32-bit width limitation.</li>
-<li>If USE_LEGACY_TIME_API is not defined, 64-bit UNIX time representation is used, allowing conversion of SNTP timestamps beyond the year 2038 (Y2038 problem mitigated).</li>
-</ul>
+<p>Refer to (this image)[docs/doxygen/images/Ntp_To_Unix_Time.png].</p>
 <dl class="section note"><dt>Note</dt><dd>The function also correctly handles SNTP era overflow (from 7 Feb 2036 6h 28m 16s, i.e., SNTP era 1) to ensure accurate conversion across SNTP eras.</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">

@@ -101,11 +101,7 @@ $(document).ready(function(){initNavTree('sntp_converttounixtime_function.html',
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses 1st Jan 1970 as the epoch).  </p>
-<dl class="section note"><dt>Note</dt><dd>This function converts SNTP timestamps to UNIX time supporting both 32-bit and 64-bit representations based on the configuration macro USE_LEGACY_TIME_API.</dd></dl>
-<ul>
-<li>If USE_LEGACY_TIME_API is defined, the conversion is limited to the date range from 1st Jan 1970 0h 0m 0s (UNIX epoch) to 19th Jan 2038 3h 14m 7s, due to the 32-bit width limitation.</li>
-<li>If USE_LEGACY_TIME_API is not defined, 64-bit UNIX time representation is used, allowing conversion of SNTP timestamps beyond the year 2038 (Y2038 problem mitigated).</li>
-</ul>
+<p>Refer to (this image)[docs/doxygen/images/Ntp_To_Unix_Time.png].</p>
 <dl class="section note"><dt>Note</dt><dd>The function also correctly handles SNTP era overflow (from 7 Feb 2036 6h 28m 16s, i.e., SNTP era 1) to ensure accurate conversion across SNTP eras.</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -120,13 +116,12 @@ $(document).ready(function(){initNavTree('sntp_converttounixtime_function.html',
 <li><a class="el" href="group__sntp__enum__types.html#ggaef7b22d8008bbfbbc7bbea5a7a30e798a1829c0158e4f2630b6806afa4511dfd7" title="Invalid parameter passed to an API function.">SntpErrorBadParameter</a> if any of the passed parameters are NULL.  </li>
 </ul>
 </dd></dl>
-<p>Here is a code example of using the API. </p><div class="fragment"><div class="line">    <a class="code hl_typedef" href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a> unixSecs;</div>
+<p>Here is a code example of using the API. </p><div class="fragment"><div class="line">    uint32_t unixSecs;</div>
 <div class="line">    uint32_t unixMs;</div>
-<div class="line">    <a class="code hl_enumeration" href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a> status = <a class="code hl_function" href="core__sntp__serializer_8h.html#a9d07377dd8efc162dcd33a53403f8d9a">Sntp_ConvertToUnixTime</a>( pServerTime, &amp;unixSecs, &amp;unixMs );</div>
+<div class="line">    <a class="code hl_enumeration" href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a> status = <a class="code hl_function" href="core__sntp__serializer_8h.html#ae2e96d3bc60bb30db3107a2bc1d69121">Sntp_ConvertToUnixTime</a>( pServerTime, &amp;unixSecs, &amp;unixMs );</div>
 <div class="line"> </div>
-<div class="ttc" id="acore__sntp__serializer_8h_html_a8877fd3eea1a90efdd3cea1024d5282d"><div class="ttname"><a href="core__sntp__serializer_8h.html#a8877fd3eea1a90efdd3cea1024d5282d">UnixTime_t</a></div><div class="ttdeci">uint64_t UnixTime_t</div><div class="ttdoc">Type representing seconds since Unix epoch (January 1, 1970 UTC).</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.h:57</div></div>
-<div class="ttc" id="acore__sntp__serializer_8h_html_a9d07377dd8efc162dcd33a53403f8d9a"><div class="ttname"><a href="core__sntp__serializer_8h.html#a9d07377dd8efc162dcd33a53403f8d9a">Sntp_ConvertToUnixTime</a></div><div class="ttdeci">SntpStatus_t Sntp_ConvertToUnixTime(const SntpTimestamp_t *pSntpTime, UnixTime_t *pUnixTimeSecs, uint32_t *pUnixTimeMicrosecs)</div><div class="ttdoc">Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses ...</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.c:814</div></div>
-<div class="ttc" id="agroup__sntp__enum__types_html_gaef7b22d8008bbfbbc7bbea5a7a30e798"><div class="ttname"><a href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a></div><div class="ttdeci">SntpStatus_t</div><div class="ttdoc">Enumeration of status codes that can be returned by the coreSNTP Library API.</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.h:154</div></div>
+<div class="ttc" id="acore__sntp__serializer_8h_html_ae2e96d3bc60bb30db3107a2bc1d69121"><div class="ttname"><a href="core__sntp__serializer_8h.html#ae2e96d3bc60bb30db3107a2bc1d69121">Sntp_ConvertToUnixTime</a></div><div class="ttdeci">SntpStatus_t Sntp_ConvertToUnixTime(const SntpTimestamp_t *pSntpTime, uint32_t *pUnixTimeSecs, uint32_t *pUnixTimeMicrosecs)</div><div class="ttdoc">Utility to convert SNTP timestamp (that uses 1st Jan 1900 as the epoch) to UNIX timestamp (that uses ...</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.c:814</div></div>
+<div class="ttc" id="agroup__sntp__enum__types_html_gaef7b22d8008bbfbbc7bbea5a7a30e798"><div class="ttname"><a href="group__sntp__enum__types.html#gaef7b22d8008bbfbbc7bbea5a7a30e798">SntpStatus_t</a></div><div class="ttdeci">SntpStatus_t</div><div class="ttdoc">Enumeration of status codes that can be returned by the coreSNTP Library API.</div><div class="ttdef"><b>Definition:</b> core_sntp_serializer.h:140</div></div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
