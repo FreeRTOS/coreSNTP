@@ -1,5 +1,5 @@
 /*
- * coreSNTP v1.3.1
+ * coreSNTP
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
@@ -47,6 +47,17 @@
     extern "C" {
 #endif
 /* *INDENT-ON* */
+
+/**
+ * @cond DOXYGEN_IGNORE
+ * The current version of this library.
+ *
+ * If SNTP_LIBRARY_VERSION ends with + it represents the version in development
+ * after the numbered release.
+ */
+#define SNTP_LIBRARY_VERSION    "v1.3.1+"
+/** @endcond */
+
 
 /**
  * @ingroup sntp_constants
