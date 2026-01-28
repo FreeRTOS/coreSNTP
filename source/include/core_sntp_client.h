@@ -55,7 +55,7 @@
  * If SNTP_LIBRARY_VERSION ends with + it represents the version in development
  * after the numbered release.
  */
-#define SNTP_LIBRARY_VERSION    "v1.3.1+"
+#define SNTP_LIBRARY_VERSION    "v2.0.0"
 /** @endcond */
 
 
