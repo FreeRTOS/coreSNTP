@@ -1,5 +1,22 @@
 # Changelog for coreSNTP Library
 
+## v2.0.0 (January 2026)
+
+### Changes
+- [#113](https://github.com/FreeRTOS/coreSNTP/pull/113) Add write permissions to doxygen generation workflow on main.
+- [#112](https://github.com/FreeRTOS/coreSNTP/pull/112) Add migration guide for v2.0.0.
+- [#111](https://github.com/FreeRTOS/coreSNTP/pull/111) Update manifest.yml.
+- [#110](https://github.com/FreeRTOS/coreSNTP/pull/110) Add CMakeLists.txt.
+- [#109](https://github.com/FreeRTOS/coreSNTP/pull/109) Remove version numbers and add library version macro.
+- [#107](https://github.com/FreeRTOS/coreSNTP/pull/107) Remove formatting bot workflow.
+- [#105](https://github.com/FreeRTOS/coreSNTP/pull/105) Refine Sntp_ConvertToUnixTime.
+- [#104](https://github.com/FreeRTOS/coreSNTP/pull/104) Fix Year 2038 Problem in Sntp_ConvertToUnixTime.
+- [#102](https://github.com/FreeRTOS/coreSNTP/pull/102) Update release.yml as per security guideline.
+- [#101](https://github.com/FreeRTOS/coreSNTP/pull/101) Remove unwanted comment for return value of SntpGetTime_t.
+- [#99](https://github.com/FreeRTOS/coreSNTP/pull/99) Replace Synopsys link with blackduck one to solve link error.
+- [#98](https://github.com/FreeRTOS/coreSNTP/pull/98) Adjust proof tooling to support CBMC v6.
+- [#97](https://github.com/FreeRTOS/coreSNTP/pull/97) Update LTS 202406 information.
+
 ## v1.3.1 (June 2024)
 
 ### Changes
