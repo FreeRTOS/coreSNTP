@@ -2,7 +2,7 @@
 include(${MODULE_ROOT_DIR}/coreSntpFilePaths.cmake)
 
 project ("coreSNTP unit tests")
-cmake_minimum_required (VERSION 3.2.0)
+cmake_minimum_required (VERSION 3.5)
 
 # ====================  Define your project name ========================
 set(project_name "core_sntp")
